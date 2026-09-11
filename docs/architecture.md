@@ -84,6 +84,41 @@ reloads after its own mutations, so a temporary Realtime outage does not delay l
 These operations are database functions because they cross privacy boundaries or must remain
 atomic. Ordinary self-profile updates use standard row operations under RLS.
 
+## Explain-the-word game
+
+Each active partnership can own one continuing `word_games` record. Its rounds alternate the
+explainer between the partnership's two users. Security-definer database functions lock and advance
+the turn atomically; direct table access is revoked. The game-state function shapes its response for
+the caller, so an unfinished round's secret word and forbidden forms are visible only to the
+explainer.
+
+The Worker asks the configured OpenRouter text model for a B1–B2 game card and calls
+`microsoft/mai-transcribe-2` in verbatim mode for each completed browser recording. A game begins in
+the `pending` state and becomes active only when the other participant accepts. The browser converts
+recordings to mono WAV, and the Worker stores them in a private Supabase Storage bucket before
+transcription. Storage policies limit uploads to the current explainer and playback to the two active
+participants. The transcript, word timestamps, recording path, and private coaching are stored on
+the round. The partner's normalized answer and deterministic forbidden-word detection decide the
+shared point; AI coaching never changes the official score.
+
+The dashboard and game page poll the canonical game state while waiting for invitations, acceptance,
+recordings, or guesses. Recording links are short-lived signed URLs rather than public object URLs.
+This keeps the first slice simple and allows a later move to participant-authorized Realtime
+invalidation without changing the database ownership model.
+
+Active game pages also send a short authenticated presence heartbeat. Once both players have joined,
+an explicit departure or a missing heartbeat pauses the session and locks server-side mutations. A
+returning player resumes the same round when both participants are present again. The reconnect
+window is five minutes; its deadline and terminal state live in PostgreSQL, so refreshing the browser
+cannot bypass them. A recorder already running remains mounted and can finish locally while paused,
+but its result cannot be submitted unless the session resumes before expiry.
+Either participant may also finish an active or paused session immediately. This transition is
+authorization-checked in PostgreSQL; both clients leave the game screen after observing the terminal
+state.
+The dashboard separates game sessions from partnership controls. A finished game can be reviewed or
+reset into a new pending invitation for the same partnership; restarting clears the previous rounds
+and scores while preserving the two-person partnership itself.
+
 ## Dependency direction
 
 ```text
@@ -115,5 +150,5 @@ the clearer boundary.
 
 Future tables should reference `partnerships.id` for shared topics, meetings, and activities.
 Personal feedback should reference both the activity and its owning profile so one partner cannot
-read the other's private coaching data. AI calls should be made by the Worker, with provider keys in
-Cloudflare secrets and usage recorded before returning results.
+read the other's private coaching data. AI calls are made by the Worker, with provider keys in
+Cloudflare secrets. A future billing slice should record provider usage before returning results.

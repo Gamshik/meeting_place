@@ -1,3 +1,6 @@
 # Runtime values used by the local Hono Worker.
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your-supabase-publishable-or-anon-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_TEXT_MODEL=openai/gpt-4o-mini
+OPENROUTER_SITE_URL=http://localhost:5173

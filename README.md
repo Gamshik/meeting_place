@@ -12,6 +12,7 @@ This repository contains the first vertical slice:
 - real-time invitation and partnership updates across signed-in browsers
 - invitation attempt limits and a cooldown after a relationship closes
 - paginated partner lists and accessible feedback while changes are saved
+- a turn-based “explain the word” game with AI-generated cards, speech transcription, and private coaching
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
 
@@ -91,10 +92,17 @@ VITE_SUPABASE_ANON_KEY=your-publishable-or-anon-key
 # .dev.vars — values available to the local Worker
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your-publishable-or-anon-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_TEXT_MODEL=openai/gpt-4o-mini
+OPENROUTER_SITE_URL=http://localhost:5173
 ```
 
 These files are ignored by Git. A Supabase publishable/anon key is intended for public clients; the
 database is protected by Row Level Security. Never put a Supabase service-role key in either file.
+The OpenRouter key is private and belongs only in `.dev.vars` or Cloudflare runtime secrets. The
+configured text model must support structured JSON output. MAI-Transcribe 2 is selected in server
+code for speech-to-text. Browser recordings are converted locally to 16 kHz mono WAV before upload
+because that format is supported consistently by the transcription provider.
 
 ### 4. Start the application
 
@@ -194,10 +202,18 @@ The Worker needs the same non-privileged Supabase connection values at runtime:
 ```sh
 npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_ANON_KEY
+npx wrangler secret put OPENROUTER_API_KEY
 ```
 
-Enter each value when prompted. Despite the command name, these are deliberately the project URL
-and publishable/anon key—not the service-role key.
+Enter each value when prompted. The two Supabase values are deliberately the project URL and
+publishable/anon key—not the service-role key. `OPENROUTER_API_KEY` is the private provider key.
+
+Add the non-secret model configuration as Worker runtime variables in Cloudflare:
+
+```dotenv
+OPENROUTER_TEXT_MODEL=openai/gpt-4o-mini
+OPENROUTER_SITE_URL=https://YOUR-WORKER-URL
+```
 
 If you configure these through Cloudflare's dashboard instead, add them under the Worker's
 **Settings → Variables & Secrets** section. This runtime section is different from **Settings →
@@ -258,6 +274,10 @@ returns to Supabase's `/auth/v1/callback`, and Supabase returns to this applicat
   not apply these production headers. Avatar images may load over HTTPS.
 - Worker observability is enabled. Application error logs contain infrastructure codes rather than
   database error text or request bodies. API responses are marked `Cache-Control: no-store`.
+- Game recordings are stored in a private Supabase Storage bucket and forwarded to OpenRouter for
+  transcription. Only the two active participants can request short-lived playback links.
+  Transcripts and private coaching are stored; the guessing player cannot retrieve the secret before
+  the round ends.
 
 ## Testing
 
@@ -266,6 +286,23 @@ tests, and a production build. Embedded tests execute both application migration
 Supabase identity fixtures; the pgcrypto UUID alias uses PostgreSQL's built-in UUID function.
 They check RLS, privileges, lifecycle rules, lookup limits, cooldowns, username collisions, and
 pagination. They do not replace validation against the full Supabase services.
+
+To exercise the speaking game manually, apply the latest migration, configure the three OpenRouter
+values above, and sign in with two accounts that have an active partnership. The first player sends
+a game request. Confirm that the other dashboard shows **Review game request**, and that neither
+player can start a round before the second player accepts. After acceptance, the first player chooses
+a topic, records an explanation, and sends it. Confirm that the second browser receives an audio
+player, the transcript, and the answer field. The secret must stay hidden from the guesser until the
+result; a correct guess awards the explainer one point, saying the secret produces no point, private
+AI coaching appears only to the explainer, and the next turn belongs to the previous guesser. Browser
+microphone access requires localhost or HTTPS.
+If either player leaves an active game, the session pauses and shows a five-minute reconnect timer.
+Returning in time resumes the same round; otherwise the game finishes and all actions stay locked.
+Either participant can also use **End game** to finish immediately and return both players to their
+partners screen.
+Current, paused, requested, and finished sessions appear in the dashboard's **Your games** section.
+Finished sessions provide **View final score** and **Play again** actions; starting again clears the
+previous rounds and sends a fresh game request to the partner.
 
 Install Chromium once with `npx playwright install chromium`, then run `npm run test:e2e`.
 Browser tests build and serve the production application with isolated fake sessions and intercepted
@@ -280,6 +317,6 @@ checks in a separate database job, and runs browser tests in the main verificati
 
 ## Current scope
 
-This foundation intentionally stops at identity and two-person partnerships. Meetings, topics,
-activities, AI orchestration, speech transcription, notifications, and billing belong in later
-vertical slices.
+The current application covers identity, two-person partnerships, and the first turn-based speaking
+activity. Meetings, notifications, broader activity history, realtime game updates, and billing
+belong in later vertical slices.
