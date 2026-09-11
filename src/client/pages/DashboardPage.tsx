@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-import type { Partnership, PartnershipCursor, Profile } from '../../shared/contracts'
+import type {
+  Partnership,
+  PartnershipCursor,
+  Profile,
+  WordGameSummary,
+} from '../../shared/contracts'
 import { useAuth } from '../auth/AuthContext'
 import { AppShell } from '../components/AppShell'
 import { PartnerCard } from '../components/PartnerCard'
@@ -8,9 +14,11 @@ import { api, ApiError } from '../lib/api'
 import { supabase } from '../lib/supabase'
 
 export function DashboardPage() {
+  const navigate = useNavigate()
   const { session, signOut } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [partnerships, setPartnerships] = useState<Partnership[]>([])
+  const [wordGames, setWordGames] = useState<Record<string, WordGameSummary>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,15 +34,17 @@ export function DashboardPage() {
     setError(null)
 
     try {
-      const [profileResponse, partnershipsResponse] = await Promise.all([
+      const [profileResponse, partnershipsResponse, wordGamesResponse] = await Promise.all([
         api.getProfile(),
         api.getPartnerships(),
+        api.getWordGames(),
       ])
       if (request !== generation.current) return false
       setProfile(profileResponse.data)
       if (partnershipRequest === partnershipGeneration.current) {
         setNextCursor(partnershipsResponse.nextCursor)
         setPartnerships(partnershipsResponse.data)
+        setWordGames(indexWordGames(wordGamesResponse.data))
       }
       return true
     } catch (loadError) {
@@ -49,10 +59,14 @@ export function DashboardPage() {
     const request = ++partnershipGeneration.current
 
     try {
-      const response = await api.getPartnerships()
+      const [response, wordGamesResponse] = await Promise.all([
+        api.getPartnerships(),
+        api.getWordGames(),
+      ])
       if (request !== partnershipGeneration.current) return false
       setNextCursor(response.nextCursor)
       setPartnerships(response.data)
+      setWordGames(indexWordGames(wordGamesResponse.data))
       return true
     } catch (loadError) {
       if (request === partnershipGeneration.current) setError(messageFromError(loadError))
@@ -106,6 +120,12 @@ export function DashboardPage() {
     }
   }, [dashboardReady, refreshPartnerships, userId])
 
+  useEffect(() => {
+    if (!dashboardReady) return
+    const timer = setInterval(() => void refreshPartnerships(), 3000)
+    return () => clearInterval(timer)
+  }, [dashboardReady, refreshPartnerships])
+
   const groups = useMemo(
     () => ({
       active: partnerships.filter((item) => item.status === 'active'),
@@ -117,6 +137,14 @@ export function DashboardPage() {
       ),
     }),
     [partnerships],
+  )
+  const gameItems = useMemo(
+    () =>
+      groups.active.flatMap((partnership) => {
+        const game = wordGames[partnership.id]
+        return game ? [{ game, partnership }] : []
+      }),
+    [groups.active, wordGames],
   )
 
   if (isLoading) {
@@ -189,6 +217,13 @@ export function DashboardPage() {
     })
   }
 
+  async function startNewGame(partnershipId: string) {
+    const started = await runOperation(async () => {
+      await api.startWordGame(partnershipId)
+    })
+    if (started) navigate(`/games/explain-word/${partnershipId}`)
+  }
+
   return (
     <AppShell profile={profile} isBusy={isBusy} onSignOut={() => void runOperation(signOut)}>
       <section className="mb-10 grid gap-6 lg:grid-cols-[1fr_0.75fr] lg:items-end">
@@ -255,20 +290,41 @@ export function DashboardPage() {
             </PartnerSection>
           ) : null}
 
+          {gameItems.length > 0 ? (
+            <GamesDashboard
+              disabled={isBusy}
+              items={gameItems}
+              userId={userId}
+              onOpen={(partnershipId) => navigate(`/games/explain-word/${partnershipId}`)}
+              onPlayAgain={(partnershipId) => void startNewGame(partnershipId)}
+            />
+          ) : null}
+
           <PartnerSection title="Your partners" count={groups.active.length}>
             {groups.active.length > 0 ? (
-              groups.active.map((partnership) => (
-                <PartnerCard
-                  key={partnership.id}
-                  disabled={isBusy}
-                  partnership={partnership}
-                  actionLabel="End partnership"
-                  destructiveAction
-                  onAction={() =>
-                    void runPartnershipAction(() => api.endPartnership(partnership.id))
-                  }
-                />
-              ))
+              groups.active.map((partnership) => {
+                const wordGame = wordGames[partnership.id]
+                return (
+                  <PartnerCard
+                    key={partnership.id}
+                    disabled={isBusy}
+                    partnership={partnership}
+                    actionLabel={!wordGame || wordGame.status === 'finished' ? 'Play' : undefined}
+                    secondaryActionLabel="End partnership"
+                    secondaryDestructiveAction
+                    onAction={() => {
+                      if (wordGame?.status === 'finished') {
+                        void startNewGame(partnership.id)
+                      } else {
+                        navigate(`/games/explain-word/${partnership.id}`)
+                      }
+                    }}
+                    onSecondaryAction={() =>
+                      void runPartnershipAction(() => api.endPartnership(partnership.id))
+                    }
+                  />
+                )
+              })
             ) : (
               <EmptyState hasMore={nextCursor !== null} />
             )}
@@ -308,6 +364,73 @@ export function DashboardPage() {
         </div>
       </div>
     </AppShell>
+  )
+}
+
+function GamesDashboard({
+  disabled,
+  items,
+  onOpen,
+  onPlayAgain,
+  userId,
+}: {
+  disabled: boolean
+  items: Array<{ game: WordGameSummary; partnership: Partnership }>
+  onOpen: (partnershipId: string) => void
+  onPlayAgain: (partnershipId: string) => void
+  userId: string | undefined
+}) {
+  return (
+    <PartnerSection title="Your games" count={items.length}>
+      {items.map(({ game, partnership }) => {
+        const status =
+          game.status === 'finished'
+            ? 'Finished'
+            : game.status === 'paused'
+              ? 'Paused · reconnecting'
+              : game.status === 'active'
+                ? 'In progress'
+                : game.requestedById === userId
+                  ? 'Waiting for partner'
+                  : 'Ready for your response'
+        return (
+          <article
+            key={partnership.id}
+            className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-emerald-800">Explain the word</p>
+                <h3 className="mt-1 text-lg font-semibold">
+                  With {partnership.partner.displayName}
+                </h3>
+                <p className="mt-1 text-sm text-stone-600">{status}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="button button-primary"
+                  disabled={disabled}
+                  onClick={() => onOpen(partnership.id)}
+                >
+                  {game.status === 'finished' ? 'View final score' : 'Open game'}
+                </button>
+                {game.status === 'finished' ? (
+                  <button
+                    type="button"
+                    className="button button-accent"
+                    disabled={disabled}
+                    onClick={() => onPlayAgain(partnership.id)}
+                  >
+                    Play again
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </article>
+        )
+      })}
+    </PartnerSection>
   )
 }
 
@@ -509,4 +632,8 @@ function EmptyState({ hasMore }: { hasMore: boolean }) {
 function messageFromError(error: unknown) {
   if (error instanceof ApiError || error instanceof Error) return error.message
   return 'Something went wrong.'
+}
+
+function indexWordGames(games: WordGameSummary[]) {
+  return Object.fromEntries(games.map((game) => [game.partnershipId, game]))
 }

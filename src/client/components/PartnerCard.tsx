@@ -4,6 +4,7 @@ type PartnerCardProps = {
   disabled?: boolean
   actionLabel?: string
   destructiveAction?: boolean
+  secondaryDestructiveAction?: boolean
   onAction?: () => void
   onSecondaryAction?: () => void
   partnership: Partnership
@@ -18,6 +19,7 @@ export function PartnerCard({
   onSecondaryAction,
   partnership,
   secondaryActionLabel,
+  secondaryDestructiveAction = false,
 }: PartnerCardProps) {
   const initials = partnership.partner.displayName
     .split(' ')
@@ -52,7 +54,7 @@ export function PartnerCard({
           {secondaryActionLabel ? (
             <button
               disabled={disabled}
-              className="button button-secondary"
+              className={`button ${secondaryDestructiveAction ? 'button-danger' : 'button-secondary'}`}
               type="button"
               onClick={onSecondaryAction}
             >

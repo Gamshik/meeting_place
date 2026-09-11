@@ -9,6 +9,11 @@ import { LoginPage } from './pages/LoginPage'
 const DashboardPage = lazy(() =>
   import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })),
 )
+const ExplainWordGamePage = lazy(() =>
+  import('./pages/ExplainWordGamePage').then((module) => ({
+    default: module.ExplainWordGamePage,
+  })),
+)
 
 export function App() {
   return (
@@ -20,6 +25,7 @@ export function App() {
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route element={<ProtectedRoute />}>
               <Route index element={<DashboardPage />} />
+              <Route path="games/explain-word/:partnershipId" element={<ExplainWordGamePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
