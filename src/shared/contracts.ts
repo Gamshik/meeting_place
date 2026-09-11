@@ -25,6 +25,27 @@ export const partnershipActionSchema = z.object({
   partnershipId: z.string().uuid(),
 })
 
+export const partnershipListSchema = z
+  .object({
+    beforeCreatedAt: z.iso.datetime({ offset: true }).optional(),
+    beforeId: z.uuid().optional(),
+  })
+  .refine((value) => Boolean(value.beforeCreatedAt) === Boolean(value.beforeId), {
+    message: 'Provide both cursor fields',
+  })
+
+export const invitationResultSchema = z.discriminatedUnion('ok', [
+  z.object({ ok: z.literal(true), partnershipId: z.uuid() }),
+  z.object({ ok: z.literal(false), code: z.string() }),
+])
+
+export const apiErrorBodySchema = z.object({
+  error: z.object({ code: z.string(), message: z.string(), details: z.unknown().optional() }),
+})
+
+export type PartnershipCursor = { createdAt: string; id: string }
+export type PartnershipPage = { data: Partnership[]; nextCursor: PartnershipCursor | null }
+
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
 export type InvitePartnerInput = z.infer<typeof invitePartnerSchema>
 

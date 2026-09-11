@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react'
 import type { Session } from '@supabase/supabase-js'
 
 export type AuthContextValue = {
+  error: string | null
   isLoading: boolean
   session: Session | null
   signInWithGoogle: () => Promise<void>

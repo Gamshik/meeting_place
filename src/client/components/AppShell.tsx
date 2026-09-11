@@ -3,12 +3,13 @@ import type { ReactNode } from 'react'
 import type { Profile } from '../../shared/contracts'
 
 type AppShellProps = {
+  isBusy?: boolean
   children: ReactNode
   onSignOut: () => void
   profile: Profile
 }
 
-export function AppShell({ children, onSignOut, profile }: AppShellProps) {
+export function AppShell({ children, onSignOut, profile, isBusy }: AppShellProps) {
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900">
       <header className="border-b border-stone-200 bg-white/90 backdrop-blur">
@@ -36,7 +37,12 @@ export function AppShell({ children, onSignOut, profile }: AppShellProps) {
                 referrerPolicy="no-referrer"
               />
             ) : null}
-            <button className="button button-secondary" type="button" onClick={onSignOut}>
+            <button
+              disabled={isBusy}
+              className="button button-secondary"
+              type="button"
+              onClick={onSignOut}
+            >
               Sign out
             </button>
           </div>

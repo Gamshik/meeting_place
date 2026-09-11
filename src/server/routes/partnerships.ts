@@ -2,20 +2,29 @@ import { Hono, type Context } from 'hono'
 
 import {
   invitePartnerSchema,
+  invitationResultSchema,
+  partnershipListSchema,
   partnershipActionSchema,
   type Partnership,
 } from '../../shared/contracts'
-import { databaseErrorMessage, errorResponse } from '../lib/responses'
+import { databaseErrorResponse, domainErrorResponse, errorResponse } from '../lib/responses'
 import type { AppEnvironment } from '../types'
 
 export const partnershipRoutes = new Hono<AppEnvironment>()
 
 partnershipRoutes.get('/', async (context) => {
   const supabase = context.get('supabase')
-  const { data, error } = await supabase.rpc('list_my_partnerships')
+  const parsed = partnershipListSchema.safeParse(context.req.query())
+  if (!parsed.success) return errorResponse(context, 400, 'invalid_cursor', 'Invalid page cursor.')
+  const pageSize = 50
+  const { data, error } = await supabase.rpc('list_my_partnerships', {
+    p_before_created_at: parsed.data.beforeCreatedAt,
+    p_before_id: parsed.data.beforeId,
+    p_limit: pageSize + 1,
+  })
 
   if (error) {
-    console.error('Could not list partnerships', error)
+    console.error('Could not list partnerships', { code: error.code })
     return errorResponse(
       context,
       500,
@@ -24,7 +33,7 @@ partnershipRoutes.get('/', async (context) => {
     )
   }
 
-  const partnerships: Partnership[] = (data ?? []).map((item) => ({
+  const partnerships: Partnership[] = (data ?? []).slice(0, pageSize).map((item) => ({
     id: item.partnership_id,
     status: item.partnership_status === 'active' ? 'active' : 'pending',
     direction: item.invitation_direction === 'incoming' ? 'incoming' : 'outgoing',
@@ -38,7 +47,12 @@ partnershipRoutes.get('/', async (context) => {
     acceptedAt: item.accepted_at,
   }))
 
-  return context.json({ data: partnerships })
+  const last = partnerships.at(-1)
+  return context.json({
+    data: partnerships,
+    nextCursor:
+      (data?.length ?? 0) > pageSize && last ? { createdAt: last.createdAt, id: last.id } : null,
+  })
 })
 
 partnershipRoutes.post('/invitations', async (context) => {
@@ -61,17 +75,13 @@ partnershipRoutes.post('/invitations', async (context) => {
   })
 
   if (error) {
-    const knownError = error.message.split('\n')[0] ?? 'invitation_failed'
-    const status = knownError === 'partnership_already_exists' ? 409 : 400
-    return errorResponse(
-      context,
-      status,
-      knownError,
-      databaseErrorMessage(knownError, 'We could not send the invitation.'),
-    )
+    return databaseErrorResponse(context, error)
   }
-
-  return context.json({ data: { partnershipId: data } }, 201)
+  const result = invitationResultSchema.safeParse(data)
+  if (!result.success)
+    return errorResponse(context, 500, 'invitation_failed', 'We could not send the invitation.')
+  if (!result.data.ok) return domainErrorResponse(context, result.data.code)
+  return context.json({ data: { partnershipId: result.data.partnershipId } }, 201)
 })
 
 partnershipRoutes.post('/:partnershipId/accept', async (context) => {
@@ -97,13 +107,7 @@ partnershipRoutes.delete('/:partnershipId', async (context) => {
   })
 
   if (error) {
-    const code = error.message.split('\n')[0] ?? 'partnership_update_failed'
-    return errorResponse(
-      context,
-      404,
-      code,
-      databaseErrorMessage(code, 'We could not update this partnership.'),
-    )
+    return databaseErrorResponse(context, error)
   }
 
   return context.body(null, 204)
@@ -125,13 +129,7 @@ async function respondToInvitation(context: Context<AppEnvironment>, accept: boo
   })
 
   if (error) {
-    const code = error.message.split('\n')[0] ?? 'invitation_response_failed'
-    return errorResponse(
-      context,
-      404,
-      code,
-      databaseErrorMessage(code, 'We could not respond to this invitation.'),
-    )
+    return databaseErrorResponse(context, error)
   }
 
   return context.json({ data: { accepted: accept } })

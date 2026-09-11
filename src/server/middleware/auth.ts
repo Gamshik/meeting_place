@@ -41,6 +41,15 @@ export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (c
   } = await supabase.auth.getUser(accessToken)
 
   if (error || !user) {
+    if (error && (!error.status || error.status >= 500)) {
+      console.error('Authentication service unavailable', { status: error.status })
+      return errorResponse(
+        context,
+        503,
+        'authentication_unavailable',
+        'Sign-in is temporarily unavailable. Try again shortly.',
+      )
+    }
     return errorResponse(
       context,
       401,

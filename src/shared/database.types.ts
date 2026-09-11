@@ -72,10 +72,10 @@ export type Database = {
       }
       invite_partner: {
         Args: { p_target_username: string }
-        Returns: string
+        Returns: Json
       }
       list_my_partnerships: {
-        Args: Record<PropertyKey, never>
+        Args: { p_before_created_at?: string; p_before_id?: string; p_limit?: number }
         Returns: {
           accepted_at: string | null
           created_at: string

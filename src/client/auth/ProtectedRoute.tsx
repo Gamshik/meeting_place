@@ -14,7 +14,7 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  return <Outlet />
+  return <Outlet key={session.user.id} />
 }
 
 export function FullPageLoader({ label }: { label: string }) {

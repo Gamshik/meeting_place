@@ -1,6 +1,7 @@
 import type { Partnership } from '../../shared/contracts'
 
 type PartnerCardProps = {
+  disabled?: boolean
   actionLabel?: string
   destructiveAction?: boolean
   onAction?: () => void
@@ -10,6 +11,7 @@ type PartnerCardProps = {
 }
 
 export function PartnerCard({
+  disabled = false,
   actionLabel,
   destructiveAction = false,
   onAction,
@@ -48,12 +50,18 @@ export function PartnerCard({
       {actionLabel || secondaryActionLabel ? (
         <div className="flex gap-2">
           {secondaryActionLabel ? (
-            <button className="button button-secondary" type="button" onClick={onSecondaryAction}>
+            <button
+              disabled={disabled}
+              className="button button-secondary"
+              type="button"
+              onClick={onSecondaryAction}
+            >
               {secondaryActionLabel}
             </button>
           ) : null}
           {actionLabel ? (
             <button
+              disabled={disabled}
               className={`button ${destructiveAction ? 'button-danger' : 'button-primary'}`}
               type="button"
               onClick={onAction}

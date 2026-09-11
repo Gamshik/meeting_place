@@ -10,6 +10,10 @@ import type { AppEnvironment } from './types'
 export const app = new Hono<AppEnvironment>()
 
 app.use('/api/*', secureHeaders())
+app.use('/api/*', async (context, next) => {
+  context.header('Cache-Control', 'no-store')
+  await next()
+})
 
 app.get('/api/health', (context) =>
   context.json({
@@ -33,6 +37,6 @@ app.notFound((context) => {
 })
 
 app.onError((error, context) => {
-  console.error('Unhandled API error', error)
+  console.error('Unhandled API error', { name: error.name })
   return errorResponse(context, 500, 'internal_error', 'Something went wrong.')
 })

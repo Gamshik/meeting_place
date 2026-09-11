@@ -16,7 +16,7 @@ meRoutes.get('/', async (context) => {
     .single()
 
   if (error || !data) {
-    console.error('Could not load profile', error)
+    console.error('Could not load profile', { code: error?.code })
     return errorResponse(context, 500, 'profile_load_failed', 'We could not load your profile.')
   }
 

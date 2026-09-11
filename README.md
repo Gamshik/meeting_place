@@ -9,6 +9,8 @@ This repository contains the first vertical slice:
 - automatic user profiles with editable display names and usernames
 - invitations by exact username, without exposing a searchable user directory
 - accepting, declining, cancelling, and ending partnerships
+- invitation attempt limits and a cooldown after a relationship closes
+- paginated partner lists and accessible feedback while changes are saved
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
 
@@ -127,9 +129,14 @@ These steps intentionally require you to use your own accounts and credentials.
 
 6. Put the project URL and publishable key in `.env.local` and `.dev.vars` as described above.
 
-The migration in `supabase/migrations` creates the complete initial schema, triggers, database
+The migrations in `supabase/migrations` create the schema, triggers, database
 functions, permissions, and Row Level Security policies. Do not reproduce it manually in the SQL
 editor.
+
+The hardening migration changes the invitation RPC result and partnership pagination arguments.
+Apply it with a coordinated deployment of the current Worker and frontend; do not run an older
+application version against the updated RPC contracts. Always apply new migrations rather than
+editing previously deployed ones.
 
 ## Configure Google sign-in
 
@@ -212,20 +219,22 @@ returns to Supabase's `/auth/v1/callback`, and Supabase returns to this applicat
 
 ## Commands
 
-| Command                  | Purpose                                      |
-| ------------------------ | -------------------------------------------- |
-| `npm run dev`            | Run React and the Worker locally             |
-| `npm run build`          | Type-check and create a production bundle    |
-| `npm run lint`           | Run ESLint                                   |
-| `npm run typecheck`      | Check TypeScript                             |
-| `npm test`               | Run unit tests once                          |
-| `npm run format`         | Format source files                          |
-| `npm run format:check`   | Check formatting without changing files      |
-| `npm run check`          | Run all repository checks                    |
-| `npm run deploy`         | Build and deploy to Cloudflare Workers       |
-| `npm run supabase:start` | Start local Supabase using Docker            |
-| `npm run db:reset`       | Rebuild the local database from migrations   |
-| `npm run db:push`        | Apply local migrations to the linked project |
+| Command                       | Purpose                                      |
+| ----------------------------- | -------------------------------------------- |
+| `npm run dev`                 | Run React and the Worker locally             |
+| `npm run build`               | Type-check and create a production bundle    |
+| `npm run lint`                | Run ESLint                                   |
+| `npm run typecheck`           | Check TypeScript                             |
+| `npm test`                    | Run unit tests once                          |
+| `npm run test:e2e`            | Run browser regression tests                 |
+| `npm run test:db:concurrency` | Test concurrent requests on local Supabase   |
+| `npm run format`              | Format source files                          |
+| `npm run format:check`        | Check formatting without changing files      |
+| `npm run check`               | Run all repository checks                    |
+| `npm run deploy`              | Build and deploy to Cloudflare Workers       |
+| `npm run supabase:start`      | Start local Supabase using Docker            |
+| `npm run db:reset`            | Rebuild the local database from migrations   |
+| `npm run db:push`             | Apply local migrations to the linked project |
 
 ## Security notes
 
@@ -235,6 +244,35 @@ returns to Supabase's `/auth/v1/callback`, and Supabase returns to this applicat
   lookup; authenticated users cannot enumerate every profile.
 - Partnership changes are performed by database functions with participant checks.
 - Keep production environment values in the platform dashboards, not committed files.
+- Every account can make ten invitation attempts in a rolling hour, including invalid usernames,
+  failed lookups, and duplicate invitations. A pair must wait seven days after a decline,
+  cancellation, or ended partnership before another invitation. Database locks and a private,
+  bounded attempt ledger enforce these rules for direct Supabase RPC calls as well as Worker calls.
+- Production builds generate `dist/client/_headers` with a Content Security Policy restricted to
+  the configured Supabase origin for connections, plus framing, content-type, referrer, and
+  permissions protections. Rebuild after changing the Supabase URL. Local Vite development does
+  not apply these production headers. Avatar images may load over HTTPS.
+- Worker observability is enabled. Application error logs contain infrastructure codes rather than
+  database error text or request bodies. API responses are marked `Cache-Control: no-store`.
+
+## Testing
+
+`npm run check` runs formatting, lint, type checking, unit/API tests, embedded PostgreSQL migration
+tests, and a production build. Embedded tests execute both application migrations with minimal
+Supabase identity fixtures; the pgcrypto UUID alias uses PostgreSQL's built-in UUID function.
+They check RLS, privileges, lifecycle rules, lookup limits, cooldowns, username collisions, and
+pagination. They do not replace validation against the full Supabase services.
+
+Install Chromium once with `npx playwright install chromium`, then run `npm run test:e2e`.
+Browser tests build and serve the production application with isolated fake sessions and intercepted
+API responses. They check the interface and static security headers, not Google's live OAuth service.
+The test server uses port 5174 and test-only Supabase values. Rebuild with your normal environment
+values before deployment; the browser test build uses a deliberately fictitious Supabase project.
+
+With Docker running, use `npm run supabase:start`, `npm run db:reset`, and
+`npm run test:db:concurrency`. The last command only connects to local Supabase on port 54322,
+creates disposable accounts, tests racing requests, and removes its fixtures. CI runs these
+checks in a separate database job, and runs browser tests in the main verification job.
 
 ## Current scope
 

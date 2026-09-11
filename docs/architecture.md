@@ -50,6 +50,28 @@ consistency boundary:
   pending invitation.
 - `list_my_partnerships` returns only relationships containing the authenticated user.
 
+Invitation attempts are limited to ten per account in a rolling hour, stored as at most ten
+timestamps in `private.invitation_limits`. That schema is not exposed to clients, and the table
+has RLS enabled with no client grants. The invitation function locks the account's ledger row,
+counts all attempts before looking up a username, and returns expected failures as JSON values
+instead of exceptions so rejected attempts commit their counters. Unexpected failures still
+abort the transaction. Direct authenticated RPC calls have the same restrictions as the Worker.
+
+Invitation creation and lifecycle mutations share an advisory transaction lock for the unordered
+pair. This serializes competing invites and prevents an invitation from racing an end/decline to
+bypass the seven-day cooldown. The unique index remains the final open-pair constraint.
+Profile creation retries a username collision with a new random suffix.
+
+Lists use a `(created_at, id)` cursor ordered descending, with 50 visible items per Worker page
+and a database maximum of 100 rows per call. The Worker fetches one extra row to determine whether
+there is a next page. The client appends pages and discards stale refresh responses. Dashboard
+mutations are serialized while controls show pending states.
+
+Expected domain errors are explicitly mapped to stable HTTP errors. Unexpected database errors
+produce generic 500 responses and sanitized diagnostic logs. Auth service outages return 503.
+Static assets receive production security headers generated during the frontend build; API
+middleware separately protects API responses and disables their caching.
+
 These operations are database functions because they cross privacy boundaries or must remain
 atomic. Ordinary self-profile updates use standard row operations under RLS.
 

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 
-import type { Partnership, Profile } from '../../shared/contracts'
+import type { Partnership, PartnershipCursor, Profile } from '../../shared/contracts'
 import { useAuth } from '../auth/AuthContext'
 import { AppShell } from '../components/AppShell'
 import { PartnerCard } from '../components/PartnerCard'
@@ -13,7 +13,13 @@ export function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const [isBusy, setIsBusy] = useState(false)
+  const busy = useRef(false)
+  const generation = useRef(0)
+  const [nextCursor, setNextCursor] = useState<PartnershipCursor | null>(null)
+
   const loadDashboard = useCallback(async () => {
+    const request = ++generation.current
     setError(null)
 
     try {
@@ -21,17 +27,28 @@ export function DashboardPage() {
         api.getProfile(),
         api.getPartnerships(),
       ])
+      if (request !== generation.current) return false
+      setNextCursor(partnershipsResponse.nextCursor)
       setProfile(profileResponse.data)
       setPartnerships(partnershipsResponse.data)
+      return true
     } catch (loadError) {
-      setError(messageFromError(loadError))
+      if (request === generation.current) setError(messageFromError(loadError))
+      return false
     } finally {
-      setIsLoading(false)
+      if (request === generation.current) setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    void Promise.resolve().then(loadDashboard)
+    let active = true
+    void Promise.resolve().then(() => {
+      if (active) return loadDashboard()
+    })
+    return () => {
+      active = false
+      generation.current += 1
+    }
   }, [loadDashboard])
 
   const groups = useMemo(
@@ -78,21 +95,47 @@ export function DashboardPage() {
     )
   }
 
-  async function runPartnershipAction(action: () => Promise<unknown>) {
+  async function runOperation(action: () => Promise<void>) {
+    if (busy.current) return false
+    busy.current = true
+    setIsBusy(true)
     setError(null)
-
     try {
       await action()
-      await loadDashboard()
       return true
     } catch (actionError) {
       setError(messageFromError(actionError))
       return false
+    } finally {
+      busy.current = false
+      setIsBusy(false)
     }
   }
 
+  async function runPartnershipAction(action: () => Promise<unknown>) {
+    return runOperation(async () => {
+      await action()
+      await loadDashboard()
+    })
+  }
+
+  async function loadMore() {
+    if (!nextCursor) return
+    const cursor = nextCursor
+    const request = generation.current
+    await runOperation(async () => {
+      const response = await api.getPartnerships(cursor)
+      if (request !== generation.current) return
+      setPartnerships((current) => {
+        const ids = new Set(current.map((item) => item.id))
+        return [...current, ...response.data.filter((item) => !ids.has(item.id))]
+      })
+      setNextCursor(response.nextCursor)
+    })
+  }
+
   return (
-    <AppShell profile={profile} onSignOut={() => void signOut()}>
+    <AppShell profile={profile} isBusy={isBusy} onSignOut={() => void runOperation(signOut)}>
       <section className="mb-10 grid gap-6 lg:grid-cols-[1fr_0.75fr] lg:items-end">
         <div>
           <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
@@ -109,7 +152,10 @@ export function DashboardPage() {
       </section>
 
       {error ? (
-        <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
           {error}
         </div>
       ) : null}
@@ -117,9 +163,20 @@ export function DashboardPage() {
       <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr]">
         <div className="space-y-6">
           <InvitePartnerForm
+            disabled={isBusy}
             onInvite={(username) => runPartnershipAction(() => api.invitePartner({ username }))}
           />
-          <ProfileCard profile={profile} onProfileUpdated={setProfile} />
+          <ProfileCard
+            profile={profile}
+            disabled={isBusy}
+            onSave={(input) =>
+              runOperation(async () => {
+                generation.current += 1
+                const response = await api.updateProfile(input)
+                setProfile(response.data)
+              })
+            }
+          />
         </div>
 
         <div className="space-y-8">
@@ -128,6 +185,7 @@ export function DashboardPage() {
               {groups.incoming.map((partnership) => (
                 <PartnerCard
                   key={partnership.id}
+                  disabled={isBusy}
                   partnership={partnership}
                   actionLabel="Accept"
                   secondaryActionLabel="Decline"
@@ -147,6 +205,7 @@ export function DashboardPage() {
               groups.active.map((partnership) => (
                 <PartnerCard
                   key={partnership.id}
+                  disabled={isBusy}
                   partnership={partnership}
                   actionLabel="End partnership"
                   destructiveAction
@@ -156,7 +215,7 @@ export function DashboardPage() {
                 />
               ))
             ) : (
-              <EmptyState />
+              <EmptyState hasMore={nextCursor !== null} />
             )}
           </PartnerSection>
 
@@ -165,6 +224,7 @@ export function DashboardPage() {
               {groups.outgoing.map((partnership) => (
                 <PartnerCard
                   key={partnership.id}
+                  disabled={isBusy}
                   partnership={partnership}
                   actionLabel="Cancel"
                   destructiveAction
@@ -175,19 +235,41 @@ export function DashboardPage() {
               ))}
             </PartnerSection>
           ) : null}
+          {nextCursor ? (
+            <button
+              type="button"
+              className="button button-secondary"
+              disabled={isBusy}
+              onClick={() => void loadMore()}
+            >
+              Load more partners and invitations
+            </button>
+          ) : null}
+          {isBusy ? (
+            <p role="status" className="text-sm text-stone-600">
+              Updating your meeting place…
+            </p>
+          ) : null}
         </div>
       </div>
     </AppShell>
   )
 }
 
-function InvitePartnerForm({ onInvite }: { onInvite: (username: string) => Promise<boolean> }) {
+function InvitePartnerForm({
+  onInvite,
+  disabled,
+}: {
+  disabled: boolean
+  onInvite: (username: string) => Promise<boolean>
+}) {
   const [username, setUsername] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (isSubmitting || disabled) return
     setIsSubmitting(true)
     setSent(false)
 
@@ -214,6 +296,7 @@ function InvitePartnerForm({ onInvite }: { onInvite: (username: string) => Promi
         <span className="self-center pl-3 text-stone-400">@</span>
         <input
           id="partner-username"
+          disabled={isSubmitting || disabled}
           className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-stone-900 outline-none"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
@@ -223,37 +306,40 @@ function InvitePartnerForm({ onInvite }: { onInvite: (username: string) => Promi
           pattern="[A-Za-z0-9_]+"
           required
         />
-        <button className="button button-accent" type="submit" disabled={isSubmitting}>
+        <button className="button button-accent" type="submit" disabled={isSubmitting || disabled}>
           {isSubmitting ? 'Sending…' : 'Invite'}
         </button>
       </div>
-      {sent ? <p className="mt-3 text-sm text-emerald-200">Invitation sent.</p> : null}
+      {sent ? (
+        <p role="status" className="mt-3 text-sm text-emerald-200">
+          Invitation sent.
+        </p>
+      ) : null}
     </form>
   )
 }
 
 function ProfileCard({
-  onProfileUpdated,
+  onSave,
   profile,
+  disabled,
 }: {
-  onProfileUpdated: (profile: Profile) => void
+  onSave: (input: { username: string; displayName: string }) => Promise<boolean>
   profile: Profile
+  disabled: boolean
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [username, setUsername] = useState(profile.username)
   const [displayName, setDisplayName] = useState(profile.displayName)
-  const [error, setError] = useState<string | null>(null)
+  const [saved, setSaved] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError(null)
-
-    try {
-      const response = await api.updateProfile({ username, displayName })
-      onProfileUpdated(response.data)
+    if (disabled) return
+    setSaved(false)
+    if (await onSave({ username, displayName })) {
       setIsEditing(false)
-    } catch (updateError) {
-      setError(messageFromError(updateError))
+      setSaved(true)
     }
   }
 
@@ -267,18 +353,30 @@ function ProfileCard({
         <button
           className="text-sm font-medium text-emerald-800 hover:text-emerald-950"
           type="button"
-          onClick={() => setIsEditing((value) => !value)}
+          disabled={disabled}
+          onClick={() => {
+            setUsername(profile.username)
+            setDisplayName(profile.displayName)
+            setSaved(false)
+            setIsEditing((value) => !value)
+          }}
         >
           {isEditing ? 'Cancel' : 'Edit'}
         </button>
       </div>
 
+      {saved ? (
+        <p role="status" className="mt-3 text-sm text-emerald-800">
+          Profile saved.
+        </p>
+      ) : null}
       {isEditing ? (
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <label className="block text-sm font-medium">
             Display name
             <input
               className="input mt-1.5"
+              disabled={disabled}
               value={displayName}
               onChange={(event) => setDisplayName(event.target.value)}
               maxLength={80}
@@ -289,6 +387,7 @@ function ProfileCard({
             Username
             <input
               className="input mt-1.5"
+              disabled={disabled}
               value={username}
               onChange={(event) => setUsername(event.target.value)}
               minLength={3}
@@ -297,8 +396,11 @@ function ProfileCard({
               required
             />
           </label>
-          {error ? <p className="text-sm text-red-700">{error}</p> : null}
-          <button className="button button-primary w-full justify-center" type="submit">
+          <button
+            className="button button-primary w-full justify-center"
+            type="submit"
+            disabled={disabled}
+          >
             Save profile
           </button>
         </form>
@@ -334,11 +436,17 @@ function PartnerSection({
   )
 }
 
-function EmptyState() {
+function EmptyState({ hasMore }: { hasMore: boolean }) {
   return (
     <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 px-6 py-10 text-center">
-      <p className="font-medium text-stone-700">No active partners yet</p>
-      <p className="mt-2 text-sm text-stone-500">Invite someone using the form on the left.</p>
+      <p className="font-medium text-stone-700">
+        {hasMore ? 'No active partners loaded yet' : 'No active partners yet'}
+      </p>
+      <p className="mt-2 text-sm text-stone-500">
+        {hasMore
+          ? 'Load more to see older partners and invitations.'
+          : 'Invite someone using the invitation form.'}
+      </p>
     </div>
   )
 }

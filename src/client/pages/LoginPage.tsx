@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { FullPageLoader } from '../auth/ProtectedRoute'
 
 export function LoginPage() {
-  const { isLoading, session, signInWithGoogle } = useAuth()
+  const { isLoading, session, signInWithGoogle, error: authError } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(false)
 
@@ -70,7 +70,11 @@ export function LoginPage() {
             {isSigningIn ? 'Opening Google…' : 'Continue with Google'}
           </button>
 
-          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+          {error || authError ? (
+            <p role="alert" className="mt-4 text-sm text-red-700">
+              {error ?? authError}
+            </p>
+          ) : null}
 
           <p className="mt-7 text-center text-xs leading-5 text-stone-500">
             By continuing, you create an account if you do not already have one.

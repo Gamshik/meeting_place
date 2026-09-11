@@ -1,11 +1,12 @@
 import type {
-  ApiErrorBody,
   InvitePartnerInput,
-  Partnership,
+  PartnershipCursor,
+  PartnershipPage,
   Profile,
   UpdateProfileInput,
 } from '../../shared/contracts'
 import { supabase } from './supabase'
+import { apiErrorBodySchema } from '../../shared/contracts'
 
 export class ApiError extends Error {
   constructor(
@@ -40,12 +41,13 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, { ...init, headers })
 
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as ApiErrorBody | null
+    const parsed = apiErrorBodySchema.safeParse(await response.json().catch(() => null))
+    const error = parsed.success ? parsed.data.error : undefined
     throw new ApiError(
-      body?.error.message ?? 'Something went wrong.',
-      body?.error.code ?? 'request_failed',
+      error?.message ?? 'Something went wrong.',
+      error?.code ?? 'request_failed',
       response.status,
-      body?.error.details,
+      error?.details,
     )
   }
 
@@ -63,7 +65,12 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  getPartnerships: () => apiRequest<DataResponse<Partnership[]>>('/api/partnerships'),
+  getPartnerships: (cursor?: PartnershipCursor) => {
+    const query = cursor
+      ? `?${new URLSearchParams({ beforeCreatedAt: cursor.createdAt, beforeId: cursor.id })}`
+      : ''
+    return apiRequest<PartnershipPage>(`/api/partnerships${query}`)
+  },
   invitePartner: (input: InvitePartnerInput) =>
     apiRequest<DataResponse<{ partnershipId: string }>>('/api/partnerships/invitations', {
       method: 'POST',
