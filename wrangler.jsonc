@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "meeting-place",
   "main": "src/server/index.ts",
+  "keep_vars": true,
   "compatibility_date": "2026-09-10",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {

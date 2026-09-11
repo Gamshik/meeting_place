@@ -188,6 +188,11 @@ npx wrangler secret put SUPABASE_ANON_KEY
 Enter each value when prompted. Despite the command name, these are deliberately the project URL
 and publishable/anon key—not the service-role key.
 
+If you configure these through Cloudflare's dashboard instead, add them under the Worker's
+**Settings → Variables & Secrets** section. This runtime section is different from **Settings →
+Build → Build Variables and Secrets**. The repository sets `keep_vars` so dashboard-managed runtime
+variables are preserved by later Wrangler deployments.
+
 Deploy once more so the code and configuration are active together:
 
 ```sh
