@@ -1,0 +1,3 @@
+# Runtime values used by the local Hono Worker.
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your-supabase-publishable-or-anon-key
