@@ -40,4 +40,32 @@ describe('API error handling', () => {
       details: { field: 'username' },
     })
   })
+
+  it('lets the browser set the multipart boundary for audio uploads', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        data: {
+          id: '44444444-4444-4444-8444-444444444444',
+          partnershipId: '33333333-3333-4333-8333-333333333333',
+          currentPlayerId: '11111111-1111-4111-8111-111111111111',
+          partner: {
+            id: '22222222-2222-4222-8222-222222222222',
+            username: 'bob',
+            displayName: 'Bob',
+            avatarUrl: null,
+          },
+          scores: { you: 0, partner: 0 },
+          round: null,
+        },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await api.submitWordExplanation(
+      '33333333-3333-4333-8333-333333333333',
+      '55555555-5555-4555-8555-555555555555',
+      new Blob(['audio'], { type: 'audio/wav' }),
+    )
+    const headers = new Headers((fetchMock.mock.calls[0]![1] as RequestInit).headers)
+    expect(headers.has('Content-Type')).toBe(false)
+  })
 })

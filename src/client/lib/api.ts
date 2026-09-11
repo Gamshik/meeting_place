@@ -4,6 +4,8 @@ import type {
   PartnershipPage,
   Profile,
   UpdateProfileInput,
+  WordGame,
+  WordGameSummary,
 } from '../../shared/contracts'
 import { supabase } from './supabase'
 import { apiErrorBodySchema } from '../../shared/contracts'
@@ -34,7 +36,7 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers)
   headers.set('Authorization', `Bearer ${session.access_token}`)
 
-  if (init?.body) {
+  if (init?.body && !(init.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -86,4 +88,65 @@ export const api = {
     }),
   endPartnership: (partnershipId: string) =>
     apiRequest<void>(`/api/partnerships/${partnershipId}`, { method: 'DELETE' }),
+  getWordGame: (partnershipId: string) =>
+    apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}`),
+  getWordGames: () => apiRequest<DataResponse<WordGameSummary[]>>('/api/games/explain-word'),
+  startWordGame: (partnershipId: string) =>
+    apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}`, {
+      method: 'POST',
+    }),
+  acceptWordGame: (partnershipId: string) =>
+    apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}/accept`, {
+      method: 'POST',
+    }),
+  heartbeatWordGame: (partnershipId: string) =>
+    apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}/presence`, {
+      method: 'POST',
+    }),
+  leaveWordGame: (partnershipId: string) =>
+    apiRequest<void>(`/api/games/explain-word/${partnershipId}/presence`, {
+      method: 'DELETE',
+      keepalive: true,
+    }),
+  endWordGame: (partnershipId: string) =>
+    apiRequest<void>(`/api/games/explain-word/${partnershipId}/end`, { method: 'POST' }),
+  declineWordGame: (partnershipId: string) =>
+    apiRequest<void>(`/api/games/explain-word/${partnershipId}/decline`, { method: 'POST' }),
+  cancelWordGame: (partnershipId: string) =>
+    apiRequest<void>(`/api/games/explain-word/${partnershipId}`, { method: 'DELETE' }),
+  createWordRound: (partnershipId: string, topic: string) =>
+    apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}/rounds`, {
+      method: 'POST',
+      body: JSON.stringify({ topic }),
+    }),
+  submitWordExplanation: (partnershipId: string, roundId: string, audio: Blob) => {
+    const form = new FormData()
+    form.set('audio', audio, `explanation.${audioExtension(audio.type)}`)
+    return apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
+      { method: 'POST', body: form },
+    )
+  },
+  guessWord: (partnershipId: string, roundId: string, guess: string) =>
+    apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/guess`,
+      { method: 'POST', body: JSON.stringify({ guess }) },
+    ),
+  getWordRoundAudio: (partnershipId: string, roundId: string) =>
+    apiRequest<DataResponse<{ url: string }>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/audio`,
+    ),
+  skipWordRound: (partnershipId: string, roundId: string) =>
+    apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/skip`,
+      { method: 'POST' },
+    ),
+}
+
+function audioExtension(mimeType: string) {
+  if (mimeType.includes('mp4')) return 'm4a'
+  if (mimeType.includes('mpeg')) return 'mp3'
+  if (mimeType.includes('wav')) return 'wav'
+  if (mimeType.includes('ogg')) return 'ogg'
+  return 'webm'
 }
