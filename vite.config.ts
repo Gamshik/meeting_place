@@ -18,7 +18,9 @@ export default defineConfig(({ mode }) => {
             throw new Error('Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY before building.')
           }
           const authOrigin = new URL(env.VITE_SUPABASE_URL).origin
-          const csp = `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; connect-src 'self' ${authOrigin}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`
+          const realtimeUrl = new URL(authOrigin)
+          realtimeUrl.protocol = realtimeUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+          const csp = `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https:; connect-src 'self' ${authOrigin} ${realtimeUrl.origin}; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`
           this.emitFile({
             type: 'asset',
             fileName: '_headers',

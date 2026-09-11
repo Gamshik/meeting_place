@@ -9,6 +9,7 @@ This repository contains the first vertical slice:
 - automatic user profiles with editable display names and usernames
 - invitations by exact username, without exposing a searchable user directory
 - accepting, declining, cancelling, and ending partnerships
+- real-time invitation and partnership updates across signed-in browsers
 - invitation attempt limits and a cooldown after a relationship closes
 - paginated partner lists and accessible feedback while changes are saved
 - a React interface and Hono API deployed together on Cloudflare Workers
@@ -26,19 +27,22 @@ This repository contains the first vertical slice:
 ```text
 Browser
   ├─ React UI
-  ├─ Supabase Auth (Google OAuth and session refresh)
+  ├─ Supabase Auth and participant-authorized Realtime events
   └─ authenticated /api requests
           ↓
 Cloudflare Worker / Hono
           ↓ user JWT, never a service-role key
 Supabase Postgres
   ├─ row-level security
-  └─ atomic partnership functions
+  ├─ atomic partnership functions
+  └─ partnership change publication
 ```
 
 The frontend and API share request types and validation rules in `src/shared`. The Worker validates
 the Supabase access token and forwards that user's identity to PostgreSQL. Business invariants are
 also enforced in the database, so bypassing the UI cannot create invalid partnerships.
+Supabase Realtime tells an authorized browser when one of its partnership rows changes; the browser
+then reloads the canonical partnership view through the Worker API.
 
 See [docs/architecture.md](docs/architecture.md) for the boundaries and design decisions.
 

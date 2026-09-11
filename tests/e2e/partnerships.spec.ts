@@ -134,12 +134,90 @@ test('loads the next page without replacing existing partners', async ({ page })
   ).toHaveCount(0)
 })
 
+test('refreshes invitations when Realtime reports a partnership change', async ({ page }) => {
+  await signIn(page)
+  let data: Partnership[] = []
+  let partnershipReads = 0
+  let sendPartnershipChange: (() => void) | undefined
+
+  await page.routeWebSocket('wss://browser-test.supabase.co/realtime/v1/**', (socket) => {
+    let channelTopic = ''
+
+    socket.onMessage((message) => {
+      const [joinReference, reference, topic, event, payload] = JSON.parse(message.toString())
+
+      if (event === 'phx_join') {
+        channelTopic = topic
+        const postgresChanges = payload.config.postgres_changes.map(
+          (filter: Record<string, unknown>, index: number) => ({ ...filter, id: index + 1 }),
+        )
+        socket.send(
+          JSON.stringify([
+            joinReference,
+            reference,
+            topic,
+            'phx_reply',
+            { status: 'ok', response: { postgres_changes: postgresChanges } },
+          ]),
+        )
+      } else if (event === 'heartbeat') {
+        socket.send(
+          JSON.stringify([
+            joinReference,
+            reference,
+            topic,
+            'phx_reply',
+            { status: 'ok', response: {} },
+          ]),
+        )
+      }
+    })
+
+    sendPartnershipChange = () => {
+      socket.send(
+        JSON.stringify([
+          null,
+          null,
+          channelTopic,
+          'postgres_changes',
+          {
+            ids: [1],
+            data: {
+              columns: [],
+              commit_timestamp: '2026-01-01T00:00:00Z',
+              errors: null,
+              old_record: {},
+              record: {},
+              schema: 'public',
+              table: 'partnerships',
+              type: 'INSERT',
+            },
+          },
+        ]),
+      )
+    }
+  })
+  await page.route('**/api/partnerships**', (route) => {
+    partnershipReads++
+    return route.fulfill({ json: { data, nextCursor: null } })
+  })
+
+  await page.goto('/')
+  await expect.poll(() => partnershipReads).toBeGreaterThanOrEqual(2)
+
+  data = [relationship('incoming')]
+  sendPartnershipChange!()
+
+  await expect(page.getByRole('heading', { name: 'Invitations for you' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
+})
+
 test('serves production security headers on a browser route', async ({ page }) => {
   const response = await page.goto('/login')
   const headers = response!.headers()
   expect(headers['content-security-policy']).toContain("frame-ancestors 'none'")
   expect(headers['content-security-policy']).toContain(
-    "connect-src 'self' https://browser-test.supabase.co;",
+    "connect-src 'self' https://browser-test.supabase.co wss://browser-test.supabase.co;",
   )
   expect(headers['x-content-type-options']).toBe('nosniff')
   expect(headers['x-frame-options']).toBe('DENY')

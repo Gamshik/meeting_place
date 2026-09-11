@@ -5,9 +5,10 @@ import { useAuth } from '../auth/AuthContext'
 import { AppShell } from '../components/AppShell'
 import { PartnerCard } from '../components/PartnerCard'
 import { api, ApiError } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 export function DashboardPage() {
-  const { signOut } = useAuth()
+  const { session, signOut } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [partnerships, setPartnerships] = useState<Partnership[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -16,10 +17,12 @@ export function DashboardPage() {
   const [isBusy, setIsBusy] = useState(false)
   const busy = useRef(false)
   const generation = useRef(0)
+  const partnershipGeneration = useRef(0)
   const [nextCursor, setNextCursor] = useState<PartnershipCursor | null>(null)
 
   const loadDashboard = useCallback(async () => {
     const request = ++generation.current
+    const partnershipRequest = ++partnershipGeneration.current
     setError(null)
 
     try {
@@ -28,15 +31,32 @@ export function DashboardPage() {
         api.getPartnerships(),
       ])
       if (request !== generation.current) return false
-      setNextCursor(partnershipsResponse.nextCursor)
       setProfile(profileResponse.data)
-      setPartnerships(partnershipsResponse.data)
+      if (partnershipRequest === partnershipGeneration.current) {
+        setNextCursor(partnershipsResponse.nextCursor)
+        setPartnerships(partnershipsResponse.data)
+      }
       return true
     } catch (loadError) {
       if (request === generation.current) setError(messageFromError(loadError))
       return false
     } finally {
       if (request === generation.current) setIsLoading(false)
+    }
+  }, [])
+
+  const refreshPartnerships = useCallback(async () => {
+    const request = ++partnershipGeneration.current
+
+    try {
+      const response = await api.getPartnerships()
+      if (request !== partnershipGeneration.current) return false
+      setNextCursor(response.nextCursor)
+      setPartnerships(response.data)
+      return true
+    } catch (loadError) {
+      if (request === partnershipGeneration.current) setError(messageFromError(loadError))
+      return false
     }
   }, [])
 
@@ -48,8 +68,43 @@ export function DashboardPage() {
     return () => {
       active = false
       generation.current += 1
+      partnershipGeneration.current += 1
     }
   }, [loadDashboard])
+
+  const userId = session?.user.id
+  const dashboardReady = profile !== null
+
+  useEffect(() => {
+    if (!dashboardReady || !userId) return
+
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer)
+      refreshTimer = setTimeout(() => void refreshPartnerships(), 150)
+    }
+    const channel = supabase
+      .channel(`partnerships:${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'partnerships' },
+        scheduleRefresh,
+      )
+      .subscribe((status, subscriptionError) => {
+        if (status === 'SUBSCRIBED') scheduleRefresh()
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Partnership realtime subscription failed', {
+            error: subscriptionError,
+            status,
+          })
+        }
+      })
+
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer)
+      void supabase.removeChannel(channel)
+    }
+  }, [dashboardReady, refreshPartnerships, userId])
 
   const groups = useMemo(
     () => ({
@@ -115,17 +170,17 @@ export function DashboardPage() {
   async function runPartnershipAction(action: () => Promise<unknown>) {
     return runOperation(async () => {
       await action()
-      await loadDashboard()
+      await refreshPartnerships()
     })
   }
 
   async function loadMore() {
     if (!nextCursor) return
     const cursor = nextCursor
-    const request = generation.current
+    const request = partnershipGeneration.current
     await runOperation(async () => {
       const response = await api.getPartnerships(cursor)
-      if (request !== generation.current) return
+      if (request !== partnershipGeneration.current) return
       setPartnerships((current) => {
         const ids = new Set(current.map((item) => item.id))
         return [...current, ...response.data.filter((item) => !ids.has(item.id))]

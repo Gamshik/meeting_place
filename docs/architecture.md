@@ -23,7 +23,10 @@ relationship from being created for the same unordered pair.
 ### React client
 
 The client owns rendering, navigation, Supabase's OAuth browser flow, and local interaction state.
-It never contains privileged credentials and does not mutate product data directly.
+It never contains privileged credentials and does not mutate product data directly. An authenticated
+Realtime subscription listens for changes to participant-visible partnership rows. Events are
+treated as invalidation signals: the client debounces them and reloads the canonical partnership
+view through the Hono API rather than constructing joined partner data from an event payload.
 
 ### Hono API
 
@@ -71,6 +74,12 @@ Expected domain errors are explicitly mapped to stable HTTP errors. Unexpected d
 produce generic 500 responses and sanitized diagnostic logs. Auth service outages return 503.
 Static assets receive production security headers generated during the frontend build; API
 middleware separately protects API responses and disables their caching.
+
+`public.partnerships` belongs to the Supabase Realtime publication. Postgres Changes applies the
+table's participant-only `select` policy before delivering an insert or update over WebSockets, so
+unrelated accounts cannot observe relationship activity. The client reloads after the channel first
+subscribes to close the race between its initial HTTP request and WebSocket connection. It also
+reloads after its own mutations, so a temporary Realtime outage does not delay local confirmation.
 
 These operations are database functions because they cross privacy boundaries or must remain
 atomic. Ordinary self-profile updates use standard row operations under RLS.
