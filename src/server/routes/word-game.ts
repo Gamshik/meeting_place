@@ -13,7 +13,7 @@ import type { Json } from '../../shared/database.types'
 import { errorResponse } from '../lib/responses'
 import {
   coachExplanation,
-  generateGameWord,
+  generateGameWords,
   OpenRouterError,
   transcribeExplanation,
 } from '../lib/openrouter'
@@ -153,21 +153,52 @@ wordGameRoutes.post('/:partnershipId/rounds', async (context) => {
     )
   }
 
-  let card
+  const pooledRound = await createRoundFromPool(supabase, game.id, parsed.data.topic, false)
+  if (pooledRound.error) return gameDatabaseError(context, pooledRound.error)
+  if (pooledRound.data) return gameResponse(context, pooledRound.data, 201)
+
+  const { data: exclusions, error: exclusionsError } = await supabase.rpc(
+    'list_word_game_card_exclusions',
+    {
+      p_game_id: game.id,
+      p_topic: parsed.data.topic,
+      p_limit: 200,
+    },
+  )
+  if (exclusionsError) return gameDatabaseError(context, exclusionsError)
+
+  let generationError: unknown = null
   try {
-    card = await generateGameWord(openRouterConfiguration(context.env), parsed.data.topic)
+    const cards = await generateGameWords(
+      openRouterConfiguration(context.env),
+      parsed.data.topic,
+      exclusions ?? [],
+    )
+    const { error: cacheError } = await supabase.rpc('cache_word_game_cards', {
+      p_game_id: game.id,
+      p_topic: parsed.data.topic,
+      p_source_model: context.env.OPENROUTER_TEXT_MODEL ?? 'unknown',
+      p_cards: cards as Json,
+    })
+    if (cacheError) return gameDatabaseError(context, cacheError)
+
+    const generatedRound = await createRoundFromPool(supabase, game.id, parsed.data.topic, false)
+    if (generatedRound.error) return gameDatabaseError(context, generatedRound.error)
+    if (generatedRound.data) return gameResponse(context, generatedRound.data, 201)
   } catch (error) {
-    return openRouterErrorResponse(context, error)
+    generationError = error
   }
-  const { data, error } = await supabase.rpc('create_word_game_round', {
-    p_game_id: game.id,
-    p_topic: parsed.data.topic,
-    p_secret_word: card.word,
-    p_accepted_answers: card.acceptedAnswers,
-    p_forbidden_words: card.forbiddenWords,
-  })
-  if (error) return gameDatabaseError(context, error)
-  return gameResponse(context, data, 201)
+
+  const fallbackRound = await createRoundFromPool(supabase, game.id, parsed.data.topic, true)
+  if (fallbackRound.error) return gameDatabaseError(context, fallbackRound.error)
+  if (fallbackRound.data) return gameResponse(context, fallbackRound.data, 201)
+  if (generationError) return openRouterErrorResponse(context, generationError)
+  return errorResponse(
+    context,
+    503,
+    'word_pool_empty',
+    'No suitable word is available for this topic yet. Try again shortly.',
+  )
 })
 
 wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (context) => {
@@ -373,6 +404,19 @@ function gameResponse(
 
 function isOpenRound(game: WordGame) {
   return game.round?.status === 'explaining' || game.round?.status === 'awaiting_guess'
+}
+
+function createRoundFromPool(
+  supabase: AppEnvironment['Variables']['supabase'],
+  gameId: string,
+  topic: string,
+  allowSeen: boolean,
+) {
+  return supabase.rpc('create_word_game_round_from_pool', {
+    p_game_id: gameId,
+    p_topic: topic,
+    p_allow_seen: allowSeen,
+  })
 }
 
 function invalidPartnershipResponse(context: Parameters<typeof errorResponse>[0]) {

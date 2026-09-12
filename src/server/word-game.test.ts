@@ -266,6 +266,9 @@ describe('explain-word game API', () => {
   it('creates a generated word without returning provider credentials', async () => {
     mocks.rpc
       .mockResolvedValueOnce({ data: game(), error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: 2, error: null })
       .mockResolvedValueOnce({ data: game({ round: round() }), error: null })
     const providerFetch = vi.fn().mockResolvedValue(
       Response.json({
@@ -273,9 +276,18 @@ describe('explain-word game API', () => {
           {
             message: {
               content: JSON.stringify({
-                word: 'Passport',
-                acceptedAnswers: ['passport', 'passports'],
-                forbiddenWords: ['passport', 'passports'],
+                cards: [
+                  {
+                    word: 'Passport',
+                    acceptedAnswers: ['passport', 'passports'],
+                    forbiddenWords: ['passport', 'passports'],
+                  },
+                  {
+                    word: 'Suitcase',
+                    acceptedAnswers: ['suitcase', 'suitcases'],
+                    forbiddenWords: ['suitcase', 'suitcases'],
+                  },
+                ],
               }),
             },
           },
@@ -289,23 +301,46 @@ describe('explain-word game API', () => {
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round', {
+    expect(mocks.rpc).toHaveBeenCalledWith('cache_word_game_cards', {
+      p_cards: [
+        {
+          word: 'passport',
+          acceptedAnswers: ['passport', 'passports'],
+          forbiddenWords: ['passport', 'passports'],
+        },
+        {
+          word: 'suitcase',
+          acceptedAnswers: ['suitcase', 'suitcases'],
+          forbiddenWords: ['suitcase', 'suitcases'],
+        },
+      ],
+      p_game_id: gameId,
+      p_source_model: 'test/text-model',
+      p_topic: 'Travel',
+    })
+    expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
+      p_allow_seen: false,
       p_game_id: gameId,
       p_topic: 'Travel',
-      p_secret_word: 'passport',
-      p_accepted_answers: ['passport', 'passports'],
-      p_forbidden_words: ['passport', 'passports'],
     })
     const providerRequest = providerFetch.mock.calls[0]!
     expect(providerRequest[0]).toBe('https://openrouter.ai/api/v1/chat/completions')
     expect((providerRequest[1] as RequestInit).headers).toMatchObject({
       Authorization: 'Bearer openrouter-key',
     })
+    expect(JSON.parse((providerRequest[1] as RequestInit).body as string)).toMatchObject({
+      temperature: 0.85,
+      response_format: { json_schema: { name: 'explain_word_batch' } },
+    })
     expect(await response.text()).not.toContain('openrouter-key')
   })
 
   it('reports missing AI configuration before generating a word', async () => {
-    mocks.rpc.mockResolvedValue({ data: game(), error: null })
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game(), error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
     const response = await jsonRequest(
       `/api/games/explain-word/${partnershipId}/rounds`,
       'POST',
@@ -314,6 +349,94 @@ describe('explain-word game API', () => {
     )
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toMatchObject({ error: { code: 'ai_not_configured' } })
+  })
+
+  it('falls back to a stored card when the AI is unavailable', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game(), error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: ['passport'], error: null })
+      .mockResolvedValueOnce({ data: game({ round: round() }), error: null })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds`,
+      'POST',
+      { topic: 'Travel' },
+      { SUPABASE_URL: env.SUPABASE_URL, SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY },
+    )
+
+    expect(response.status).toBe(201)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
+      p_allow_seen: true,
+      p_game_id: gameId,
+      p_topic: 'Travel',
+    })
+  })
+
+  it('uses an unseen pooled card without calling the AI', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: game(), error: null }).mockResolvedValueOnce({
+      data: game({ round: round({ secretWord: 'suitcase' }) }),
+      error: null,
+    })
+    const providerFetch = vi.fn()
+    vi.stubGlobal('fetch', providerFetch)
+
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}/rounds`, 'POST', {
+      topic: 'Travel',
+    })
+
+    expect(response.status).toBe(201)
+    expect(providerFetch).not.toHaveBeenCalled()
+    expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
+      p_allow_seen: false,
+      p_game_id: gameId,
+      p_topic: 'Travel',
+    })
+  })
+
+  it('uses the least-recently-seen card when a generated batch adds no unseen words', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game(), error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: ['passport'], error: null })
+      .mockResolvedValueOnce({ data: 0, error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({
+        data: game({ round: round({ secretWord: 'passport' }) }),
+        error: null,
+      })
+    const providerFetch = vi.fn().mockResolvedValue(
+      Response.json({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                cards: [
+                  {
+                    word: 'Passport',
+                    acceptedAnswers: ['passport', 'passports'],
+                    forbiddenWords: ['passport', 'passports'],
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    )
+    vi.stubGlobal('fetch', providerFetch)
+
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}/rounds`, 'POST', {
+      topic: 'Travel',
+    })
+
+    expect(response.status).toBe(201)
+    expect(providerFetch).toHaveBeenCalledTimes(1)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
+      p_allow_seen: true,
+      p_game_id: gameId,
+      p_topic: 'Travel',
+    })
   })
 
   it('stores and transcribes browser audio before making it available to the partner', async () => {

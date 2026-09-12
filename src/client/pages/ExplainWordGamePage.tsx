@@ -15,11 +15,12 @@ export function ExplainWordGamePage() {
   const { partnershipId = '' } = useParams()
   const navigate = useNavigate()
   const { session } = useAuth()
-  const { sessions } = useCommunity()
+  const { partnerships, sessions } = useCommunity()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [game, setGame] = useState<WordGame | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isBusy, setIsBusy] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [showEndConfirmation, setShowEndConfirmation] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const joinedActiveSession = useRef(false)
@@ -74,6 +75,7 @@ export function ExplainWordGamePage() {
       (item.status === 'active' || item.status === 'paused') &&
       (item.gameId !== 'explain-word' || item.partnershipId !== partnershipId),
   )
+  const partner = partnerships.find((item) => item.id === partnershipId)?.partner
   useEffect(() => {
     if (sessionStatus === 'active' || sessionStatus === 'paused' || sessionStatus === 'finished') {
       return
@@ -173,10 +175,12 @@ export function ExplainWordGamePage() {
         }
       }}
     >
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <header
+        className={`game-page-header ${game && game.status !== 'pending' ? 'is-active' : ''}`}
+      >
+        <div className="game-page-heading">
           <Link
-            className="text-sm font-semibold text-emerald-800 hover:text-emerald-950"
+            className="game-back-link"
             to="/"
             onClick={() => {
               if (game?.status === 'active' || game?.status === 'paused') {
@@ -186,35 +190,57 @@ export function ExplainWordGamePage() {
           >
             ← Games
           </Link>
-          <h1 className="mt-3 font-serif text-4xl font-semibold">Explain the word</h1>
-          <p className="mt-2 text-stone-600">
-            Describe it without saying it. Your friend gets the next turn.
-          </p>
+          <div className="game-title-row">
+            <div>
+              <h1>Explain the word</h1>
+              <p>Describe it without saying it. Then switch roles.</p>
+            </div>
+          </div>
         </div>
-        {game && game.status !== 'pending' ? <Scoreboard game={game} /> : null}
-      </div>
+        <div className="game-header-tools">
+          {game && game.status !== 'pending' ? <Scoreboard game={game} /> : null}
+          <button
+            type="button"
+            className="game-icon-button"
+            aria-label="How to play"
+            title="How to play"
+            onClick={() => setShowRules(true)}
+          >
+            i
+          </button>
+          {game && game.status !== 'pending' && game.status !== 'finished' ? (
+            <button
+              type="button"
+              className="game-end-control"
+              disabled={isBusy}
+              onClick={() => setShowEndConfirmation(true)}
+            >
+              <span aria-hidden="true" />
+              {isBusy ? 'Ending…' : 'End game'}
+            </button>
+          ) : game?.status === 'finished' ? (
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={isBusy}
+              onClick={() => void run(() => api.startWordGame(partnershipId))}
+            >
+              {isBusy ? 'Starting…' : 'New game'}
+            </button>
+          ) : null}
+        </div>
+      </header>
 
       {error ? <Notice error message={error} onClose={() => setError(null)} /> : null}
 
       {!game ? (
-        <section className="game-stage">
-          <h2 className="mt-3 font-serif text-3xl font-semibold">Invite your partner to play</h2>
-          <p className="mt-3 max-w-2xl leading-7 text-emerald-100">
-            Take turns describing a word and guessing. Your friend joins before you begin.
-          </p>
-          <button
-            type="button"
-            className="button button-accent mt-6"
-            disabled={isBusy || hasOtherOngoingGame}
-            onClick={() => void run(() => api.startWordGame(partnershipId))}
-          >
-            {isBusy
-              ? 'Sending…'
-              : hasOtherOngoingGame
-                ? 'Finish your current game first'
-                : 'Send game request'}
-          </button>
-        </section>
+        <GameStartCard
+          currentPlayerName={profile.displayName}
+          partnerName={partner?.displayName}
+          disabled={isBusy}
+          blocked={hasOtherOngoingGame}
+          onStart={() => run(() => api.startWordGame(partnershipId))}
+        />
       ) : game.status === 'pending' ? (
         <GameInvitation
           game={game}
@@ -232,10 +258,9 @@ export function ExplainWordGamePage() {
           partnershipId={partnershipId}
           isBusy={isBusy}
           run={run}
-          onEnd={() => setShowEndConfirmation(true)}
-          onRestart={() => run(() => api.startWordGame(partnershipId))}
         />
       )}
+      {showRules ? <RulesDialog onClose={() => setShowRules(false)} /> : null}
       {showEndConfirmation ? (
         <EndGameDialog
           isBusy={isBusy}
@@ -253,102 +278,65 @@ function GameBoard({
   partnershipId,
   isBusy,
   run,
-  onEnd,
-  onRestart,
 }: {
   game: WordGame
   userId: string
   partnershipId: string
   isBusy: boolean
   run: (action: () => Promise<{ data: WordGame } | void>) => Promise<void>
-  onEnd: () => void
-  onRestart: () => Promise<void>
 }) {
   const round = game.round
   const openRound = round?.status === 'explaining' || round?.status === 'awaiting_guess'
   const sessionLocked = game.status !== 'active'
 
   return (
-    <div>
+    <div className="game-board">
       {sessionLocked ? <SessionStatus game={game} userId={userId} /> : null}
-      <div className="grid gap-6 lg:grid-cols-[1fr_0.42fr]">
-        <div>
-          {!round || !openRound ? (
-            game.currentPlayerId === userId ? (
-              <NewRoundCard
-                disabled={isBusy || sessionLocked}
-                onCreate={(topic) => run(() => api.createWordRound(partnershipId, topic))}
-              />
-            ) : (
-              <WaitingCard
-                name={game.partner.displayName}
-                message="It is their turn to choose a word."
-              />
-            )
-          ) : round.status === 'explaining' ? (
-            round.explainerId === userId ? (
-              <ExplainCard
-                disabled={isBusy || sessionLocked}
-                game={game}
-                onSkip={() => run(() => api.skipWordRound(partnershipId, round.id))}
-                onSubmit={(audio) =>
-                  run(() => api.submitWordExplanation(partnershipId, round.id, audio))
-                }
-              />
-            ) : (
-              <WaitingCard
-                name={game.partner.displayName}
-                message="They are recording an explanation."
-              />
-            )
-          ) : round.explainerId === userId ? (
+      <div className="game-play-area">
+        {!round || !openRound ? (
+          game.currentPlayerId === userId ? (
+            <NewRoundCard
+              disabled={isBusy || sessionLocked}
+              onCreate={(topic) => run(() => api.createWordRound(partnershipId, topic))}
+            />
+          ) : (
             <WaitingCard
               name={game.partner.displayName}
-              message="Your explanation is ready. They can now submit their guess."
+              message="It is their turn to choose the next word."
             />
-          ) : (
-            <GuessCard
+          )
+        ) : round.status === 'explaining' ? (
+          round.explainerId === userId ? (
+            <ExplainCard
               disabled={isBusy || sessionLocked}
-              audioAvailable={round.audioAvailable}
-              partnershipId={partnershipId}
-              roundId={round.id}
-              transcript={round.transcript ?? ''}
-              onGuess={(guess) => run(() => api.guessWord(partnershipId, round.id, guess))}
+              game={game}
+              onSkip={() => run(() => api.skipWordRound(partnershipId, round.id))}
+              onSubmit={(audio) =>
+                run(() => api.submitWordExplanation(partnershipId, round.id, audio))
+              }
             />
-          )}
-        </div>
-
-        <aside className="space-y-4">
-          {round ? <RoundSummary game={game} userId={userId} /> : null}
-          <details className="game-help">
-            <summary>How to play</summary>
-            <ol className="mt-3 space-y-2 text-sm leading-6 text-stone-600">
-              <li>1. Choose a topic and get a private word.</li>
-              <li>2. Record up to one minute without saying the word.</li>
-              <li>3. Your partner reads the transcript and guesses.</li>
-              <li>4. A correct guess earns the explainer one point.</li>
-            </ol>
-          </details>
-          {game.status === 'finished' ? (
-            <button
-              type="button"
-              className="button button-accent w-full"
-              disabled={isBusy}
-              onClick={() => void onRestart()}
-            >
-              {isBusy ? 'Starting…' : 'Start a new game'}
-            </button>
           ) : (
-            <button
-              type="button"
-              className="button button-danger w-full"
-              disabled={isBusy}
-              onClick={onEnd}
-            >
-              {isBusy ? 'Ending…' : 'End game'}
-            </button>
-          )}
-        </aside>
+            <WaitingCard
+              name={game.partner.displayName}
+              message="They are recording an explanation."
+            />
+          )
+        ) : round.explainerId === userId ? (
+          <WaitingCard
+            name={game.partner.displayName}
+            message="Your explanation is ready. They can now submit their guess."
+          />
+        ) : (
+          <GuessCard
+            disabled={isBusy || sessionLocked}
+            audioAvailable={round.audioAvailable}
+            partnershipId={partnershipId}
+            roundId={round.id}
+            transcript={round.transcript ?? ''}
+            onGuess={(guess) => run(() => api.guessWord(partnershipId, round.id, guess))}
+          />
+        )}
+        {round ? <RoundSummary game={game} userId={userId} /> : null}
       </div>
       <section className="rounds-section" aria-labelledby="game-rounds-title">
         <div className="rounds-section-heading">
@@ -363,6 +351,145 @@ function GameBoard({
           partnerId={game.partner.id}
           partnerName={game.partner.displayName}
         />
+      </section>
+    </div>
+  )
+}
+
+function GameStartCard({
+  blocked,
+  currentPlayerName,
+  disabled,
+  onStart,
+  partnerName,
+}: {
+  blocked: boolean
+  currentPlayerName: string
+  disabled: boolean
+  onStart: () => Promise<void>
+  partnerName?: string
+}) {
+  const partnerLabel = partnerName ?? 'your partner'
+  const currentInitial = currentPlayerName.trim().charAt(0).toUpperCase() || 'Y'
+  const partnerInitial = partnerName?.trim().charAt(0).toUpperCase() || '?'
+
+  return (
+    <section className="game-lobby game-lobby-ready">
+      <div className="game-lobby-copy">
+        <p className="game-lobby-eyebrow">
+          <span aria-hidden="true" /> Two-player game
+        </p>
+        <h2>Ready to play with {partnerLabel}?</h2>
+        <p>Send one invitation. The game opens automatically for both of you when they accept.</p>
+        <button
+          type="button"
+          className="button button-accent game-lobby-action"
+          disabled={disabled || blocked}
+          onClick={() => void onStart()}
+        >
+          {disabled ? 'Sending…' : blocked ? 'Finish your current game first' : 'Invite to play'}
+        </button>
+        {blocked ? (
+          <p className="game-lobby-blocked" role="status">
+            You can have only one active game at a time.
+          </p>
+        ) : null}
+      </div>
+      <div className="game-lobby-preview" aria-hidden="true">
+        <div className="game-lobby-players">
+          <span>{currentInitial}</span>
+          <i>
+            <b />
+            <b />
+            <b />
+          </i>
+          <span>{partnerInitial}</span>
+        </div>
+        <strong>You explain first</strong>
+        <p>Then switch roles after every word.</p>
+      </div>
+    </section>
+  )
+}
+
+function RulesDialog({ onClose }: { onClose: () => void }) {
+  const closeButton = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    closeButton.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  return (
+    <div
+      className="game-dialog-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <section
+        className="game-dialog rules-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="game-rules-title"
+        aria-describedby="game-rules-description"
+      >
+        <div className="game-dialog-heading">
+          <h2 id="game-rules-title">How to play</h2>
+          <button
+            ref={closeButton}
+            type="button"
+            className="game-dialog-close"
+            aria-label="Close rules"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        <p id="game-rules-description" className="rules-intro">
+          Take turns explaining and guessing. One clear clue can be enough.
+        </p>
+        <ol className="rules-steps">
+          <li>
+            <span>1</span>
+            <div>
+              <strong>Choose a topic</strong>
+              <p>You receive a private word that your partner cannot see.</p>
+            </div>
+          </li>
+          <li>
+            <span>2</span>
+            <div>
+              <strong>Explain naturally</strong>
+              <p>Record up to one minute without saying the secret word or its forms.</p>
+            </div>
+          </li>
+          <li>
+            <span>3</span>
+            <div>
+              <strong>Your partner guesses</strong>
+              <p>They can listen to the recording and read the transcript.</p>
+            </div>
+          </li>
+          <li>
+            <span>4</span>
+            <div>
+              <strong>Switch roles</strong>
+              <p>A correct guess earns the explainer one point, then the turn changes.</p>
+            </div>
+          </li>
+        </ol>
+        <div className="rules-tip">
+          <span aria-hidden="true">!</span>
+          <p>
+            Using the secret word means no point for that round. AI feedback is private to the
+            explainer and never changes the score.
+          </p>
+        </div>
       </section>
     </div>
   )
@@ -390,7 +517,7 @@ function EndGameDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-emerald-950/60 p-5 backdrop-blur-sm"
+      className="game-dialog-backdrop"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && !isBusy) onCancel()
       }}
@@ -400,17 +527,18 @@ function EndGameDialog({
         aria-modal="true"
         aria-labelledby="end-game-title"
         aria-describedby="end-game-description"
-        className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl"
+        className="game-dialog end-game-dialog"
       >
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-red-700">End game</p>
-        <h2 id="end-game-title" className="mt-2 font-serif text-3xl font-semibold">
-          Finish for both players?
-        </h2>
-        <p id="end-game-description" className="mt-3 leading-7 text-stone-600">
+        <span className="end-game-symbol" aria-hidden="true">
+          ■
+        </span>
+        <p className="end-game-label">End game</p>
+        <h2 id="end-game-title">Finish for both players?</h2>
+        <p id="end-game-description">
           Both players will leave the game immediately. The final score will remain available to
           review, but the game cannot be resumed.
         </p>
-        <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div className="game-dialog-actions">
           <button
             ref={cancelButton}
             type="button"
@@ -459,28 +587,42 @@ function SessionStatus({ game, userId }: { game: WordGame; userId: string }) {
   }
 
   const seconds = game.reconnectDeadline
-    ? Math.max(0, Math.ceil((new Date(game.reconnectDeadline).getTime() - now) / 1000))
+    ? Math.min(
+        300,
+        Math.max(0, Math.ceil((new Date(game.reconnectDeadline).getTime() - now) / 1000)),
+      )
     : 300
   const partnerLeft = game.disconnectedPlayerId === game.partner.id
+  const reconnectingSelf = game.disconnectedPlayerId === userId
   return (
-    <section className="mb-6 rounded-3xl border border-amber-300 bg-amber-50 p-6" role="status">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-800">
-        Game paused
-      </p>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-2xl font-semibold text-stone-900">
-            {partnerLeft ? `Waiting for ${game.partner.displayName}` : 'Reconnecting players…'}
-          </h2>
-          <p className="mt-1 text-stone-600">
-            {game.disconnectedPlayerId === userId
-              ? 'You are reconnecting. The game resumes when both players are online.'
-              : 'Game actions are locked until both players are online.'}
-          </p>
-        </div>
-        <p className="font-mono text-3xl font-semibold tabular-nums text-amber-900">
-          {formatCountdown(seconds)}
+    <section className="session-pause-card" role="status">
+      <div className="session-pause-signal" aria-hidden="true">
+        <span>{partnerLeft ? game.partner.displayName.trim().charAt(0).toUpperCase() : '↻'}</span>
+        <i />
+      </div>
+      <div className="session-pause-copy">
+        <p className="session-pause-eyebrow">
+          <span aria-hidden="true" /> Game paused
         </p>
+        <h2>
+          {partnerLeft
+            ? `Waiting for ${game.partner.displayName}`
+            : reconnectingSelf
+              ? 'Reconnecting you…'
+              : 'Reconnecting players…'}
+        </h2>
+        <p>
+          {reconnectingSelf
+            ? 'Trying to bring you back. Your round and recording are safe.'
+            : 'Your round is safe. Play resumes when both players are back online.'}
+        </p>
+      </div>
+      <div
+        className="session-pause-timer"
+        aria-label={`${formatCountdown(seconds)} remaining to reconnect`}
+      >
+        <span>Reconnect window</span>
+        <strong>{formatCountdown(seconds)}</strong>
       </div>
     </section>
   )
@@ -504,30 +646,47 @@ function GameInvitation({
   userId: string
 }) {
   const isRequester = game.requestedById === userId
+  const partnerInitial = game.partner.displayName.trim().charAt(0).toUpperCase() || '?'
   return (
-    <section className="game-surface secret-surface">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-800">
-        Game request
-      </p>
-      <h2 className="mt-3 font-serif text-3xl font-semibold">
-        {isRequester
-          ? `Waiting for ${game.partner.displayName}`
-          : `${game.partner.displayName} wants to play`}
-      </h2>
-      <p className="mt-3 max-w-2xl leading-7 text-stone-600">
-        {isRequester
-          ? 'The game will appear for both of you as soon as your partner accepts.'
-          : 'Accept to start the shared game. The player who invited you will explain first.'}
-      </p>
-      <div className="mt-6 flex flex-wrap gap-2">
+    <section className={`game-invitation-card ${isRequester ? 'is-sent' : 'is-received'}`}>
+      <div className="game-invitation-avatar" aria-hidden="true">
+        <span>{partnerInitial}</span>
+        <i>{isRequester ? '…' : '!'}</i>
+      </div>
+      <div className="game-invitation-copy">
+        <p className="game-lobby-eyebrow">
+          <span aria-hidden="true" /> {isRequester ? 'Invitation sent' : 'Game invitation'}
+        </p>
+        <h2>
+          {isRequester
+            ? `Waiting for ${game.partner.displayName}`
+            : `${game.partner.displayName} invited you`}
+        </h2>
+        <p>
+          {isRequester
+            ? 'You are all set. The game will open automatically as soon as they accept.'
+            : 'Join the shared game now. The player who sent the invitation will explain first.'}
+        </p>
+        {isRequester ? (
+          <p className="game-invitation-live" role="status">
+            <span aria-hidden="true" /> Waiting for a response
+          </p>
+        ) : null}
+        {!isRequester && acceptBlocked ? (
+          <p className="game-lobby-blocked" role="status">
+            Finish your current game before accepting this invitation.
+          </p>
+        ) : null}
+      </div>
+      <div className="game-invitation-actions">
         {isRequester ? (
           <button
             type="button"
-            className="button button-danger"
+            className="game-cancel-invitation"
             disabled={disabled}
             onClick={() => void onCancel()}
           >
-            Cancel request
+            Cancel invitation
           </button>
         ) : (
           <>
@@ -554,14 +713,6 @@ function GameInvitation({
           </>
         )}
       </div>
-      {!isRequester && acceptBlocked ? (
-        <p className="mt-4 text-sm font-medium text-amber-800" role="status">
-          You can decline this request now, or finish your current game and return to accept it.
-        </p>
-      ) : null}
-      <p role="status" className="mt-5 text-sm text-stone-500">
-        This page checks for updates automatically.
-      </p>
     </section>
   )
 }
@@ -575,25 +726,27 @@ function NewRoundCard({
 }) {
   const [topic, setTopic] = useState(TOPICS[0]!)
   return (
-    <section className="game-stage">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-300">Your turn</p>
-      <h2 className="mt-3 font-serif text-3xl font-semibold">Choose a topic</h2>
-      <label className="mt-6 block text-sm text-emerald-100" htmlFor="word-topic">
-        Topic
-      </label>
-      <select
-        id="word-topic"
-        className="mt-2 w-full rounded-xl bg-white px-3 py-3 text-stone-900"
-        value={topic}
-        disabled={disabled}
-        onChange={(event) => setTopic(event.target.value)}
-      >
+    <section className="game-stage new-round-card">
+      <p className="game-card-eyebrow">Your turn</p>
+      <h2>Choose a topic</h2>
+      <p className="new-round-intro">Pick a direction and we’ll find a fresh word for you.</p>
+      <fieldset className="topic-picker" disabled={disabled}>
+        <legend>Topic</legend>
         {TOPICS.map((option) => (
-          <option key={option}>{option}</option>
+          <label key={option}>
+            <input
+              type="radio"
+              name="word-topic"
+              value={option}
+              checked={topic === option}
+              onChange={(event) => setTopic(event.target.value)}
+            />
+            <span>{option}</span>
+          </label>
         ))}
-      </select>
+      </fieldset>
       <button
-        className="button button-accent mt-5"
+        className="button button-accent new-round-action"
         type="button"
         disabled={disabled}
         onClick={() => void onCreate(topic)}
@@ -617,31 +770,33 @@ function ExplainCard({
 }) {
   const round = game.round!
   return (
-    <section className="game-surface secret-surface">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-amber-800">
-        {round.topic}
-      </p>
-      <h2 className="mt-4 text-sm font-medium text-stone-600">Your secret word</h2>
-      <p className="mt-1 font-serif text-5xl font-semibold text-emerald-950">{round.secretWord}</p>
-      <p className="mt-4 text-base leading-6 text-stone-600">
-        Describe it without using these words:
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        {round.forbiddenWords?.map((word) => (
-          <span key={word} className="forbidden-word">
-            {word}
-          </span>
-        ))}
+    <section className="game-surface secret-surface explain-card">
+      <div className="explain-card-topbar">
+        <p>{round.topic}</p>
+        <button
+          type="button"
+          className="explain-skip-control"
+          disabled={disabled}
+          onClick={() => void onSkip()}
+        >
+          Skip word
+        </button>
+      </div>
+      <div className="explain-brief">
+        <div className="secret-word-block">
+          <span>Your secret word</span>
+          <h2>{round.secretWord}</h2>
+        </div>
+        <div className="forbidden-words-block">
+          <p>Don’t say</p>
+          <div>
+            {round.forbiddenWords?.map((word) => (
+              <span key={word}>{word}</span>
+            ))}
+          </div>
+        </div>
       </div>
       <AudioRecorder disabled={disabled} onSubmit={onSubmit} />
-      <button
-        type="button"
-        className="button button-secondary mt-4"
-        disabled={disabled}
-        onClick={() => void onSkip()}
-      >
-        Skip this word
-      </button>
     </section>
   )
 }
@@ -732,12 +887,17 @@ function AudioRecorder({
   }
 
   return (
-    <div className="mt-7 rounded-2xl bg-white p-5 ring-1 ring-amber-200">
-      <p className="font-medium">Record your explanation</p>
-      <p className="mt-1 text-sm text-stone-500">
-        Maximum one minute. Speak clearly and naturally.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-2">
+    <div className="audio-recorder">
+      <div className="audio-recorder-heading">
+        <span aria-hidden="true">
+          <i />
+        </span>
+        <div>
+          <p>Record your explanation</p>
+          <small>Up to one minute · Speak clearly and naturally</small>
+        </div>
+      </div>
+      <div className="audio-recorder-actions">
         {!isRecording ? (
           <button
             type="button"
@@ -764,29 +924,23 @@ function AudioRecorder({
         ) : null}
       </div>
       {isRecording ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="mt-4 flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 text-red-800 ring-1 ring-red-200"
-        >
-          <span className="text-sm font-medium">● Recording</span>
-          <span className="font-mono text-xl font-semibold tabular-nums">
-            {formatCountdown(secondsRemaining)} remaining
-          </span>
+        <div role="status" aria-live="polite" className="audio-recorder-status">
+          <span>● Recording</span>
+          <strong>{formatCountdown(secondsRemaining)} remaining</strong>
         </div>
       ) : null}
       {isPreparing ? (
-        <p role="status" className="mt-3 text-sm font-medium text-stone-600">
+        <p role="status" className="audio-recorder-message">
           Preparing the recording…
         </p>
       ) : null}
       {audioUrl ? (
-        <audio className="mt-4 w-full" controls src={audioUrl}>
+        <audio className="audio-recorder-preview" controls src={audioUrl}>
           Your browser cannot play this recording.
         </audio>
       ) : null}
       {error ? (
-        <p role="alert" className="mt-3 text-sm text-red-700">
+        <p role="alert" className="audio-recorder-error">
           {error}
         </p>
       ) : null}
@@ -882,31 +1036,39 @@ function GuessCard({
 function RoundSummary({ game, userId }: { game: WordGame; userId: string }) {
   const round = game.round!
   const isFinished = round.status === 'completed' || round.status === 'skipped'
+  const isMyTurn = round.explainerId === userId
   return (
-    <section className="game-surface">
-      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
-        Round {round.turnNumber}
-      </p>
-      <p className="mt-2 font-semibold">
-        {round.explainerId === userId ? 'You explain' : `${game.partner.displayName} explains`}
-      </p>
+    <section className="round-recap" aria-label={`Round ${round.turnNumber} summary`}>
+      <div className="round-recap-heading">
+        <div>
+          <p>Round {round.turnNumber}</p>
+          <h2>{isMyTurn ? 'You explain' : `${game.partner.displayName} explains`}</h2>
+        </div>
+        <span className={`round-status round-status-${round.status}`}>
+          {round.status === 'completed'
+            ? 'Complete'
+            : round.status === 'skipped'
+              ? 'Skipped'
+              : round.status === 'awaiting_guess'
+                ? 'Guessing'
+                : 'Explaining'}
+        </span>
+      </div>
       {isFinished ? (
-        <div className="mt-4 space-y-2 text-sm">
-          <p>
-            <span className="text-stone-500">Word:</span> <strong>{round.secretWord}</strong>
-          </p>
+        <div className="round-recap-result">
+          <div>
+            <span>Word</span>
+            <strong>{round.secretWord}</strong>
+          </div>
           {round.status === 'skipped' ? (
-            <p className="text-stone-600">This word was skipped.</p>
+            <p className="round-recap-message">This word was skipped.</p>
           ) : (
             <>
-              <p>
-                <span className="text-stone-500">Guess:</span> {round.guess}
-              </p>
-              <p
-                className={
-                  round.isCorrect ? 'font-semibold text-emerald-800' : 'font-semibold text-red-700'
-                }
-              >
+              <div>
+                <span>Guess</span>
+                <strong>{round.guess}</strong>
+              </div>
+              <p className={`round-recap-message ${round.isCorrect ? 'is-correct' : 'is-missed'}`}>
                 {round.isCorrect
                   ? 'Correct — one point!'
                   : round.usedForbiddenWord
@@ -917,13 +1079,16 @@ function RoundSummary({ game, userId }: { game: WordGame; userId: string }) {
           )}
         </div>
       ) : round.transcript ? (
-        <p className="mt-3 text-sm leading-6 text-stone-600">{round.transcript}</p>
+        <p className="round-transcript">{round.transcript}</p>
       ) : null}
-      {round.explainerId === userId && round.coachScore !== null ? (
-        <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-950">
-          <p className="font-semibold">AI coaching · {round.coachScore}/100</p>
-          <p className="mt-1 leading-6">{round.coachFeedback}</p>
-        </div>
+      {isMyTurn && round.coachScore !== null ? (
+        <details className="coaching-disclosure">
+          <summary>
+            <span>AI coaching · {round.coachScore}/100</span>
+            <span aria-hidden="true">+</span>
+          </summary>
+          <p>{round.coachFeedback}</p>
+        </details>
       ) : null}
     </section>
   )
@@ -931,29 +1096,33 @@ function RoundSummary({ game, userId }: { game: WordGame; userId: string }) {
 
 function WaitingCard({ name, message }: { name: string; message: string }) {
   return (
-    <section className="game-surface game-waiting">
-      <div className="mx-auto grid size-14 place-items-center rounded-full bg-amber-100 text-2xl">
-        …
+    <section className="game-surface game-waiting" aria-live="polite">
+      <div className="waiting-presence" aria-hidden="true">
+        <span className="waiting-avatar">{name.trim().charAt(0).toUpperCase()}</span>
+        <span className="waiting-dots">
+          <i />
+          <i />
+          <i />
+        </span>
       </div>
-      <h2 className="mt-5 font-serif text-3xl font-semibold">Waiting for {name}</h2>
-      <p className="mx-auto mt-3 max-w-lg text-stone-600">{message}</p>
+      <p className="waiting-label">Partner's turn</p>
+      <h2>Waiting for {name}</h2>
+      <p>{message}</p>
     </section>
   )
 }
 
 function Scoreboard({ game }: { game: WordGame }) {
   return (
-    <div
-      className="flex rounded-2xl border border-stone-200 bg-white p-1 shadow-sm"
-      aria-label="Score"
-    >
-      <div className="min-w-24 rounded-xl bg-emerald-950 px-4 py-2 text-center text-white">
-        <p className="text-xs text-emerald-200">You</p>
-        <p className="text-xl font-semibold">{game.scores.you}</p>
+    <div className="game-scoreboard" aria-label="Score">
+      <div className="is-you">
+        <p>You</p>
+        <strong>{game.scores.you}</strong>
       </div>
-      <div className="min-w-24 px-4 py-2 text-center">
-        <p className="truncate text-xs text-stone-500">{game.partner.displayName}</p>
-        <p className="text-xl font-semibold">{game.scores.partner}</p>
+      <span aria-hidden="true">:</span>
+      <div>
+        <p>{game.partner.displayName}</p>
+        <strong>{game.scores.partner}</strong>
       </div>
     </div>
   )

@@ -26,8 +26,8 @@ async function authenticated(id, sql, values = []) {
   }
 }
 
-test('real PostgreSQL concurrent invitations, cooldown and quota', async () => {
-  const ids = [randomUUID(), randomUUID(), randomUUID()]
+test('real PostgreSQL concurrency, cooldown, and quota rules', async () => {
+  const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()]
   const names = ids.map((id) => `test_${id.replaceAll('-', '').slice(0, 24)}`)
   try {
     for (const [index, id] of ids.entries()) {
@@ -63,6 +63,32 @@ test('real PostgreSQL concurrent invitations, cooldown and quota', async () => {
     )
     assert.equal(attempts.filter((result) => result.code === 'profile_not_found').length, 10)
     assert.equal(attempts.filter((result) => result.code === 'invitation_rate_limited').length, 2)
+
+    const gameInvitation = await authenticated(ids[3], 'select public.invite_partner($1) result', [
+      names[4],
+    ])
+    await authenticated(ids[4], 'select public.respond_to_partnership($1,true) result', [
+      gameInvitation.partnershipId,
+    ])
+    const game = await authenticated(ids[3], 'select public.start_word_game($1) result', [
+      gameInvitation.partnershipId,
+    ])
+    await authenticated(ids[4], 'select public.respond_to_word_game($1,true) result', [game.id])
+
+    const rounds = await Promise.allSettled([
+      authenticated(ids[3], 'select public.create_word_game_round_from_pool($1,$2,false) result', [
+        game.id,
+        'Travel',
+      ]),
+      authenticated(ids[3], 'select public.create_word_game_round_from_pool($1,$2,false) result', [
+        game.id,
+        'Travel',
+      ]),
+    ])
+    assert.equal(rounds.filter((result) => result.status === 'fulfilled').length, 1)
+    assert.equal(rounds.filter((result) => result.status === 'rejected').length, 1)
+    const rejectedRound = rounds.find((result) => result.status === 'rejected')
+    assert.match(String(rejectedRound.reason), /word_game_round_in_progress/)
   } finally {
     await pool
       .query('delete from auth.users where id=any($1::uuid[])', [ids])

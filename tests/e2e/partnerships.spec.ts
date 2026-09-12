@@ -449,13 +449,18 @@ test('starts a word game and submits a browser recording for transcription', asy
   })
 
   await page.goto(`/games/explain-word/${relationshipId}`)
-  await page.getByRole('button', { name: 'Send game request' }).click()
+  await page.getByRole('button', { name: 'How to play' }).click()
+  await expect(page.getByRole('dialog', { name: 'How to play' })).toBeVisible()
+  await expect(page.getByText('Explain naturally')).toBeVisible()
+  await page.getByRole('button', { name: 'Close rules' }).click()
+  await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible({
     timeout: 5000,
   })
   await page.getByRole('button', { name: 'Give me a word' }).click()
   await expect(page.getByText('passport', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rounds' })).toBeInViewport()
   await page.getByRole('button', { name: 'Start recording' }).click()
   await expect(page.getByText('1:00 remaining')).toBeVisible()
   await expect(page.getByText(/0:5[89] remaining/)).toBeVisible({ timeout: 2_500 })
@@ -656,6 +661,16 @@ for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await signIn(page)
     await page.goto('/')
+    if (width === 1440) {
+      await expect(
+        page.getByRole('heading', { name: 'Who are you practising with?' }),
+      ).toBeInViewport()
+      await page.getByRole('link', { name: 'History', exact: true }).click()
+      await expect(
+        page.getByRole('heading', { name: 'Your finished games will live here' }),
+      ).toBeInViewport()
+      await page.getByRole('link', { name: 'Practice', exact: true }).click()
+    }
     await page.getByRole('link', { name: 'Invite your first friend', exact: true }).click()
     await expect(page.getByRole('dialog', { name: 'Invite a friend' })).toBeVisible()
     expect((await page.getByRole('dialog').boundingBox())!.height).toBeLessThan(400)
@@ -669,8 +684,14 @@ for (const width of [320, 390, 1440]) {
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await page.getByRole('button', { name: 'Invitations', exact: true }).click()
     await expect(page.getByText('No pending invitations.')).toBeVisible()
+    if (width === 1440) {
+      await expect(page.getByText('No pending invitations.')).toBeInViewport()
+    }
     await page.getByRole('link', { name: 'Your profile' }).click()
     await expect(page.getByLabel('Display name')).toBeVisible()
+    if (width === 1440) {
+      await expect(page.getByLabel('Display name')).toBeInViewport()
+    }
   })
 }
 

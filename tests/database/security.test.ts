@@ -259,6 +259,94 @@ describe('database authorization and lifecycle', () => {
     await expect(rows('select * from public.word_game_rounds')).rejects.toThrow(/permission denied/)
   })
 
+  it('uses every unseen pooled word before the least-recently-seen fallback', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+
+    const seenWords = new Set<string>()
+    let currentPlayer = alice
+    for (let turn = 0; turn < 10; turn += 1) {
+      await asUser(currentPlayer)
+      const created = await db.query<{
+        result: { round: { id: string; secretWord: string } }
+      }>('select public.create_word_game_round_from_pool($1,$2,false) result', [gameId, 'Travel'])
+      const createdRound = created.rows[0]!.result.round
+      expect(seenWords.has(createdRound.secretWord)).toBe(false)
+      seenWords.add(createdRound.secretWord)
+      await rows('select public.skip_word_game_round($1)', [createdRound.id])
+      currentPlayer = currentPlayer === alice ? bob : alice
+    }
+
+    await asUser(currentPlayer)
+    const exhausted = await db.query<{ result: null }>(
+      'select public.create_word_game_round_from_pool($1,$2,false) result',
+      [gameId, 'Travel'],
+    )
+    expect(exhausted.rows[0]!.result).toBeNull()
+
+    const fallback = await db.query<{
+      result: { round: { secretWord: string } }
+    }>('select public.create_word_game_round_from_pool($1,$2,true) result', [gameId, 'Travel'])
+    expect(seenWords.has(fallback.rows[0]!.result.round.secretWord)).toBe(true)
+    expect(seenWords.size).toBe(10)
+    await db.exec('savepoint private_word_cards')
+    await expect(rows('select * from public.word_game_cards')).rejects.toThrow(/permission denied/)
+    await db.exec('rollback to savepoint private_word_cards')
+    await expect(rows('select * from public.word_game_card_exposures')).rejects.toThrow(
+      /permission denied/,
+    )
+  })
+
+  it('keeps only genuinely new cards from a generated batch', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+    await asUser(alice)
+
+    const batch = [
+      {
+        word: 'passport',
+        acceptedAnswers: ['passport', 'passports'],
+        forbiddenWords: ['passport', 'passports'],
+      },
+      {
+        word: 'travel adapter',
+        acceptedAnswers: ['travel adapter', 'travel adapters'],
+        forbiddenWords: ['travel adapter', 'travel adapters'],
+      },
+    ]
+    const first = await db.query<{ result: number }>(
+      'select public.cache_word_game_cards($1,$2,$3,$4) result',
+      [gameId, 'Travel', 'test-model', JSON.stringify(batch)],
+    )
+    const second = await db.query<{ result: number }>(
+      'select public.cache_word_game_cards($1,$2,$3,$4) result',
+      [gameId, 'Travel', 'test-model', JSON.stringify(batch)],
+    )
+
+    expect(first.rows[0]!.result).toBe(1)
+    expect(second.rows[0]!.result).toBe(0)
+  })
+
   it('requires the invited partner to approve a game and protects its recording', async () => {
     await asUser(alice)
     const invitation = await invite('bob')

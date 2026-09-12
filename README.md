@@ -322,6 +322,13 @@ player, the transcript, and the answer field. The secret must stay hidden from t
 result; a correct guess awards the explainer one point, saying the secret produces no point, private
 AI coaching appears only to the explainer, and the next turn belongs to the previous guesser. Browser
 microphone access requires localhost or HTTPS.
+Generated vocabulary is retained in a private shared card pool. A round first selects a random card
+that neither participant has seen. If none exists, the Worker requests one batch from OpenRouter,
+stores every valid new card, and retries the selection once. A duplicate-only or unavailable AI
+response falls back to the card least recently seen by either player, so a round never loops on AI
+generation. Applying the pool migration also imports existing round words and exposures.
+Each built-in topic starts with ten curated cards, so an unavailable provider does not block a fresh
+installation.
 If either player leaves an active game, the session pauses and shows a five-minute reconnect timer.
 Returning in time resumes the same round; otherwise the game finishes and all actions stay locked.
 Either participant can also use **End game** to finish immediately and return both players to their

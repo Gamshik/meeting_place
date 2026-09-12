@@ -67,6 +67,7 @@ export type Database = {
         Row: {
           accepted_answers: string[]
           audio_path: string | null
+          card_id: string | null
           coach_feedback: string | null
           coach_score: number | null
           completed_at: string | null
@@ -89,6 +90,7 @@ export type Database = {
         Insert: {
           accepted_answers: string[]
           audio_path?: string | null
+          card_id?: string | null
           coach_feedback?: string | null
           coach_score?: number | null
           completed_at?: string | null
@@ -109,6 +111,70 @@ export type Database = {
           used_forbidden_word?: boolean | null
         }
         Update: Partial<Database['public']['Tables']['word_game_rounds']['Insert']>
+        Relationships: []
+      }
+      word_game_cards: {
+        Row: {
+          accepted_answers: string[]
+          created_at: string
+          difficulty: string
+          forbidden_words: string[]
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          normalized_word: string
+          source_model: string
+          times_used: number
+          topic: string
+          word: string
+        }
+        Insert: {
+          accepted_answers: string[]
+          created_at?: string
+          difficulty?: string
+          forbidden_words: string[]
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          normalized_word: string
+          source_model: string
+          times_used?: number
+          topic: string
+          word: string
+        }
+        Update: Partial<Database['public']['Tables']['word_game_cards']['Insert']>
+        Relationships: []
+      }
+      word_game_card_answers: {
+        Row: {
+          answer: string
+          card_id: string
+          normalized_answer: string
+        }
+        Insert: {
+          answer: string
+          card_id: string
+          normalized_answer: string
+        }
+        Update: Partial<Database['public']['Tables']['word_game_card_answers']['Insert']>
+        Relationships: []
+      }
+      word_game_card_exposures: {
+        Row: {
+          card_id: string
+          first_seen_at: string
+          last_seen_at: string
+          profile_id: string
+          times_seen: number
+        }
+        Insert: {
+          card_id: string
+          first_seen_at?: string
+          last_seen_at?: string
+          profile_id: string
+          times_seen?: number
+        }
+        Update: Partial<Database['public']['Tables']['word_game_card_exposures']['Insert']>
         Relationships: []
       }
       word_games: {
@@ -187,6 +253,23 @@ export type Database = {
           p_topic: string
         }
         Returns: Json
+      }
+      cache_word_game_cards: {
+        Args: {
+          p_cards: Json
+          p_game_id: string
+          p_source_model: string
+          p_topic: string
+        }
+        Returns: number
+      }
+      create_word_game_round_from_pool: {
+        Args: { p_allow_seen?: boolean; p_game_id: string; p_topic: string }
+        Returns: Json
+      }
+      list_word_game_card_exclusions: {
+        Args: { p_game_id: string; p_limit?: number; p_topic: string }
+        Returns: string[]
       }
       get_word_game: {
         Args: { p_partnership_id: string }

@@ -99,7 +99,23 @@ another ongoing game before inserting or activating the request. This makes simu
 serialize and keeps the rule effective for direct authenticated RPC Supabase calls as well as the
 Worker API.
 
-The Worker asks the configured OpenRouter text model for a B1–B2 game card and calls
+Reusable B1–B2 cards live in a private database pool. Per-profile exposure rows prevent a card from
+being selected when either participant has seen it before. Card selection, round creation, exposure
+updates, and usage counters run in one authorization-checked database transaction. When no unseen
+card remains for a topic, the Worker asks the configured OpenRouter text model for one batch of up
+to 20 cards. Structurally valid, non-conflicting cards are cached for later rounds, including cards
+not selected immediately. Grammatical answer aliases are globally unique, so case, punctuation, and
+singular/plural variants cannot become separate cards. Existing round snapshots are backfilled into
+the exposure ledger when the pool migration is applied. Ten curated cards per supported topic
+provide a cold-start fallback before the pool grows through normal play.
+
+There is never more than one word-generation request for a round. If the generated batch contains
+no unseen card or the provider is unavailable, PostgreSQL selects the card least recently seen by
+either participant. An error is returned only when the topic has no stored card at all. Increasing
+model temperature and varying the requested vocabulary focus improve variety, but the database—not
+the model prompt—enforces deduplication and the terminating fallback.
+
+The Worker also calls
 `microsoft/mai-transcribe-2` in verbatim mode for each completed browser recording. A game begins in
 the `pending` state and becomes active only when the other participant accepts. The browser converts
 recordings to mono WAV, and the Worker stores them in a private Supabase Storage bucket before
