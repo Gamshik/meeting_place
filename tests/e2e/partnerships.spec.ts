@@ -4,6 +4,8 @@ import type { Partnership, WordGame } from '../../src/shared/contracts'
 const userId = '11111111-1111-4111-8111-111111111111'
 const partnerId = '22222222-2222-4222-8222-222222222222'
 const relationshipId = '33333333-3333-4333-8333-333333333333'
+const secondPartnerId = '88888888-8888-4888-8888-888888888888'
+const secondRelationshipId = '99999999-9999-4999-8999-999999999999'
 async function signIn(page: Page) {
   await page.addInitScript(
     ({ id }) => {
@@ -45,6 +47,12 @@ async function signIn(page: Page) {
       },
     }),
   )
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [], nextCursor: null } }),
+  )
+  await page.route('**/api/games/explain-word/history', (route) =>
+    route.fulfill({ json: { data: [] } }),
+  )
   await page.route('**/api/games/explain-word', (route) => route.fulfill({ json: { data: [] } }))
 }
 function relationship(
@@ -81,15 +89,17 @@ test('sends and cancels an invitation, disabling actions while saving', async ({
     } else await route.fulfill({ json: { data, nextCursor: null } })
   })
   await page.goto('/')
-  await page.getByLabel('Their username').fill('bob')
-  await page.getByRole('button', { name: 'Invite', exact: true }).click()
+  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+  await page.getByRole('button', { name: 'Add a friend', exact: true }).click()
+  await page.getByLabel('Friend’s username').fill('bob')
+  await page.getByRole('button', { name: 'Send invite', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Sending…' })).toBeDisabled()
   release!()
   await expect(page.getByRole('status').filter({ hasText: 'Invitation sent.' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Waiting for a reply' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
   expect(attempts).toBe(1)
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Waiting for a reply' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Cancel invitation', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toHaveCount(0)
 })
 
 test('accepts then ends a partnership and shows sign-out failures', async ({ page }) => {
@@ -105,9 +115,20 @@ test('accepts then ends a partnership and shows sign-out failures', async ({ pag
     } else await route.fulfill({ json: { data, nextCursor: null } })
   })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Accept', exact: true }).click()
-  await page.getByRole('button', { name: 'End partnership' }).click()
-  await expect(page.getByText('No active partners yet')).toBeVisible()
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  await page
+    .getByRole('region', { name: 'Notifications' })
+    .getByRole('button', { name: 'Accept', exact: true })
+    .click()
+  await expect(page.getByRole('region', { name: 'Notifications' })).toContainText(
+    "You're all caught up.",
+  )
+  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+  await page.getByLabel('Manage Bob').click()
+  await page.getByRole('button', { name: 'Remove friend', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Remove friend', exact: true }).click()
+  await expect(page.getByText('Add a friend using their username.')).toBeVisible()
+  await page.getByRole('link', { name: 'Your profile', exact: true }).click()
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page.getByRole('alert')).toContainText('Sign-out unavailable')
 })
@@ -127,12 +148,14 @@ test('loads the next page without replacing existing partners', async ({ page })
     })
   })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Load more partners and invitations' }).click()
+  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+
   await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Charlie', exact: true })).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: 'Load more partners and invitations' }),
-  ).toHaveCount(0)
+  await page.getByLabel('Find a friend').fill('Charlie')
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toHaveCount(0)
+  await page.waitForTimeout(3500)
+  await expect(page.getByRole('heading', { name: 'Charlie', exact: true })).toBeVisible()
 })
 
 test('refreshes invitations when Realtime reports a partnership change', async ({ page }) => {
@@ -209,8 +232,15 @@ test('refreshes invitations when Realtime reports a partnership change', async (
   data = [relationship('incoming')]
   sendPartnershipChange!()
 
-  await expect(page.getByRole('heading', { name: 'Invitations for you' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Notifications, pending invitations' }),
+  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  await expect(page.getByRole('region', { name: 'Notifications' })).toContainText(
+    'Bob sent you a friend invitation.',
+  )
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('serves production security headers on a browser route', async ({ page }) => {
@@ -223,7 +253,7 @@ test('serves production security headers on a browser route', async ({ page }) =
   expect(headers['x-content-type-options']).toBe('nosniff')
   expect(headers['x-frame-options']).toBe('DENY')
   expect(headers['permissions-policy']).toContain('microphone=(self)')
-  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start practising with Google' })).toBeVisible()
 })
 
 test('prevents duplicate profile saves and restores saved values after cancel', async ({
@@ -255,19 +285,16 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
       },
     })
   })
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Edit', exact: true }).click()
+  await page.goto('/?view=profile')
   await page.getByLabel('Display name').fill('Alice Updated')
   await page.getByRole('button', { name: 'Save profile' }).click()
-  await expect(page.getByRole('button', { name: 'Save profile' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Saving…' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled()
   release!()
   await expect(page.getByRole('status').filter({ hasText: 'Profile saved.' })).toBeVisible()
   expect(saves).toBe(1)
-  await page.getByRole('button', { name: 'Edit', exact: true }).click()
   await page.getByLabel('Display name').fill('Unsaved')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
-  await page.getByRole('button', { name: 'Edit', exact: true }).click()
   await expect(page.getByLabel('Display name')).toHaveValue('Alice Updated')
 })
 
@@ -482,6 +509,21 @@ test('shows the partner both the recording and transcript before their answer', 
       createdAt: '2026-09-11T12:00:00Z',
       completedAt: null,
     },
+    rounds: [
+      {
+        id: roundId,
+        turnNumber: 1,
+        explainerId: partnerId,
+        topic: 'Travel',
+        status: 'awaiting_guess',
+        word: null,
+        guess: null,
+        isCorrect: null,
+        score: null,
+        coachScore: null,
+        completedAt: null,
+      },
+    ],
   }
   await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
     const path = new URL(route.request().url()).pathname
@@ -502,44 +544,347 @@ test('shows the partner both the recording and transcript before their answer', 
     'https://audio.example.test/recording.wav',
   )
   await expect(page.getByLabel('Your answer')).toBeVisible()
+  const liveRounds = page.getByRole('table')
+  await expect(liveRounds).toContainText('Travel')
+  await expect(liveRounds).toContainText('Hidden')
+  await expect(liveRounds).toContainText('In progress')
 })
 
-test('opens a finished game from the final-score button', async ({ page }) => {
+test('shows every finished game and its rounds in History', async ({ page }) => {
   await signIn(page)
-  const finishedGame: WordGame = {
-    id: '44444444-4444-4444-8444-444444444444',
-    partnershipId: relationshipId,
-    status: 'finished',
-    requestedById: userId,
-    acceptedAt: '2026-09-11T12:00:00Z',
-    finishedAt: '2026-09-11T12:10:00Z',
-    currentPlayerId: userId,
-    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
-    scores: { you: 2, partner: 1 },
-    round: null,
-  }
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  await page.unroute('**/api/games/explain-word/history')
+  await page.route('**/api/games/explain-word/history', (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            partnershipId: relationshipId,
+            finishedAt: '2026-09-11T12:10:00Z',
+            partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+            scores: { you: 2, partner: 1 },
+            roundCount: 2,
+            rounds: [
+              {
+                id: '55555555-5555-4555-8555-555555555555',
+                turnNumber: 1,
+                explainerId: userId,
+                topic: 'Travel',
+                status: 'completed',
+                word: 'passport',
+                guess: 'passport',
+                isCorrect: true,
+                score: 1,
+                coachScore: 88,
+                completedAt: '2026-09-11T12:05:00Z',
+              },
+              {
+                id: '66666666-6666-4666-8666-666666666666',
+                turnNumber: 2,
+                explainerId: partnerId,
+                topic: 'Food',
+                status: 'skipped',
+                word: 'sandwich',
+                guess: null,
+                isCorrect: false,
+                score: 0,
+                coachScore: null,
+                completedAt: '2026-09-11T12:09:00Z',
+              },
+            ],
+          },
+          {
+            id: '77777777-7777-4777-8777-777777777777',
+            partnershipId: relationshipId,
+            finishedAt: '2026-09-10T10:10:00Z',
+            partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+            scores: { you: 0, partner: 0 },
+            roundCount: 0,
+            rounds: [],
+          },
+        ],
+      },
+    }),
+  )
+
+  await page.goto('/')
+  await page.getByRole('link', { name: 'History', exact: true }).click()
+  await expect(page.locator('.history-card')).toHaveCount(2)
+  await expect(
+    page.getByText('Your complete practice trail—not only the latest match.'),
+  ).toBeVisible()
+  await page.getByText('Round details', { exact: true }).first().click()
+  const rounds = page.locator('.history-card').first().getByRole('table')
+  await expect(rounds.getByRole('row')).toHaveCount(3)
+  await expect(rounds).toContainText('passport')
+  await expect(rounds).toContainText('+1 correct')
+})
+
+test('notifications are anchored, actionable, and do not block navigation', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  await page.route('**/api/games/explain-word', (route) =>
+    route.fulfill({
+      json: {
+        data: [{ partnershipId: relationshipId, status: 'pending', requestedById: partnerId }],
+      },
+    }),
+  )
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  const panel = page.getByRole('region', { name: 'Notifications' })
+  await expect(panel.getByRole('button', { name: 'Join game' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(panel).toHaveCount(0)
+  await expect(
+    page.getByRole('button', { name: 'Notifications, pending invitations' }),
+  ).toBeFocused()
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+  await expect(panel).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Friends', exact: true })).toBeVisible()
+})
+
+for (const width of [320, 390, 1440]) {
+  test(`compact add-friend flow fits ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 })
+    await signIn(page)
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Invite your first friend', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Invite a friend' })).toBeVisible()
+    expect((await page.getByRole('dialog').boundingBox())!.height).toBeLessThan(400)
+    const sendButton = page.getByRole('button', { name: 'Send invite', exact: true })
+    expect((await sendButton.boundingBox())!.height).toBeLessThan(60)
+    expect(await sendButton.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe(
+      'nowrap',
+    )
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await page.getByRole('button', { name: 'Invitations', exact: true }).click()
+    await expect(page.getByText('No pending invitations.')).toBeVisible()
+    await page.getByRole('link', { name: 'Your profile' }).click()
+    await expect(page.getByLabel('Display name')).toBeVisible()
+  })
+}
+
+const activeGame: WordGame = {
+  id: '44444444-4444-4444-8444-444444444444',
+  partnershipId: relationshipId,
+  status: 'active',
+  requestedById: userId,
+  acceptedAt: '2026-09-11T12:00:00Z',
+  currentPlayerId: userId,
+  partner: relationship('incoming').partner,
+  scores: { you: 0, partner: 0 },
+  round: null,
+}
+
+test('one explicit invitation action starts a game, prevents duplicates, and Friends has no play controls', async ({
+  page,
+}) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  let requests = 0
+  let left = false
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
+    if (route.request().method() === 'POST' && route.request().url().endsWith(relationshipId)) {
+      requests++
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    }
+    if (route.request().method() === 'DELETE' && route.request().url().endsWith('/presence'))
+      left = true
+    await route.fulfill({ json: { data: activeGame } })
+  })
+  await page.goto('/?view=friends')
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: /Start a round|Join now|Jump back in/ }),
+  ).toHaveCount(0)
+  await page.getByRole('link', { name: 'Practice', exact: true }).click()
+  await page.getByRole('button', { name: 'Start a round' }).dblclick()
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
+  expect(requests).toBe(1)
+  await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
+  await page.getByRole('button', { name: 'Notifications', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Notifications' })).toBeVisible()
+  expect(left).toBe(false)
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
+  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+  await expect.poll(() => left).toBe(true)
+})
+
+test('joining directly from notifications accepts before entering the game', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  let accepted = false
+  await page.route('**/api/games/explain-word', (route) =>
+    route.fulfill({
+      json: {
+        data: accepted
+          ? []
+          : [{ partnershipId: relationshipId, status: 'pending', requestedById: partnerId }],
+      },
+    }),
+  )
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
+    if (route.request().url().endsWith('/accept')) accepted = true
+    return route.fulfill({ json: { data: activeGame } })
+  })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  await page
+    .getByRole('region', { name: 'Notifications' })
+    .getByRole('button', { name: 'Join game' })
+    .click()
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
+  expect(accepted).toBe(true)
+})
+
+test('blocks another game invitation while a game is already in progress', async ({ page }) => {
+  await signIn(page)
+  const secondRelationship: Partnership = {
+    id: secondRelationshipId,
+    direction: 'incoming',
+    status: 'active',
+    partner: {
+      id: secondPartnerId,
+      username: 'charlie',
+      displayName: 'Charlie',
+      avatarUrl: null,
+    },
+    createdAt: '2026-01-02T00:00:00Z',
+    acceptedAt: '2026-01-02T00:01:00Z',
+  }
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({
+      json: {
+        data: [relationship('incoming', 'active'), secondRelationship],
+        nextCursor: null,
+      },
+    }),
   )
   await page.unroute('**/api/games/explain-word')
   await page.route('**/api/games/explain-word', (route) =>
     route.fulfill({
       json: {
-        data: [{ partnershipId: relationshipId, status: 'finished', requestedById: userId }],
+        data: [
+          { partnershipId: relationshipId, status: 'active', requestedById: userId },
+          {
+            partnershipId: secondRelationshipId,
+            status: 'pending',
+            requestedById: secondPartnerId,
+          },
+        ],
       },
     }),
   )
-  await page.route(`**/api/games/explain-word/${relationshipId}`, (route) =>
-    route.fulfill({ json: { data: finishedGame } }),
-  )
 
   await page.goto('/')
-  const finalScoreButton = page.getByRole('button', { name: 'View final score' })
-  await expect(finalScoreButton).toBeEnabled()
-  await expect(page.getByRole('button', { name: 'Play again' })).toBeEnabled()
-  await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
-  await finalScoreButton.click()
+  await expect(page.getByRole('button', { name: 'Jump back in' })).toBeEnabled()
+  await expect(page.getByRole('button', { name: 'Finish current game' })).toBeDisabled()
+  await expect(page.getByText('Finish your current game first', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  const notifications = page.getByRole('region', { name: 'Notifications' })
+  await expect(notifications.getByRole('button', { name: 'Finish current game' })).toBeDisabled()
+  await expect(notifications).toContainText(
+    'Finish your current game before accepting another invitation.',
+  )
+  await expect(notifications.getByRole('button', { name: 'Decline' })).toBeEnabled()
+})
+
+test('long notifications scroll without hiding the close control on a short screen', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 360 })
+  await signIn(page)
+  const data = Array.from({ length: 15 }, (_, index) => ({
+    ...relationship('incoming'),
+    id: `33333333-3333-4333-8333-${String(index).padStart(12, '0')}`,
+    partner: { ...relationship('incoming').partner, displayName: `Friend ${index}` },
+  }))
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data, nextCursor: null } }),
+  )
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
+  const panel = page.getByRole('region', { name: 'Notifications' })
+  const bounds = (await panel.boundingBox())!
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(360)
+  expect(
+    await page
+      .locator('.notification-list')
+      .evaluate((element) => element.scrollHeight > element.clientHeight),
+  ).toBe(true)
+  await panel.getByText('Friend 14', { exact: true }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('button', { name: 'Close notifications' })).toBeInViewport()
+})
+
+test('resuming an existing game never sends a new request', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  await page.route('**/api/games/explain-word', (route) =>
+    route.fulfill({
+      json: { data: [{ partnershipId: relationshipId, status: 'active', requestedById: userId }] },
+    }),
+  )
+  let starts = 0
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
+    if (route.request().method() === 'POST' && route.request().url().endsWith(relationshipId))
+      starts++
+    return route.fulfill({ json: { data: activeGame } })
+  })
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Jump back in', exact: true })).toHaveCount(1)
+  await page.getByRole('button', { name: 'Jump back in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
+  expect(starts).toBe(0)
+})
+
+test('a busy friend is not invited and can be retried later', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  let attempts = 0
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
+    if (route.request().method() === 'POST' && route.request().url().endsWith(relationshipId)) {
+      attempts++
+      if (attempts === 1)
+        return route.fulfill({
+          status: 409,
+          json: {
+            error: {
+              code: 'word_game_partner_busy',
+              message: 'Your friend is already playing another game. Try again later.',
+            },
+          },
+        })
+    }
+    return route.fulfill({ json: { data: activeGame } })
+  })
+  await page.goto('/')
+  await page.getByLabel('Play with').fill('bob')
+  await page.getByRole('button', { name: 'Start a round' }).click()
+  await expect(page.getByRole('alert')).toContainText(
+    'Your friend is already playing another game. Try again later.',
+  )
+  await expect(page).toHaveURL('/')
+  await expect(page.getByLabel('Play with')).toHaveValue('bob')
+  await page.getByRole('button', { name: 'Start a round' }).click()
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
-  await expect(page.getByText('Game finished', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Start a new game' })).toBeEnabled()
+  expect(attempts).toBe(2)
 })

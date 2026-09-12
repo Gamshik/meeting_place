@@ -16,6 +16,32 @@ This repository contains the first vertical slice:
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
 
+## Interface
+
+Practice is the home screen. It is deliberately partner-first: the current activity is selected
+automatically, and people with a game to join or resume rise to the top. One action opens the game
+room, whether the user is starting, joining, or returning to a session. The UI makes the resulting
+state explicit as **Start a round**, **Join now**, **Waiting room**, or **Jump back in**. Finished
+games remain behind an expandable history section. Each entry in `src/client/lib/games.ts` provides
+its route and session operations; adding a game requires implementing its route and backend as well
+as registering it.
+
+Friends manages connections only. **Invite** is also available from the global header and Practice
+screen, so a missing partner never becomes a navigation dead end. The compact form uses exact
+username lookup and explains that invitations are private. After sending, the Invitations list
+shows the pending request, with actions to accept, decline, or cancel. Search covers all loaded
+partnership pages, and refreshing does not drop older friends. Friend removal is under the friend's
+options menu and requires confirmation. Profile fields are editable directly, with Save, Cancel,
+and Copy username actions. Profiles are created on first Google sign-in.
+
+Notifications open in a nonmodal panel anchored to the bell. Friend actions work directly in the
+panel during a game. A second game request remains visible, but joining stays disabled until the
+current game finishes; declining remains available. Opening notifications does not navigate away or
+pause the game. Clicking outside or pressing Escape closes the panel. The dot indicates pending
+incoming invitations until they are resolved. Notifications are in-app, not background push
+notifications. Dialogs and sections size to content; long notification lists scroll with the close
+control visible.
+
 ## Technology
 
 - React, TypeScript, Vite, React Router, and Tailwind CSS
@@ -289,7 +315,7 @@ pagination. They do not replace validation against the full Supabase services.
 
 To exercise the speaking game manually, apply the latest migration, configure the three OpenRouter
 values above, and sign in with two accounts that have an active partnership. The first player sends
-a game request. Confirm that the other dashboard shows **Review game request**, and that neither
+a game request. Confirm that the other browser shows the request in **Notifications**, and that neither
 player can start a round before the second player accepts. After acceptance, the first player chooses
 a topic, records an explanation, and sends it. Confirm that the second browser receives an audio
 player, the transcript, and the answer field. The secret must stay hidden from the guesser until the
@@ -299,10 +325,13 @@ microphone access requires localhost or HTTPS.
 If either player leaves an active game, the session pauses and shows a five-minute reconnect timer.
 Returning in time resumes the same round; otherwise the game finishes and all actions stay locked.
 Either participant can also use **End game** to finish immediately and return both players to their
-partners screen.
-Current, paused, requested, and finished sessions appear in the dashboard's **Your games** section.
-Finished sessions provide **View final score** and **Play again** actions; starting again clears the
-previous rounds and sends a fresh game request to the partner.
+Games screen.
+Active and paused sessions appear under **Continue playing**. Every completed session appears in the
+separate **History** tab, with its score and saved round-by-round results. Incoming requests appear in
+Notifications. Starting again creates a fresh game request without deleting the previous game or its
+rounds. A player may have only one active or paused game at a time. A new request is not created when
+either player is already playing, and another invitation cannot be accepted until the current game
+ends.
 
 Install Chromium once with `npx playwright install chromium`, then run `npm run test:e2e`.
 Browser tests build and serve the production application with isolated fake sessions and intercepted
@@ -318,5 +347,5 @@ checks in a separate database job, and runs browser tests in the main verificati
 ## Current scope
 
 The current application covers identity, two-person partnerships, and the first turn-based speaking
-activity. Meetings, notifications, broader activity history, realtime game updates, and billing
-belong in later vertical slices.
+activity. Meetings, background push notifications, cross-game activity history, realtime game
+updates, and billing belong in later vertical slices.

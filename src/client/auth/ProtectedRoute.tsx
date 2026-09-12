@@ -1,5 +1,11 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
+import { lazy } from 'react'
+const CommunityProvider = lazy(() =>
+  import('../community/CommunityProvider').then((module) => ({
+    default: module.CommunityProvider,
+  })),
+)
 import { useAuth } from './AuthContext'
 
 export function ProtectedRoute() {
@@ -14,7 +20,11 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />
   }
 
-  return <Outlet key={session.user.id} />
+  return (
+    <CommunityProvider key={session.user.id}>
+      <Outlet />
+    </CommunityProvider>
+  )
 }
 
 export function FullPageLoader({ label }: { label: string }) {

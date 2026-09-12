@@ -1,3 +1,4 @@
+import { WordArtwork } from '../components/GameCatalog'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
@@ -30,55 +31,51 @@ export function LoginPage() {
   }
 
   return (
-    <main className="relative grid min-h-screen overflow-hidden bg-emerald-950 px-5 py-10 text-white lg:grid-cols-2 lg:px-12">
-      <div className="absolute -left-28 top-16 size-80 rounded-full bg-emerald-700/30 blur-3xl" />
-      <div className="absolute -bottom-24 right-10 size-96 rounded-full bg-amber-300/15 blur-3xl" />
-
-      <section className="relative flex flex-col justify-between py-6 lg:py-12">
-        <p className="font-serif text-xl font-semibold text-amber-300">Meeting Place</p>
-        <div className="max-w-xl py-16 lg:py-0">
-          <p className="mb-5 text-sm font-semibold uppercase tracking-[0.25em] text-emerald-200">
-            Learn together
-          </p>
-          <h1 className="font-serif text-5xl leading-[1.05] sm:text-6xl">
-            Better English starts with one honest conversation.
+    <main className="login-page">
+      <header className="login-header">
+        <a className="wordmark" href="/">
+          <span className="brand-mark" aria-hidden="true">
+            mp
+          </span>
+          <span>
+            meeting
+            <br />
+            place
+          </span>
+        </a>
+        <span>Less scrolling. More speaking.</span>
+      </header>
+      <section className="login-hero">
+        <div className="login-copy">
+          <p className="eyebrow">English, together</p>
+          <h1>
+            Speak before
+            <br />
+            you overthink.
           </h1>
-          <p className="mt-7 max-w-lg text-lg leading-8 text-emerald-100/80">
-            Connect with a partner, practise regularly, and let technology handle the preparation.
-          </p>
-        </div>
-        <p className="text-sm text-emerald-100/50">Built for learners, not classrooms.</p>
-      </section>
-
-      <section className="relative grid place-items-center lg:justify-items-end">
-        <div className="w-full max-w-md rounded-[2rem] bg-stone-50 p-7 text-stone-900 shadow-2xl sm:p-10">
-          <div className="mb-9">
-            <p className="mb-2 text-sm font-medium text-emerald-800">Welcome</p>
-            <h2 className="font-serif text-3xl font-semibold">Create your meeting place</h2>
-            <p className="mt-3 leading-7 text-stone-600">
-              One account, as many learning partners as you need.
-            </p>
-          </div>
-
+          <p>A tiny game, a trusted friend, and a real reason to use your English.</p>
           <button
-            className="button flex w-full justify-center border border-stone-300 bg-white px-5 py-3.5 text-base shadow-sm hover:bg-stone-100"
+            className="button button-primary google-button"
             type="button"
             onClick={handleSignIn}
             disabled={isSigningIn}
           >
             <GoogleMark />
-            {isSigningIn ? 'Opening Google…' : 'Continue with Google'}
+            {isSigningIn ? 'Opening Google…' : 'Start practising with Google'}
           </button>
-
+          <div className="login-promises" aria-label="What to expect">
+            <span>2 players</span>
+            <span>5–10 minutes</span>
+            <span>No awkward setup</span>
+          </div>
           {error || authError ? (
-            <p role="alert" className="mt-4 text-sm text-red-700">
+            <p role="alert" className="login-error">
               {error ?? authError}
             </p>
           ) : null}
-
-          <p className="mt-7 text-center text-xs leading-5 text-stone-500">
-            By continuing, you create an account if you do not already have one.
-          </p>
+        </div>
+        <div className="login-art">
+          <WordArtwork />
         </div>
       </section>
     </main>

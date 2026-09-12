@@ -1,184 +1,76 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-
-import type {
-  Partnership,
-  PartnershipCursor,
-  Profile,
-  WordGameSummary,
-} from '../../shared/contracts'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import type { Partnership, Profile } from '../../shared/contracts'
 import { useAuth } from '../auth/AuthContext'
+import { useCommunity, type GameHistoryItem } from '../community/CommunityContext'
 import { AppShell } from '../components/AppShell'
 import { PartnerCard } from '../components/PartnerCard'
-import { api, ApiError } from '../lib/api'
-import { supabase } from '../lib/supabase'
+import { Panel, Notice } from '../components/Panel'
+import { GameWorkspace } from '../components/GameWorkspace'
+import { ProfileEditor } from '../components/ProfileEditor'
+import { RoundsTable } from '../components/RoundsTable'
+import { games, type GameDefinition } from '../lib/games'
+import { api } from '../lib/api'
 
 export function DashboardPage() {
   const navigate = useNavigate()
-  const { session, signOut } = useAuth()
+  const [params, setParams] = useSearchParams()
+  const view = params.get('view') ?? 'games'
+  const selectedGame = games.find((game) => game.id === params.get('game')) ?? games[0]!
+  const invitationView = params.get('section') === 'invitations'
+  const { signOut } = useAuth()
+  const { partnerships, sessions, history, isLoading, error: loadError, refresh } = useCommunity()
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [partnerships, setPartnerships] = useState<Partnership[]>([])
-  const [wordGames, setWordGames] = useState<Record<string, WordGameSummary>>({})
-  const [isLoading, setIsLoading] = useState(true)
+  const [profileLoading, setProfileLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
+  const [notice, setNotice] = useState<string | null>(null)
+  const [panel, setPanel] = useState<string | null>(null)
+  const modal = panel ?? (params.get('add') === '1' ? 'add' : null)
+  const [search, setSearch] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const busy = useRef(false)
-  const generation = useRef(0)
-  const partnershipGeneration = useRef(0)
-  const [nextCursor, setNextCursor] = useState<PartnershipCursor | null>(null)
-
-  const loadDashboard = useCallback(async () => {
-    const request = ++generation.current
-    const partnershipRequest = ++partnershipGeneration.current
-    setError(null)
-
+  const closeNotice = useCallback(() => setNotice(null), [])
+  const closeError = useCallback(() => setError(null), [])
+  const loadProfile = useCallback(async () => {
     try {
-      const [profileResponse, partnershipsResponse, wordGamesResponse] = await Promise.all([
-        api.getProfile(),
-        api.getPartnerships(),
-        api.getWordGames(),
-      ])
-      if (request !== generation.current) return false
-      setProfile(profileResponse.data)
-      if (partnershipRequest === partnershipGeneration.current) {
-        setNextCursor(partnershipsResponse.nextCursor)
-        setPartnerships(partnershipsResponse.data)
-        setWordGames(indexWordGames(wordGamesResponse.data))
-      }
-      return true
-    } catch (loadError) {
-      if (request === generation.current) setError(messageFromError(loadError))
-      return false
+      const response = await api.getProfile()
+      setProfile(response.data)
+    } catch (error) {
+      setError(messageFromError(error))
     } finally {
-      if (request === generation.current) setIsLoading(false)
+      setProfileLoading(false)
     }
   }, [])
-
-  const refreshPartnerships = useCallback(async () => {
-    const request = ++partnershipGeneration.current
-
-    try {
-      const [response, wordGamesResponse] = await Promise.all([
-        api.getPartnerships(),
-        api.getWordGames(),
-      ])
-      if (request !== partnershipGeneration.current) return false
-      setNextCursor(response.nextCursor)
-      setPartnerships(response.data)
-      setWordGames(indexWordGames(wordGamesResponse.data))
-      return true
-    } catch (loadError) {
-      if (request === partnershipGeneration.current) setError(messageFromError(loadError))
-      return false
-    }
-  }, [])
-
   useEffect(() => {
     let active = true
     void Promise.resolve().then(() => {
-      if (active) return loadDashboard()
+      if (active) void loadProfile()
     })
     return () => {
       active = false
-      generation.current += 1
-      partnershipGeneration.current += 1
     }
-  }, [loadDashboard])
-
-  const userId = session?.user.id
-  const dashboardReady = profile !== null
-
-  useEffect(() => {
-    if (!dashboardReady || !userId) return
-
-    let refreshTimer: ReturnType<typeof setTimeout> | undefined
-    const scheduleRefresh = () => {
-      if (refreshTimer) clearTimeout(refreshTimer)
-      refreshTimer = setTimeout(() => void refreshPartnerships(), 150)
-    }
-    const channel = supabase
-      .channel(`partnerships:${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'partnerships' },
-        scheduleRefresh,
-      )
-      .subscribe((status, subscriptionError) => {
-        if (status === 'SUBSCRIBED') scheduleRefresh()
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('Partnership realtime subscription failed', {
-            error: subscriptionError,
-            status,
-          })
-        }
-      })
-
-    return () => {
-      if (refreshTimer) clearTimeout(refreshTimer)
-      void supabase.removeChannel(channel)
-    }
-  }, [dashboardReady, refreshPartnerships, userId])
-
-  useEffect(() => {
-    if (!dashboardReady) return
-    const timer = setInterval(() => void refreshPartnerships(), 3000)
-    return () => clearInterval(timer)
-  }, [dashboardReady, refreshPartnerships])
-
-  const groups = useMemo(
-    () => ({
-      active: partnerships.filter((item) => item.status === 'active'),
-      incoming: partnerships.filter(
-        (item) => item.status === 'pending' && item.direction === 'incoming',
-      ),
-      outgoing: partnerships.filter(
-        (item) => item.status === 'pending' && item.direction === 'outgoing',
-      ),
-    }),
-    [partnerships],
+  }, [loadProfile])
+  const friends = partnerships.filter((item) => item.status === 'active')
+  const incoming = partnerships.filter(
+    (item) => item.status === 'pending' && item.direction === 'incoming',
   )
-  const gameItems = useMemo(
-    () =>
-      groups.active.flatMap((partnership) => {
-        const game = wordGames[partnership.id]
-        return game ? [{ game, partnership }] : []
-      }),
-    [groups.active, wordGames],
+  const outgoing = partnerships.filter(
+    (item) => item.status === 'pending' && item.direction === 'outgoing',
   )
-
-  if (isLoading) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-stone-100">
-        <p className="text-stone-600">Loading your partners…</p>
-      </main>
-    )
-  }
-
-  if (!profile) {
-    return (
-      <main className="grid min-h-screen place-items-center bg-stone-100 px-5">
-        <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-7 text-center shadow-sm">
-          <h1 className="font-serif text-2xl font-semibold">
-            We could not open your meeting place
-          </h1>
-          <p className="mt-3 text-stone-600">{error ?? 'Please try again in a moment.'}</p>
-          <button
-            className="button button-primary mt-6"
-            type="button"
-            onClick={() => {
-              setIsLoading(true)
-              void loadDashboard()
-            }}
-          >
-            Try again
-          </button>
-        </div>
-      </main>
-    )
-  }
-
-  async function runOperation(action: () => Promise<void>) {
+  const filtered = friends.filter((item) =>
+    `${item.partner.displayName} ${item.partner.username}`
+      .toLowerCase()
+      .includes(search.trim().toLowerCase()),
+  )
+  const availableSessions = sessions.flatMap((session) => {
+    const friend = friends.find((item) => item.id === session.partnershipId)
+    const game = games.find((item) => item.id === session.gameId)
+    return friend && game ? [{ session, friend, game }] : []
+  })
+  const active = availableSessions.filter(
+    ({ session }) => session.status === 'active' || session.status === 'paused',
+  )
+  async function run(action: () => Promise<unknown>) {
     if (busy.current) return false
     busy.current = true
     setIsBusy(true)
@@ -186,254 +78,469 @@ export function DashboardPage() {
     try {
       await action()
       return true
-    } catch (actionError) {
-      setError(messageFromError(actionError))
+    } catch (error) {
+      setError(messageFromError(error))
       return false
     } finally {
       busy.current = false
       setIsBusy(false)
     }
   }
-
-  async function runPartnershipAction(action: () => Promise<unknown>) {
-    return runOperation(async () => {
+  async function mutate(action: () => Promise<unknown>) {
+    return run(async () => {
       await action()
-      await refreshPartnerships()
+      await refresh()
     })
   }
-
-  async function loadMore() {
-    if (!nextCursor) return
-    const cursor = nextCursor
-    const request = partnershipGeneration.current
-    await runOperation(async () => {
-      const response = await api.getPartnerships(cursor)
-      if (request !== partnershipGeneration.current) return
-      setPartnerships((current) => {
-        const ids = new Set(current.map((item) => item.id))
-        return [...current, ...response.data.filter((item) => !ids.has(item.id))]
-      })
-      setNextCursor(response.nextCursor)
-    })
+  async function play(
+    game: GameDefinition,
+    friend: Partnership,
+    action: 'invite' | 'join' | 'open',
+  ) {
+    if (action === 'open') {
+      navigate(`${game.path}/${friend.id}`)
+      return
+    }
+    if (await mutate(() => (action === 'join' ? game.accept(friend.id) : game.start(friend.id))))
+      navigate(`${game.path}/${friend.id}`)
   }
-
-  async function startNewGame(partnershipId: string) {
-    const started = await runOperation(async () => {
-      await api.startWordGame(partnershipId)
-    })
-    if (started) navigate(`/games/explain-word/${partnershipId}`)
-  }
-
+  if (profileLoading || (isLoading && !profile))
+    return (
+      <main className="loading-screen">
+        <p>Opening Meeting Place…</p>
+      </main>
+    )
+  if (!profile)
+    return (
+      <main className="loading-screen">
+        <h1>Could not open your profile</h1>
+        <p role="alert">{error}</p>
+        <button className="button button-primary" onClick={() => void loadProfile()}>
+          Try again
+        </button>
+      </main>
+    )
+  const feedback = (
+    <>
+      {error && <Notice error message={error} onClose={closeError} />}{' '}
+      {notice && <Notice message={notice} onClose={closeNotice} />}
+    </>
+  )
   return (
-    <AppShell profile={profile} isBusy={isBusy} onSignOut={() => void runOperation(signOut)}>
-      <section className="mb-10 grid gap-6 lg:grid-cols-[1fr_0.75fr] lg:items-end">
-        <div>
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-emerald-800">
-            Your learning circle
-          </p>
-          <h1 className="max-w-2xl font-serif text-4xl font-semibold leading-tight sm:text-5xl">
-            Who would you like to practise with?
-          </h1>
+    <AppShell profile={profile}>
+      {!modal && feedback}
+      {loadError && (
+        <div className="inline-error" role="alert">
+          {loadError}
+          <button className="text-action" onClick={() => void refresh()}>
+            Retry
+          </button>
         </div>
-        <p className="max-w-xl text-base leading-7 text-stone-600 lg:justify-self-end">
-          Every partnership is private and always contains exactly two people. Invite someone using
-          their username.
-        </p>
-      </section>
-
-      {error ? (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
-        >
-          {error}
-        </div>
-      ) : null}
-
-      <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr]">
-        <div className="space-y-6">
-          <InvitePartnerForm
-            disabled={isBusy}
-            onInvite={(username) => runPartnershipAction(() => api.invitePartner({ username }))}
-          />
-          <ProfileCard
+      )}
+      {view === 'profile' ? (
+        <section className="account-page">
+          <div className="page-heading section-heading">
+            <div>
+              <p className="eyebrow">Account</p>
+              <h1>Your profile</h1>
+              <p>Keep it recognisable for the people you practise with.</p>
+            </div>
+          </div>
+          <ProfileEditor
+            key={`${profile.username}:${profile.displayName}`}
             profile={profile}
             disabled={isBusy}
+            onCopy={async () => {
+              if (await run(() => navigator.clipboard.writeText(profile.username)))
+                setNotice('Username copied.')
+            }}
             onSave={(input) =>
-              runOperation(async () => {
-                generation.current += 1
+              run(async () => {
                 const response = await api.updateProfile(input)
                 setProfile(response.data)
+                setNotice('Profile saved.')
               })
             }
           />
-        </div>
-
-        <div className="space-y-8">
-          {groups.incoming.length > 0 ? (
-            <PartnerSection title="Invitations for you" count={groups.incoming.length}>
-              {groups.incoming.map((partnership) => (
-                <PartnerCard
-                  key={partnership.id}
-                  disabled={isBusy}
-                  partnership={partnership}
-                  actionLabel="Accept"
-                  secondaryActionLabel="Decline"
-                  onAction={() =>
-                    void runPartnershipAction(() => api.acceptPartnership(partnership.id))
-                  }
-                  onSecondaryAction={() =>
-                    void runPartnershipAction(() => api.declinePartnership(partnership.id))
-                  }
-                />
-              ))}
-            </PartnerSection>
-          ) : null}
-
-          {gameItems.length > 0 ? (
-            <GamesDashboard
-              disabled={isBusy}
-              items={gameItems}
-              userId={userId}
-              onOpen={(partnershipId) => navigate(`/games/explain-word/${partnershipId}`)}
-              onPlayAgain={(partnershipId) => void startNewGame(partnershipId)}
-            />
-          ) : null}
-
-          <PartnerSection title="Your partners" count={groups.active.length}>
-            {groups.active.length > 0 ? (
-              groups.active.map((partnership) => {
-                const wordGame = wordGames[partnership.id]
-                return (
-                  <PartnerCard
-                    key={partnership.id}
-                    disabled={isBusy}
-                    partnership={partnership}
-                    actionLabel={!wordGame || wordGame.status === 'finished' ? 'Play' : undefined}
-                    secondaryActionLabel="End partnership"
-                    secondaryDestructiveAction
-                    onAction={() => {
-                      if (wordGame?.status === 'finished') {
-                        void startNewGame(partnership.id)
-                      } else {
-                        navigate(`/games/explain-word/${partnership.id}`)
-                      }
-                    }}
-                    onSecondaryAction={() =>
-                      void runPartnershipAction(() => api.endPartnership(partnership.id))
-                    }
-                  />
-                )
-              })
-            ) : (
-              <EmptyState hasMore={nextCursor !== null} />
-            )}
-          </PartnerSection>
-
-          {groups.outgoing.length > 0 ? (
-            <PartnerSection title="Waiting for a reply" count={groups.outgoing.length}>
-              {groups.outgoing.map((partnership) => (
-                <PartnerCard
-                  key={partnership.id}
-                  disabled={isBusy}
-                  partnership={partnership}
-                  actionLabel="Cancel"
-                  destructiveAction
-                  onAction={() =>
-                    void runPartnershipAction(() => api.endPartnership(partnership.id))
-                  }
-                />
-              ))}
-            </PartnerSection>
-          ) : null}
-          {nextCursor ? (
-            <button
-              type="button"
-              className="button button-secondary"
-              disabled={isBusy}
-              onClick={() => void loadMore()}
-            >
-              Load more partners and invitations
+          <button
+            className="text-action profile-signout"
+            disabled={isBusy}
+            onClick={() => void run(signOut)}
+          >
+            Sign out
+          </button>
+        </section>
+      ) : view === 'history' ? (
+        <HistoryView
+          history={history}
+          friends={friends}
+          disabled={isBusy}
+          onPlayAgain={(item) => {
+            const friend = friends.find((candidate) => candidate.id === item.partnershipId)
+            const game = games.find((candidate) => candidate.id === item.gameId)
+            if (friend && game) void play(game, friend, 'invite')
+          }}
+        />
+      ) : view === 'friends' ? (
+        <section className="friends-page">
+          <div className="friends-hero">
+            <div>
+              <p className="eyebrow">Your circle</p>
+              <h1>Friends</h1>
+              <p>People you trust, ready for real English practice.</p>
+            </div>
+            <button className="button button-accent" onClick={() => setPanel('add')}>
+              <span aria-hidden="true">＋</span> Add a friend
             </button>
-          ) : null}
-          {isBusy ? (
-            <p role="status" className="text-sm text-stone-600">
-              Updating your meeting place…
-            </p>
-          ) : null}
-        </div>
-      </div>
+          </div>
+          <nav className="section-tabs" aria-label="Friend lists">
+            <button
+              aria-current={!invitationView ? 'page' : undefined}
+              onClick={() => setParams({ view: 'friends' })}
+            >
+              Your friends
+            </button>
+            <button
+              aria-current={invitationView ? 'page' : undefined}
+              onClick={() => setParams({ view: 'friends', section: 'invitations' })}
+            >
+              Invitations{incoming.length > 0 ? ` (${incoming.length})` : ''}
+            </button>
+          </nav>
+          {invitationView ? (
+            <div className="invitations-list">
+              {!incoming.length && !outgoing.length ? (
+                <p className="compact-empty">No pending invitations.</p>
+              ) : null}
+              {incoming.length > 0 && (
+                <ListSection title="Received">
+                  {incoming.map((friend) => (
+                    <PartnerCard
+                      key={friend.id}
+                      partnership={friend}
+                      disabled={isBusy}
+                      actionLabel="Accept"
+                      secondaryActionLabel="Decline"
+                      onAction={() => void mutate(() => api.acceptPartnership(friend.id))}
+                      onSecondaryAction={() => void mutate(() => api.declinePartnership(friend.id))}
+                    />
+                  ))}
+                </ListSection>
+              )}
+              {outgoing.length > 0 && (
+                <ListSection title="Sent">
+                  {outgoing.map((friend) => (
+                    <PartnerCard
+                      key={friend.id}
+                      partnership={friend}
+                      disabled={isBusy}
+                      actionLabel="Cancel invitation"
+                      onAction={() => void mutate(() => api.endPartnership(friend.id))}
+                    />
+                  ))}
+                </ListSection>
+              )}
+            </div>
+          ) : (
+            <>
+              {friends.length > 0 && (
+                <label className="search-field friends-search">
+                  Find a friend
+                  <input
+                    className="input"
+                    type="search"
+                    value={search}
+                    placeholder="Name or username"
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </label>
+              )}
+              <div className="friend-list">
+                {filtered.map((friend) => (
+                  <div className="friend-management" key={friend.id}>
+                    <PartnerCard partnership={friend} />
+                    <details className="friend-options">
+                      <summary aria-label={`Manage ${friend.partner.displayName}`}>•••</summary>
+                      <button onClick={() => setPanel(`remove:${friend.id}`)}>Remove friend</button>
+                    </details>
+                  </div>
+                ))}
+                {!filtered.length && (
+                  <p className="compact-empty">
+                    {friends.length ? 'No matching friends.' : 'Add a friend using their username.'}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+      ) : (
+        <>
+          <section className="practice-hero">
+            <div className="practice-hero-copy">
+              <p className="eyebrow">English, together</p>
+              <h1>
+                Skip the small talk.
+                <span> Start speaking.</span>
+              </h1>
+              <p className="practice-intro">
+                Pick a friend and go. We prepare the game, open the room, and give you something
+                worth talking about.
+              </p>
+              <div className="practice-actions">
+                <button className="button button-accent" onClick={() => setPanel('add')}>
+                  Invite someone
+                  <span aria-hidden="true">↗</span>
+                </button>
+                <span className="handle-chip">You’re @{profile.username}</span>
+              </div>
+            </div>
+            <div className="practice-card-stack" aria-hidden="true">
+              <div className="prompt-card prompt-card-back">
+                <span>01</span>
+                <strong>listen</strong>
+                <i>↗</i>
+              </div>
+              <div className="prompt-card prompt-card-front">
+                <div className="prompt-card-top">
+                  <span>Explain the word</span>
+                  <span>5–10 min</span>
+                </div>
+                <strong>Imagine.</strong>
+                <div className="prompt-wave">
+                  {[28, 52, 38, 72, 48, 82, 56, 34, 64, 40].map((height, index) => (
+                    <i key={index} style={{ height }} />
+                  ))}
+                </div>
+                <span>No prep. Just play.</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="quick-start-shell">
+            <div className="quick-start-heading">
+              <div>
+                <p className="eyebrow">Quick start</p>
+                <h2>Who are you practising with?</h2>
+                <p>Choose a person. Explain the word is already selected.</p>
+              </div>
+              <div className="game-pill" aria-label={`${selectedGame.title}, five to ten minutes`}>
+                <span className="game-pill-icon" aria-hidden="true">
+                  Aa
+                </span>
+                <span>
+                  <strong>{selectedGame.title}</strong>
+                  <small>5–10 min · 2 players</small>
+                </span>
+              </div>
+            </div>
+            {active.length > 0 ? (
+              <div className="live-note" role="status">
+                <span className="live-dot" aria-hidden="true" />
+                {active.length === 1
+                  ? 'One game is ready to continue.'
+                  : `${active.length} games are ready to continue.`}
+              </div>
+            ) : null}
+            {isLoading ? (
+              <p role="status">Loading your friends…</p>
+            ) : (
+              <GameWorkspace
+                key={selectedGame.id}
+                game={selectedGame}
+                friends={friends}
+                sessions={sessions}
+                disabled={isBusy}
+                onAction={(friend, action) => play(selectedGame, friend, action)}
+              />
+            )}
+            <div className="quick-start-footer">
+              <p>
+                Someone missing?{' '}
+                <button className="text-action" onClick={() => setPanel('add')}>
+                  Invite them by username
+                </button>
+              </p>
+              {incoming.length > 0 ? (
+                <button
+                  className="text-action"
+                  onClick={() => setParams({ view: 'friends', section: 'invitations' })}
+                >
+                  {incoming.length} friend {incoming.length === 1 ? 'request' : 'requests'} waiting
+                </button>
+              ) : null}
+            </div>
+          </section>
+        </>
+      )}
+      {modal === 'add' && (
+        <Panel
+          title="Invite a friend"
+          feedback={feedback}
+          onClose={() => {
+            setPanel(null)
+            if (params.get('add') === '1') setParams({ view: 'friends' })
+          }}
+        >
+          <div className="invite-intro">
+            <span aria-hidden="true">@</span>
+            <div>
+              <strong>One username. No directory.</strong>
+              <p>We’ll send a private request so you can practise together.</p>
+            </div>
+          </div>
+          <InvitePartnerForm
+            disabled={isBusy}
+            onInvite={async (username) => {
+              const sent = await mutate(() => api.invitePartner({ username }))
+              if (sent) {
+                setPanel(null)
+                setParams({ view: 'friends', section: 'invitations' })
+                setNotice('Invitation sent.')
+              }
+              return sent
+            }}
+          />
+        </Panel>
+      )}
+      {panel?.startsWith('remove:') && (
+        <Panel title="Remove friend?" feedback={feedback} onClose={() => setPanel(null)}>
+          <p>You can invite them again after seven days.</p>
+          <div className="row-actions">
+            <button className="button button-secondary" onClick={() => setPanel(null)}>
+              Keep friend
+            </button>
+            <button
+              className="button button-danger"
+              disabled={isBusy}
+              onClick={async () => {
+                if (await mutate(() => api.endPartnership(panel.slice(7)))) setPanel(null)
+              }}
+            >
+              Remove friend
+            </button>
+          </div>
+        </Panel>
+      )}
     </AppShell>
   )
 }
-
-function GamesDashboard({
+function HistoryView({
+  history,
+  friends,
   disabled,
-  items,
-  onOpen,
   onPlayAgain,
-  userId,
 }: {
+  history: GameHistoryItem[]
+  friends: Partnership[]
   disabled: boolean
-  items: Array<{ game: WordGameSummary; partnership: Partnership }>
-  onOpen: (partnershipId: string) => void
-  onPlayAgain: (partnershipId: string) => void
-  userId: string | undefined
+  onPlayAgain: (item: GameHistoryItem) => void
 }) {
   return (
-    <PartnerSection title="Your games" count={items.length}>
-      {items.map(({ game, partnership }) => {
-        const status =
-          game.status === 'finished'
-            ? 'Finished'
-            : game.status === 'paused'
-              ? 'Paused · reconnecting'
-              : game.status === 'active'
-                ? 'In progress'
-                : game.requestedById === userId
-                  ? 'Waiting for partner'
-                  : 'Ready for your response'
-        return (
-          <article
-            key={partnership.id}
-            className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-emerald-800">Explain the word</p>
-                <h3 className="mt-1 text-lg font-semibold">
-                  With {partnership.partner.displayName}
-                </h3>
-                <p className="mt-1 text-sm text-stone-600">{status}</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className="button button-primary"
-                  disabled={disabled}
-                  onClick={() => onOpen(partnership.id)}
+    <section className="history-page">
+      <div className="history-hero">
+        <div>
+          <p className="eyebrow">Every finished game</p>
+          <h1>History</h1>
+          <p>Your complete practice trail—not only the latest match.</p>
+        </div>
+        <div className="history-count" aria-label={`${history.length} finished games`}>
+          <strong>{history.length}</strong>
+          <span>{history.length === 1 ? 'game' : 'games'}</span>
+        </div>
+      </div>
+
+      {history.length ? (
+        <div className="history-list">
+          {history.map((item, index) => {
+            const game = games.find((candidate) => candidate.id === item.gameId)
+            const canPlayAgain = friends.some((friend) => friend.id === item.partnershipId)
+            const result =
+              item.scores.you === item.scores.partner
+                ? 'Draw'
+                : item.scores.you > item.scores.partner
+                  ? 'You won'
+                  : `${item.partner.displayName} won`
+            return (
+              <article className="history-card" key={`${item.gameId}:${item.id}`}>
+                <div className="history-index" aria-hidden="true">
+                  {String(index + 1).padStart(2, '0')}
+                </div>
+                <div className="history-main">
+                  <div className="history-title-row">
+                    <div>
+                      <p>{game?.title ?? 'English game'}</p>
+                      <h2>With {item.partner.displayName}</h2>
+                    </div>
+                    <time dateTime={item.finishedAt}>{formatFinishedAt(item.finishedAt)}</time>
+                  </div>
+                  <div className="history-meta">
+                    <span>{result}</span>
+                    <span>{item.roundCount === 1 ? '1 round' : `${item.roundCount} rounds`}</span>
+                    <span>@{item.partner.username}</span>
+                  </div>
+                </div>
+                <div
+                  className="history-score"
+                  aria-label={`Score ${item.scores.you} to ${item.scores.partner}`}
                 >
-                  {game.status === 'finished' ? 'View final score' : 'Open game'}
-                </button>
-                {game.status === 'finished' ? (
+                  <strong>{item.scores.you}</strong>
+                  <span>—</span>
+                  <strong>{item.scores.partner}</strong>
+                </div>
+                {canPlayAgain ? (
                   <button
                     type="button"
-                    className="button button-accent"
+                    className="button button-primary"
                     disabled={disabled}
-                    onClick={() => onPlayAgain(partnership.id)}
+                    onClick={() => onPlayAgain(item)}
                   >
-                    Play again
+                    Play again <span aria-hidden="true">↗</span>
                   </button>
                 ) : null}
-              </div>
-            </div>
-          </article>
-        )
-      })}
-    </PartnerSection>
+                <details className="history-rounds">
+                  <summary>
+                    <span>Round details</span>
+                    <span>{item.roundCount}</span>
+                  </summary>
+                  <RoundsTable
+                    rounds={item.rounds}
+                    partnerId={item.partner.id}
+                    partnerName={item.partner.displayName}
+                  />
+                </details>
+              </article>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="history-empty">
+          <span aria-hidden="true">00</span>
+          <h2>Your finished games will live here</h2>
+          <p>Complete a game and its score, partner, rounds, and date will be saved.</p>
+        </div>
+      )}
+    </section>
   )
 }
 
+function formatFinishedAt(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+function ListSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="list-section">
+      <h2>{title}</h2>
+      {children}
+    </section>
+  )
+}
+function messageFromError(error: unknown) {
+  return error instanceof Error ? error.message : 'Something went wrong.'
+}
 function InvitePartnerForm({
   onInvite,
   disabled,
@@ -443,20 +550,17 @@ function InvitePartnerForm({
 }) {
   const [username, setUsername] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [sent, setSent] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (isSubmitting || disabled) return
     setIsSubmitting(true)
-    setSent(false)
 
     try {
       const invitationSent = await onInvite(username)
 
       if (invitationSent) {
         setUsername('')
-        setSent(true)
       }
     } finally {
       setIsSubmitting(false)
@@ -464,176 +568,26 @@ function InvitePartnerForm({
   }
 
   return (
-    <form className="rounded-3xl bg-emerald-950 p-6 text-white shadow-lg" onSubmit={handleSubmit}>
-      <p className="text-sm font-medium text-amber-300">Invite a partner</p>
-      <h2 className="mt-2 font-serif text-2xl font-semibold">Start learning together</h2>
-      <label className="mt-6 block text-sm text-emerald-100" htmlFor="partner-username">
-        Their username
-      </label>
-      <div className="mt-2 flex rounded-xl bg-white p-1">
-        <span className="self-center pl-3 text-stone-400">@</span>
+    <form className="invite-form" onSubmit={handleSubmit}>
+      <label htmlFor="partner-username">Friend’s username</label>
+      <div className="invite-input">
+        <span aria-hidden="true">@</span>
         <input
           id="partner-username"
+          autoFocus
           disabled={isSubmitting || disabled}
-          className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-stone-900 outline-none"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
-          placeholder="martyna_english"
+          placeholder="their_username"
           minLength={3}
           maxLength={32}
           pattern="[A-Za-z0-9_]+"
           required
         />
-        <button className="button button-accent" type="submit" disabled={isSubmitting || disabled}>
-          {isSubmitting ? 'Sending…' : 'Invite'}
+        <button className="button button-primary" type="submit" disabled={isSubmitting || disabled}>
+          {isSubmitting ? 'Sending…' : 'Send invite'}
         </button>
       </div>
-      {sent ? (
-        <p role="status" className="mt-3 text-sm text-emerald-200">
-          Invitation sent.
-        </p>
-      ) : null}
     </form>
   )
-}
-
-function ProfileCard({
-  onSave,
-  profile,
-  disabled,
-}: {
-  onSave: (input: { username: string; displayName: string }) => Promise<boolean>
-  profile: Profile
-  disabled: boolean
-}) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [username, setUsername] = useState(profile.username)
-  const [displayName, setDisplayName] = useState(profile.displayName)
-  const [saved, setSaved] = useState(false)
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (disabled) return
-    setSaved(false)
-    if (await onSave({ username, displayName })) {
-      setIsEditing(false)
-      setSaved(true)
-    }
-  }
-
-  return (
-    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm text-stone-500">Your profile</p>
-          <h2 className="mt-1 font-semibold">How partners find you</h2>
-        </div>
-        <button
-          className="text-sm font-medium text-emerald-800 hover:text-emerald-950"
-          type="button"
-          disabled={disabled}
-          onClick={() => {
-            setUsername(profile.username)
-            setDisplayName(profile.displayName)
-            setSaved(false)
-            setIsEditing((value) => !value)
-          }}
-        >
-          {isEditing ? 'Cancel' : 'Edit'}
-        </button>
-      </div>
-
-      {saved ? (
-        <p role="status" className="mt-3 text-sm text-emerald-800">
-          Profile saved.
-        </p>
-      ) : null}
-      {isEditing ? (
-        <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium">
-            Display name
-            <input
-              className="input mt-1.5"
-              disabled={disabled}
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              maxLength={80}
-              required
-            />
-          </label>
-          <label className="block text-sm font-medium">
-            Username
-            <input
-              className="input mt-1.5"
-              disabled={disabled}
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              minLength={3}
-              maxLength={32}
-              pattern="[A-Za-z0-9_]+"
-              required
-            />
-          </label>
-          <button
-            className="button button-primary w-full justify-center"
-            type="submit"
-            disabled={disabled}
-          >
-            Save profile
-          </button>
-        </form>
-      ) : (
-        <div className="mt-5 rounded-2xl bg-stone-100 p-4">
-          <p className="font-medium">{profile.displayName}</p>
-          <p className="mt-1 text-sm text-stone-500">@{profile.username}</p>
-        </div>
-      )}
-    </section>
-  )
-}
-
-function PartnerSection({
-  children,
-  count,
-  title,
-}: {
-  children: React.ReactNode
-  count: number
-  title: string
-}) {
-  return (
-    <section>
-      <div className="mb-3 flex items-center gap-2">
-        <h2 className="font-serif text-2xl font-semibold">{title}</h2>
-        <span className="rounded-full bg-stone-200 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
-          {count}
-        </span>
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
-  )
-}
-
-function EmptyState({ hasMore }: { hasMore: boolean }) {
-  return (
-    <div className="rounded-3xl border border-dashed border-stone-300 bg-stone-50 px-6 py-10 text-center">
-      <p className="font-medium text-stone-700">
-        {hasMore ? 'No active partners loaded yet' : 'No active partners yet'}
-      </p>
-      <p className="mt-2 text-sm text-stone-500">
-        {hasMore
-          ? 'Load more to see older partners and invitations.'
-          : 'Invite someone using the invitation form.'}
-      </p>
-    </div>
-  )
-}
-
-function messageFromError(error: unknown) {
-  if (error instanceof ApiError || error instanceof Error) return error.message
-  return 'Something went wrong.'
-}
-
-function indexWordGames(games: WordGameSummary[]) {
-  return Object.fromEntries(games.map((game) => [game.partnershipId, game]))
 }

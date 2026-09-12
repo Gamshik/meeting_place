@@ -29,7 +29,7 @@ export function PartnerCard({
     .toUpperCase()
 
   return (
-    <article className="flex flex-col gap-4 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <article className="friend-row">
       <div className="flex min-w-0 items-center gap-4">
         {partnership.partner.avatarUrl ? (
           <img
@@ -39,7 +39,7 @@ export function PartnerCard({
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="grid size-12 shrink-0 place-items-center rounded-2xl bg-amber-100 font-semibold text-amber-900">
+          <div className="grid size-12 shrink-0 place-items-center rounded-full bg-stone-200 font-semibold text-stone-900">
             {initials}
           </div>
         )}

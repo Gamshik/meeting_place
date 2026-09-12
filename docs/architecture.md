@@ -86,11 +86,18 @@ atomic. Ordinary self-profile updates use standard row operations under RLS.
 
 ## Explain-the-word game
 
-Each active partnership can own one continuing `word_games` record. Its rounds alternate the
-explainer between the partnership's two users. Security-definer database functions lock and advance
-the turn atomically; direct table access is revoked. The game-state function shapes its response for
-the caller, so an unfinished round's secret word and forbidden forms are visible only to the
-explainer.
+Each active partnership can have at most one unfinished `word_games` record and any number of
+finished records. Its `word_game_rounds` rows stay attached to that immutable finished session, so a
+new game never erases earlier results. Rounds alternate the explainer between the partnership's two
+users. Security-definer database functions lock and advance the turn atomically; direct table access
+is revoked. The game-state function shapes its response for the caller, so an unfinished round's
+secret word and forbidden forms are visible only to the explainer.
+
+A profile can participate in only one active or paused game at a time across all partnerships. Game
+request creation and acceptance lock both participant profile rows in stable order, then check for
+another ongoing game before inserting or activating the request. This makes simultaneous operations
+serialize and keeps the rule effective for direct authenticated RPC Supabase calls as well as the
+Worker API.
 
 The Worker asks the configured OpenRouter text model for a B1–B2 game card and calls
 `microsoft/mai-transcribe-2` in verbatim mode for each completed browser recording. A game begins in
@@ -115,9 +122,10 @@ but its result cannot be submitted unless the session resumes before expiry.
 Either participant may also finish an active or paused session immediately. This transition is
 authorization-checked in PostgreSQL; both clients leave the game screen after observing the terminal
 state.
-The dashboard separates game sessions from partnership controls. A finished game can be reviewed or
-reset into a new pending invitation for the same partnership; restarting clears the previous rounds
-and scores while preserving the two-person partnership itself.
+The dashboard separates live game sessions, friendship controls, and full game history. Both the live
+game and each completed result expose an ordered rounds table. Playing again inserts a new pending
+session for the same partnership while preserving the finished game, its score, and all of its round
+rows.
 
 ## Dependency direction
 
@@ -152,3 +160,18 @@ Future tables should reference `partnerships.id` for shared topics, meetings, an
 Personal feedback should reference both the activity and its owning profile so one partner cannot
 read the other's private coaching data. AI calls are made by the Worker, with provider keys in
 Cloudflare secrets. A future billing slice should record provider usage before returning results.
+
+## Shared client activity
+
+A provider inside the authenticated route loads every page of the current user's partnerships and
+registered game summaries. It stays mounted while navigating between Games, Friends, Profile, and
+a game. Realtime partnership events and foreground polling refresh the canonical API data, replacing
+the complete snapshot together. This lets friend search and notifications include older pages
+without dropping them on refresh. No public profile directory is queried.
+
+Game registration supplies session operations and a route; game rules and authorization still live
+in the existing Worker and database. The Games workspace sends or accepts a request before entering
+the game route. Active sessions are reopened instead of restarted. The shared notification panel
+uses the same snapshot and can accept invitations without a route change when the player is free.
+Notifications have no separate persistent store or push service; the bell marks currently pending
+incoming invitations.
