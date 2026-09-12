@@ -118,6 +118,49 @@ describe('explain-word game API', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('list_my_word_games')
   })
 
+  it('lists every finished game with its stored rounds', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: [
+        {
+          history_id: gameId,
+          partnership_id: partnershipId,
+          finished_at: '2026-09-11T12:10:00Z',
+          partner_id: partnerId,
+          partner_username: 'bob',
+          partner_display_name: 'Bob',
+          partner_avatar_url: null,
+          my_score: 1,
+          partner_score: 0,
+          round_count: 1,
+          rounds: [
+            {
+              id: roundId,
+              turnNumber: 1,
+              explainerId: userId,
+              topic: 'Travel',
+              status: 'completed',
+              word: 'passport',
+              guess: 'passport',
+              isCorrect: true,
+              score: 1,
+              coachScore: 88,
+              completedAt: '2026-09-11T12:05:00Z',
+            },
+          ],
+        },
+      ],
+      error: null,
+    })
+
+    const response = await jsonRequest('/api/games/explain-word/history', 'GET')
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: [{ id: gameId, roundCount: 1, rounds: [{ word: 'passport', score: 1 }] }],
+    })
+    expect(mocks.rpc).toHaveBeenCalledWith('list_my_word_game_history')
+  })
+
   it('updates participant presence and exposes the reconnect deadline', async () => {
     mocks.rpc.mockResolvedValue({
       data: game({
@@ -178,6 +221,45 @@ describe('explain-word game API', () => {
     expect(mocks.rpc).toHaveBeenLastCalledWith('respond_to_word_game', {
       p_accept: true,
       p_game_id: gameId,
+    })
+  })
+
+  it('returns a clear conflict when a player accepts while already playing', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game({ status: 'pending', acceptedAt: null }), error: null })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code: 'P0001', message: 'word_game_player_busy' },
+      })
+
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}/accept`, 'POST')
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: 'word_game_player_busy',
+        message: 'Finish your current game before accepting another request.',
+      },
+    })
+  })
+
+  it('does not create a game request when the selected friend is already playing', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: null,
+      error: { code: 'P0001', message: 'word_game_partner_busy' },
+    })
+
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}`, 'POST')
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: 'word_game_partner_busy',
+        message: 'Your friend is already playing another game. Try again later.',
+      },
+    })
+    expect(mocks.rpc).toHaveBeenCalledWith('start_word_game', {
+      p_partnership_id: partnershipId,
     })
   })
 

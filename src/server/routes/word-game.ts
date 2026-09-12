@@ -4,6 +4,7 @@ import {
   createWordRoundSchema,
   guessWordRoundSchema,
   wordGameActionSchema,
+  wordGameHistoryItemSchema,
   wordGameSchema,
   wordGameSummarySchema,
   type WordGame,
@@ -32,6 +33,31 @@ wordGameRoutes.get('/', async (context) => {
     requestedById: item.requested_by,
   }))
   const parsed = wordGameSummarySchema.array().safeParse(games)
+  if (!parsed.success) return invalidGameStateResponse(context)
+  return context.json({ data: parsed.data })
+})
+
+wordGameRoutes.get('/history', async (context) => {
+  const { data, error } = await context.get('supabase').rpc('list_my_word_game_history')
+  if (error) return gameDatabaseError(context, error)
+  const history = (data ?? []).map((item) => ({
+    id: item.history_id,
+    partnershipId: item.partnership_id,
+    finishedAt: item.finished_at,
+    partner: {
+      id: item.partner_id,
+      username: item.partner_username,
+      displayName: item.partner_display_name,
+      avatarUrl: item.partner_avatar_url,
+    },
+    scores: {
+      you: item.my_score,
+      partner: item.partner_score,
+    },
+    roundCount: item.round_count,
+    rounds: item.rounds,
+  }))
+  const parsed = wordGameHistoryItemSchema.array().safeParse(history)
   if (!parsed.success) return invalidGameStateResponse(context)
   return context.json({ data: parsed.data })
 })
@@ -365,6 +391,8 @@ function gameDatabaseError(
     active_partnership_not_found: [404, 'This active partnership was not found.'],
     word_game_not_found: [404, 'No game has been started with this partner.'],
     word_game_invitation_not_available: [409, 'This game request is no longer available.'],
+    word_game_player_busy: [409, 'Finish your current game before accepting another request.'],
+    word_game_partner_busy: [409, 'Your friend is already playing another game. Try again later.'],
     word_game_turn_not_available: [409, 'It is not your turn.'],
     word_game_round_in_progress: [409, 'Finish the current round first.'],
     word_game_round_not_available: [409, 'This explanation cannot be submitted.'],

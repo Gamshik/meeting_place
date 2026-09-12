@@ -74,6 +74,20 @@ export const wordGameRoundSchema = z.object({
   completedAt: z.string().nullable(),
 })
 
+export const wordGameRoundSummarySchema = z.object({
+  id: z.uuid(),
+  turnNumber: z.number().int().positive(),
+  explainerId: z.uuid(),
+  topic: z.string(),
+  status: z.enum(['explaining', 'awaiting_guess', 'completed', 'skipped']),
+  word: z.string().nullable(),
+  guess: z.string().nullable(),
+  isCorrect: z.boolean().nullable(),
+  score: z.number().int().min(0).max(1).nullable(),
+  coachScore: z.number().int().min(0).max(100).nullable(),
+  completedAt: z.string().nullable(),
+})
+
 export const wordGameSchema = z.object({
   id: z.uuid(),
   partnershipId: z.uuid(),
@@ -96,6 +110,7 @@ export const wordGameSchema = z.object({
     partner: z.number().int().nonnegative(),
   }),
   round: wordGameRoundSchema.nullable(),
+  rounds: z.array(wordGameRoundSummarySchema).optional(),
 })
 
 export const wordGameSummarySchema = z.object({
@@ -104,8 +119,28 @@ export const wordGameSummarySchema = z.object({
   requestedById: z.uuid(),
 })
 
+export const wordGameHistoryItemSchema = z.object({
+  id: z.uuid(),
+  partnershipId: z.uuid(),
+  finishedAt: z.string(),
+  partner: z.object({
+    id: z.uuid(),
+    username: z.string(),
+    displayName: z.string(),
+    avatarUrl: z.string().nullable(),
+  }),
+  scores: z.object({
+    you: z.number().int().nonnegative(),
+    partner: z.number().int().nonnegative(),
+  }),
+  roundCount: z.number().int().nonnegative(),
+  rounds: z.array(wordGameRoundSummarySchema),
+})
+
 export type WordGame = z.infer<typeof wordGameSchema>
+export type WordGameHistoryItem = z.infer<typeof wordGameHistoryItemSchema>
 export type WordGameRound = z.infer<typeof wordGameRoundSchema>
+export type WordGameRoundSummary = z.infer<typeof wordGameRoundSummarySchema>
 export type WordGameSummary = z.infer<typeof wordGameSummarySchema>
 
 export const invitationResultSchema = z.discriminatedUnion('ok', [

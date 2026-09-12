@@ -5,6 +5,7 @@ import type {
   Profile,
   UpdateProfileInput,
   WordGame,
+  WordGameHistoryItem,
   WordGameSummary,
 } from '../../shared/contracts'
 import { supabase } from './supabase'
@@ -91,6 +92,8 @@ export const api = {
   getWordGame: (partnershipId: string) =>
     apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}`),
   getWordGames: () => apiRequest<DataResponse<WordGameSummary[]>>('/api/games/explain-word'),
+  getWordGameHistory: () =>
+    apiRequest<DataResponse<WordGameHistoryItem[]>>('/api/games/explain-word/history'),
   startWordGame: (partnershipId: string) =>
     apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}`, {
       method: 'POST',

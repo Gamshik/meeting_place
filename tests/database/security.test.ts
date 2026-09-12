@@ -320,6 +320,70 @@ describe('database authorization and lifecycle', () => {
     expect(await rows('select name from storage.objects')).toEqual([{ name: audioPath }])
   })
 
+  it('does not let a player accept another game while one is active', async () => {
+    await asUser(alice)
+    const firstPartnership = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [firstPartnership.partnershipId])
+    await asUser(eve)
+    const secondPartnership = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [secondPartnership.partnershipId])
+    await asUser(eve)
+    const secondGame = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [secondPartnership.partnershipId],
+    )
+
+    await asUser(alice)
+    const firstGame = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [firstPartnership.partnershipId],
+    )
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [firstGame.rows[0]!.result.id])
+
+    await db.exec('savepoint cannot_accept_while_playing')
+    await expect(
+      rows('select public.respond_to_word_game($1,true)', [secondGame.rows[0]!.result.id]),
+    ).rejects.toThrow('word_game_player_busy')
+    await db.exec('rollback to savepoint cannot_accept_while_playing')
+
+    await rows('select public.respond_to_word_game($1,false)', [secondGame.rows[0]!.result.id])
+    await expect(
+      rows('select public.get_word_game($1)', [secondPartnership.partnershipId]),
+    ).rejects.toThrow('word_game_not_found')
+  })
+
+  it('does not create an invitation when the selected player is already playing', async () => {
+    await asUser(alice)
+    const firstPartnership = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [firstPartnership.partnershipId])
+    await asUser(alice)
+    const firstGame = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [firstPartnership.partnershipId],
+    )
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [firstGame.rows[0]!.result.id])
+
+    await asUser(eve)
+    const secondPartnership = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [secondPartnership.partnershipId])
+    await asUser(eve)
+    await db.exec('savepoint cannot_invite_busy_player')
+    await expect(
+      rows('select public.start_word_game($1)', [secondPartnership.partnershipId]),
+    ).rejects.toThrow('word_game_partner_busy')
+    await db.exec('rollback to savepoint cannot_invite_busy_player')
+
+    await expect(
+      rows('select public.get_word_game($1)', [secondPartnership.partnershipId]),
+    ).rejects.toThrow('word_game_not_found')
+  })
+
   it('pauses, resumes, and finishes a game from participant presence', async () => {
     await asUser(alice)
     const invitation = await invite('bob')
@@ -406,14 +470,65 @@ describe('database authorization and lifecycle', () => {
     await db.exec('rollback to savepoint finished_game_is_locked')
 
     const restarted = await db.query<{
-      result: { status: string; requestedById: string; scores: { you: number }; round: unknown }
+      result: {
+        id: string
+        status: string
+        requestedById: string
+        scores: { you: number }
+        round: unknown
+      }
     }>('select public.start_word_game($1) result', [invitation.partnershipId])
+    expect(restarted.rows[0]!.result.id).not.toBe(requested.rows[0]!.result.id)
     expect(restarted.rows[0]!.result).toMatchObject({
       status: 'pending',
       requestedById: alice,
       scores: { you: 0 },
       round: null,
     })
+  })
+
+  it('preserves completed games and their rounds after starting a new game', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const first = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const firstGameId = first.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [firstGameId])
+    await asUser(alice)
+    const created = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [firstGameId, 'Travel', 'passport', ['passport'], ['passport']],
+    )
+    await rows('select public.skip_word_game_round($1)', [created.rows[0]!.result.round.id])
+    await rows('select public.end_word_game($1)', [invitation.partnershipId])
+
+    const beforeRestart = await db.query<{
+      history_id: string
+      round_count: number
+      rounds: { word: string; status: string }[]
+    }>('select history_id, round_count, rounds from public.list_my_word_game_history()')
+    expect(beforeRestart.rows).toHaveLength(1)
+    expect(beforeRestart.rows[0]).toMatchObject({
+      history_id: firstGameId,
+      round_count: 1,
+      rounds: [{ word: 'passport', status: 'skipped' }],
+    })
+
+    const restarted = await db.query<{ result: { id: string; rounds: unknown[] } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    expect(restarted.rows[0]!.result.id).not.toBe(firstGameId)
+    expect(restarted.rows[0]!.result.rounds).toEqual([])
+
+    const afterRestart = await rows('select history_id from public.list_my_word_game_history()')
+    expect(afterRestart).toEqual([{ history_id: firstGameId }])
   })
 
   it('denies a point when the transcription contains the secret word', async () => {

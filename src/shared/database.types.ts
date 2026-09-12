@@ -212,6 +212,22 @@ export type Database = {
           requested_by: string
         }[]
       }
+      list_my_word_game_history: {
+        Args: Record<string, never>
+        Returns: {
+          finished_at: string
+          history_id: string
+          my_score: number
+          partner_avatar_url: string | null
+          partner_display_name: string
+          partner_id: string
+          partner_score: number
+          partner_username: string
+          partnership_id: string
+          round_count: number
+          rounds: Json
+        }[]
+      }
       guess_word_game_round: {
         Args: { p_guess: string; p_round_id: string }
         Returns: Json
