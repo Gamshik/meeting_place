@@ -8,6 +8,7 @@ import { AppShell } from '../components/AppShell'
 import { RoundsTable } from '../components/RoundsTable'
 import { Notice } from '../components/Panel'
 import { api, ApiError } from '../lib/api'
+import { supabase } from '../lib/supabase'
 
 const TOPICS = ['Everyday life', 'Food', 'Travel', 'Nature', 'Work and study', 'Technology']
 
@@ -22,6 +23,7 @@ export function ExplainWordGamePage() {
   const [isBusy, setIsBusy] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [showEndConfirmation, setShowEndConfirmation] = useState(false)
+  const [showFinishedChoice, setShowFinishedChoice] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const joinedActiveSession = useRef(false)
 
@@ -109,12 +111,40 @@ export function ExplainWordGamePage() {
   }, [partnershipId, sessionGameId, sessionStatus])
 
   useEffect(() => {
+    if (!sessionGameId || (sessionStatus !== 'active' && sessionStatus !== 'paused')) return
+    let active = true
+    const channel = supabase
+      .channel(`word-game:${sessionGameId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'word_games',
+          filter: `id=eq.${sessionGameId}`,
+        },
+        (payload) => {
+          if (active && 'status' in payload.new && payload.new.status === 'finished') {
+            void loadGame(true)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      active = false
+      void supabase.removeChannel(channel)
+    }
+  }, [loadGame, sessionGameId, sessionStatus])
+
+  useEffect(() => {
     if (sessionStatus === 'active' || sessionStatus === 'paused') {
       joinedActiveSession.current = true
     } else if (sessionStatus === 'finished' && joinedActiveSession.current) {
-      navigate('/', { replace: true })
+      joinedActiveSession.current = false
+      setShowFinishedChoice(true)
     }
-  }, [navigate, sessionStatus])
+  }, [sessionStatus])
 
   async function run(action: () => Promise<{ data: WordGame } | void>) {
     if (isBusy) return
@@ -266,6 +296,13 @@ export function ExplainWordGamePage() {
           isBusy={isBusy}
           onCancel={() => setShowEndConfirmation(false)}
           onConfirm={() => void endGame()}
+        />
+      ) : null}
+      {showFinishedChoice && game?.status === 'finished' ? (
+        <GameFinishedDialog
+          game={game}
+          onHome={() => navigate('/', { replace: true })}
+          onViewResults={() => setShowFinishedChoice(false)}
         />
       ) : null}
     </AppShell>
@@ -555,6 +592,72 @@ function EndGameDialog({
             onClick={onConfirm}
           >
             {isBusy ? 'Ending…' : 'End game for everyone'}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function GameFinishedDialog({
+  game,
+  onHome,
+  onViewResults,
+}: {
+  game: WordGame
+  onHome: () => void
+  onViewResults: () => void
+}) {
+  const resultsButton = useRef<HTMLButtonElement | null>(null)
+
+  useEffect(() => {
+    resultsButton.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onViewResults()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onViewResults])
+
+  return (
+    <div className="game-dialog-backdrop">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="finished-game-title"
+        aria-describedby="finished-game-description"
+        className="game-dialog finished-game-dialog"
+      >
+        <span className="finished-game-symbol" aria-hidden="true">
+          ✓
+        </span>
+        <p className="finished-game-label">Game over</p>
+        <h2 id="finished-game-title">The game has finished</h2>
+        <p id="finished-game-description">
+          Your final score is saved. You can review every round now or return home.
+        </p>
+        <div className="finished-game-score" aria-label="Final score">
+          <div>
+            <span>You</span>
+            <strong>{game.scores.you}</strong>
+          </div>
+          <span aria-hidden="true">:</span>
+          <div>
+            <span>{game.partner.displayName}</span>
+            <strong>{game.scores.partner}</strong>
+          </div>
+        </div>
+        <div className="game-dialog-actions">
+          <button type="button" className="button button-secondary" onClick={onHome}>
+            Go home
+          </button>
+          <button
+            ref={resultsButton}
+            type="button"
+            className="button button-primary"
+            onClick={onViewResults}
+          >
+            View results
           </button>
         </div>
       </section>

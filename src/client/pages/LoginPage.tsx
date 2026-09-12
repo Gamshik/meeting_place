@@ -39,6 +39,7 @@ export function LoginPage() {
           </span>
           <span>
             meeting
+            <span className="brand-dot" aria-hidden="true" />
             <br />
             place
           </span>

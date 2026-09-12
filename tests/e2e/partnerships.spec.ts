@@ -480,6 +480,118 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page).toHaveURL('/')
 })
 
+test('shows the other player an immediate choice when a word game finishes', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+
+  const gameId = '44444444-4444-4444-8444-444444444444'
+  let game: WordGame = {
+    id: gameId,
+    partnershipId: relationshipId,
+    status: 'active',
+    requestedById: partnerId,
+    acceptedAt: '2026-09-11T12:00:00Z',
+    currentPlayerId: userId,
+    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 1, partner: 2 },
+    round: null,
+    rounds: [],
+  }
+  let sendGameFinished: (() => void) | undefined
+
+  await page.routeWebSocket('wss://browser-test.supabase.co/realtime/v1/**', (socket) => {
+    socket.onMessage((message) => {
+      const [joinReference, reference, topic, event, payload] = JSON.parse(message.toString())
+
+      if (event === 'phx_join') {
+        const postgresChanges = payload.config.postgres_changes.map(
+          (filter: Record<string, unknown>, index: number) => ({ ...filter, id: index + 1 }),
+        )
+        socket.send(
+          JSON.stringify([
+            joinReference,
+            reference,
+            topic,
+            'phx_reply',
+            { status: 'ok', response: { postgres_changes: postgresChanges } },
+          ]),
+        )
+
+        if (
+          payload.config.postgres_changes.some(
+            (filter: Record<string, unknown>) => filter.table === 'word_games',
+          )
+        ) {
+          sendGameFinished = () => {
+            socket.send(
+              JSON.stringify([
+                null,
+                null,
+                topic,
+                'postgres_changes',
+                {
+                  ids: [1],
+                  data: {
+                    columns: [],
+                    commit_timestamp: '2026-09-13T12:00:00Z',
+                    errors: null,
+                    old_record: { id: gameId },
+                    record: { id: gameId, status: 'finished' },
+                    schema: 'public',
+                    table: 'word_games',
+                    type: 'UPDATE',
+                  },
+                },
+              ]),
+            )
+          }
+        }
+      } else if (event === 'heartbeat') {
+        socket.send(
+          JSON.stringify([
+            joinReference,
+            reference,
+            topic,
+            'phx_reply',
+            { status: 'ok', response: {} },
+          ]),
+        )
+      }
+    })
+  })
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/presence') && route.request().method() === 'DELETE') {
+      await route.fulfill({ status: 204 })
+    } else {
+      await route.fulfill({ json: { data: game } })
+    }
+  })
+
+  await page.goto(`/games/explain-word/${relationshipId}`)
+  await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
+  await expect.poll(() => Boolean(sendGameFinished)).toBe(true)
+
+  game = {
+    ...game,
+    status: 'finished',
+    finishedAt: '2026-09-13T12:00:00Z',
+    scores: { you: 1, partner: 3 },
+  }
+  sendGameFinished!()
+
+  const dialog = page.getByRole('dialog', { name: 'The game has finished' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByLabel('Final score')).toContainText('You1:Bob3')
+  await expect(dialog.getByRole('button', { name: 'Go home' })).toBeVisible()
+  await dialog.getByRole('button', { name: 'View results' }).click()
+  await expect(dialog).toHaveCount(0)
+  await expect(page.getByText('This game was ended')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Rounds' })).toBeVisible()
+})
+
 test('shows the partner both the recording and transcript before their answer', async ({
   page,
 }) => {

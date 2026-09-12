@@ -23,6 +23,7 @@ export function AppShell({ children, profile, onNavigate }: AppShellProps) {
           </span>
           <span>
             meeting
+            <span className="brand-dot" aria-hidden="true" />
             <br />
             place
           </span>

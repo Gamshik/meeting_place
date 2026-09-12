@@ -90,8 +90,10 @@ Each active partnership can have at most one unfinished `word_games` record and 
 finished records. Its `word_game_rounds` rows stay attached to that immutable finished session, so a
 new game never erases earlier results. Rounds alternate the explainer between the partnership's two
 users. Security-definer database functions lock and advance the turn atomically; direct table access
-is revoked. The game-state function shapes its response for the caller, so an unfinished round's
-secret word and forbidden forms are visible only to the explainer.
+for mutations is revoked. Participants have read-only access to their `word_games` session rows so
+Realtime can signal state changes, while round rows remain private. The game-state function shapes
+its response for the caller, so an unfinished round's secret word and forbidden forms are visible
+only to the explainer.
 
 A profile can participate in only one active or paused game at a time across all partnerships. Game
 request creation and acceptance lock both participant profile rows in stable order, then check for
@@ -125,9 +127,10 @@ the round. The partner's normalized answer and deterministic forbidden-word dete
 shared point; AI coaching never changes the official score.
 
 The dashboard and game page poll the canonical game state while waiting for invitations, acceptance,
-recordings, or guesses. Recording links are short-lived signed URLs rather than public object URLs.
-This keeps the first slice simple and allows a later move to participant-authorized Realtime
-invalidation without changing the database ownership model.
+recordings, or guesses. The game page also subscribes to participant-authorized `word_games`
+updates, then reloads the caller-shaped API response when a session finishes. The heartbeat remains
+a fallback when Realtime is temporarily unavailable. Recording links are short-lived signed URLs
+rather than public object URLs.
 
 Active game pages also send a short authenticated presence heartbeat. Once both players have joined,
 an explicit departure or a missing heartbeat pauses the session and locks server-side mutations. A
@@ -136,8 +139,8 @@ window is five minutes; its deadline and terminal state live in PostgreSQL, so r
 cannot bypass them. A recorder already running remains mounted and can finish locally while paused,
 but its result cannot be submitted unless the session resumes before expiry.
 Either participant may also finish an active or paused session immediately. This transition is
-authorization-checked in PostgreSQL; both clients leave the game screen after observing the terminal
-state.
+authorization-checked in PostgreSQL. The player who ends it returns home, while the other player
+receives the final score immediately and chooses whether to go home or review the saved result.
 The dashboard separates live game sessions, friendship controls, and full game history. Both the live
 game and each completed result expose an ordered rounds table. Playing again inserts a new pending
 session for the same partnership while preserving the finished game, its score, and all of its round
