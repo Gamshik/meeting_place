@@ -187,30 +187,25 @@ export function DashboardPage() {
         />
       ) : view === 'friends' ? (
         <section className="friends-page">
-          <div className="friends-hero">
-            <div>
-              <p className="eyebrow">Your circle</p>
-              <h1>Friends</h1>
-              <p>People you trust, ready for real English practice.</p>
-            </div>
-            <button className="button button-accent" onClick={() => setPanel('add')}>
+          <div className="friends-toolbar">
+            <nav className="section-tabs" aria-label="Friend lists">
+              <button
+                aria-current={!invitationView ? 'page' : undefined}
+                onClick={() => setParams({ view: 'friends' })}
+              >
+                Your friends
+              </button>
+              <button
+                aria-current={invitationView ? 'page' : undefined}
+                onClick={() => setParams({ view: 'friends', section: 'invitations' })}
+              >
+                Invitations{incoming.length > 0 ? ` (${incoming.length})` : ''}
+              </button>
+            </nav>
+            <button className="button button-accent friends-add" onClick={() => setPanel('add')}>
               <span aria-hidden="true">＋</span> Add a friend
             </button>
           </div>
-          <nav className="section-tabs" aria-label="Friend lists">
-            <button
-              aria-current={!invitationView ? 'page' : undefined}
-              onClick={() => setParams({ view: 'friends' })}
-            >
-              Your friends
-            </button>
-            <button
-              aria-current={invitationView ? 'page' : undefined}
-              onClick={() => setParams({ view: 'friends', section: 'invitations' })}
-            >
-              Invitations{incoming.length > 0 ? ` (${incoming.length})` : ''}
-            </button>
-          </nav>
           {invitationView ? (
             <div className="invitations-list">
               {!incoming.length && !outgoing.length ? (
@@ -440,84 +435,107 @@ function HistoryView({
   disabled: boolean
   onPlayAgain: (item: GameHistoryItem) => void
 }) {
+  const pageSize = 5
+  const pageCount = Math.max(1, Math.ceil(history.length / pageSize))
+  const [page, setPage] = useState(1)
+  const currentPage = Math.min(page, pageCount)
+  const pageStart = (currentPage - 1) * pageSize
+  const visibleHistory = history.slice(pageStart, pageStart + pageSize)
+
   return (
     <section className="history-page">
-      <div className="history-hero">
-        <div>
-          <p className="eyebrow">Every finished game</p>
-          <h1>History</h1>
-          <p>Your complete practice trail—not only the latest match.</p>
-        </div>
-        <div className="history-count" aria-label={`${history.length} finished games`}>
-          <strong>{history.length}</strong>
-          <span>{history.length === 1 ? 'game' : 'games'}</span>
-        </div>
+      <div className="history-tally" aria-label={`${history.length} finished games`}>
+        <strong>{String(history.length).padStart(2, '0')}</strong>
+        <span>
+          <small>Practice archive</small>
+          finished games
+        </span>
+        <i aria-hidden="true">
+          <b />
+          <b />
+          <b />
+          <b />
+        </i>
       </div>
 
       {history.length ? (
-        <div className="history-list">
-          {history.map((item, index) => {
-            const game = games.find((candidate) => candidate.id === item.gameId)
-            const canPlayAgain = friends.some((friend) => friend.id === item.partnershipId)
-            const result =
-              item.scores.you === item.scores.partner
-                ? 'Draw'
-                : item.scores.you > item.scores.partner
-                  ? 'You won'
-                  : `${item.partner.displayName} won`
-            return (
-              <article className="history-card" key={`${item.gameId}:${item.id}`}>
-                <div className="history-index" aria-hidden="true">
-                  {String(index + 1).padStart(2, '0')}
-                </div>
-                <div className="history-main">
-                  <div className="history-title-row">
-                    <div>
-                      <p>{game?.title ?? 'English game'}</p>
-                      <h2>With {item.partner.displayName}</h2>
+        <>
+          <div className="history-list">
+            {visibleHistory.map((item, index) => {
+              const game = games.find((candidate) => candidate.id === item.gameId)
+              const canPlayAgain = friends.some((friend) => friend.id === item.partnershipId)
+              const result =
+                item.scores.you === item.scores.partner
+                  ? 'Draw'
+                  : item.scores.you > item.scores.partner
+                    ? 'You won'
+                    : `${item.partner.displayName} won`
+              return (
+                <article className="history-card" key={`${item.gameId}:${item.id}`}>
+                  <div className="history-index" aria-hidden="true">
+                    {String(pageStart + index + 1).padStart(2, '0')}
+                  </div>
+                  <div className="history-main">
+                    <div className="history-title-row">
+                      <div>
+                        <p>{game?.title ?? 'English game'}</p>
+                        <h2>With {item.partner.displayName}</h2>
+                      </div>
+                      <time dateTime={item.finishedAt}>
+                        <span>{formatFinishedDate(item.finishedAt)}</span>
+                        <strong>{formatFinishedTime(item.finishedAt)}</strong>
+                      </time>
                     </div>
-                    <time dateTime={item.finishedAt}>{formatFinishedAt(item.finishedAt)}</time>
+                    <div className="history-meta">
+                      <span>{result}</span>
+                      <span>{wordGameModeLabel(item.mode)}</span>
+                      <span>{item.roundCount === 1 ? '1 round' : `${item.roundCount} rounds`}</span>
+                    </div>
                   </div>
-                  <div className="history-meta">
-                    <span>{result}</span>
-                    <span>{wordGameModeLabel(item.mode)}</span>
-                    <span>{item.roundCount === 1 ? '1 round' : `${item.roundCount} rounds`}</span>
-                    <span>@{item.partner.username}</span>
-                  </div>
-                </div>
-                <div
-                  className="history-score"
-                  aria-label={`Score ${item.scores.you} to ${item.scores.partner}`}
-                >
-                  <strong>{item.scores.you}</strong>
-                  <span>—</span>
-                  <strong>{item.scores.partner}</strong>
-                </div>
-                {canPlayAgain ? (
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    disabled={disabled}
-                    onClick={() => onPlayAgain(item)}
+                  <div
+                    className="history-score"
+                    aria-label={`Score ${item.scores.you} to ${item.scores.partner}`}
                   >
-                    Play again <span aria-hidden="true">↗</span>
-                  </button>
-                ) : null}
-                <details className="history-rounds">
-                  <summary>
-                    <span>Round details</span>
-                    <span>{item.roundCount}</span>
-                  </summary>
-                  <RoundsTable
-                    rounds={item.rounds}
-                    partnerId={item.partner.id}
-                    partnerName={item.partner.displayName}
-                  />
-                </details>
-              </article>
-            )
-          })}
-        </div>
+                    <strong>{item.scores.you}</strong>
+                    <span>—</span>
+                    <strong>{item.scores.partner}</strong>
+                  </div>
+                  {canPlayAgain ? (
+                    <button
+                      type="button"
+                      className="button button-primary"
+                      disabled={disabled}
+                      onClick={() => onPlayAgain(item)}
+                    >
+                      Play again <span aria-hidden="true">↗</span>
+                    </button>
+                  ) : null}
+                  <details className="history-rounds">
+                    <summary>
+                      <span>Round details</span>
+                      <span>{item.roundCount}</span>
+                    </summary>
+                    <RoundsTable
+                      rounds={item.rounds}
+                      partnerId={item.partner.id}
+                      partnerName={item.partner.displayName}
+                    />
+                  </details>
+                </article>
+              )
+            })}
+          </div>
+          {pageCount > 1 ? (
+            <HistoryPagination
+              page={currentPage}
+              pageCount={pageCount}
+              firstItem={pageStart + 1}
+              lastItem={Math.min(pageStart + pageSize, history.length)}
+              totalItems={history.length}
+              onChange={setPage}
+            />
+          ) : null}
+        </>
       ) : (
         <div className="history-empty">
           <span aria-hidden="true">00</span>
@@ -529,10 +547,78 @@ function HistoryView({
   )
 }
 
-function formatFinishedAt(value: string) {
+function HistoryPagination({
+  page,
+  pageCount,
+  firstItem,
+  lastItem,
+  totalItems,
+  onChange,
+}: {
+  page: number
+  pageCount: number
+  firstItem: number
+  lastItem: number
+  totalItems: number
+  onChange: (page: number) => void
+}) {
+  const visiblePages = Array.from(
+    new Set(
+      [1, page - 1, page, page + 1, pageCount].filter((item) => item > 0 && item <= pageCount),
+    ),
+  ).sort((left, right) => left - right)
+
+  return (
+    <nav className="history-pagination" aria-label="History pages">
+      <div className="history-pagination-status" aria-live="polite">
+        <span>
+          Showing <strong>{firstItem}</strong>–<strong>{lastItem}</strong> of {totalItems}
+        </span>
+        <div aria-hidden="true">
+          <i style={{ width: `${(lastItem / totalItems) * 100}%` }} />
+        </div>
+      </div>
+      <div className="history-pagination-controls">
+        <button type="button" disabled={page === 1} onClick={() => onChange(page - 1)}>
+          <span aria-hidden="true">←</span> Previous
+        </button>
+        <div className="history-page-numbers">
+          {visiblePages.map((pageNumber, index) => (
+            <span key={pageNumber}>
+              {index > 0 && pageNumber - visiblePages[index - 1]! > 1 ? (
+                <i aria-hidden="true">…</i>
+              ) : null}
+              <button
+                type="button"
+                aria-label={`Page ${pageNumber}`}
+                aria-current={pageNumber === page ? 'page' : undefined}
+                onClick={() => onChange(pageNumber)}
+              >
+                {pageNumber}
+              </button>
+            </span>
+          ))}
+        </div>
+        <button type="button" disabled={page === pageCount} onClick={() => onChange(page + 1)}>
+          Next <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    </nav>
+  )
+}
+
+function formatFinishedDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(new Date(value))
+}
+
+function formatFinishedTime(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
   }).format(new Date(value))
 }
 function ListSection({ title, children }: { title: string; children: React.ReactNode }) {

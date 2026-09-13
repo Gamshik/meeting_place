@@ -1251,9 +1251,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
   await page.goto('/')
   await page.getByRole('link', { name: 'History', exact: true }).click()
   await expect(page.locator('.history-card')).toHaveCount(2)
-  await expect(
-    page.getByText('Your complete practice trail—not only the latest match.'),
-  ).toBeVisible()
+  await expect(page.getByLabel('2 finished games')).toBeVisible()
   await page.getByText('Round details', { exact: true }).first().click()
   const rounds = page.locator('.history-card').first().getByRole('table')
   await expect(rounds.getByRole('row')).toHaveCount(3)

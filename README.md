@@ -26,7 +26,8 @@ room, whether the user is starting, joining, or returning to a session. The UI m
 state explicit as **Start a round**, **Join now**, **Waiting room**, or **Jump back in**. Finished
 games remain behind an expandable history section. Each entry in `src/client/lib/games.ts` provides
 its route and session operations; adding a game requires implementing its route and backend as well
-as registering it.
+as registering it. History shows five finished games per page with their result, mode, round count,
+score, completion time, and expandable round details.
 
 Friends manages connections only. **Invite** is also available from the global header and Practice
 screen, so a missing partner never becomes a navigation dead end. The compact form uses exact
