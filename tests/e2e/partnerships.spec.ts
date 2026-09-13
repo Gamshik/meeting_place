@@ -328,6 +328,7 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
     })
   })
   await page.goto('/?view=profile')
+  await page.getByRole('button', { name: 'Profile settings' }).click()
   await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your profile' })).toHaveCount(0)
   const copyUsername = page.getByRole('button', { name: 'Copy username' })
@@ -434,10 +435,25 @@ test('shows yearly activity by default and lets friends open the monthly profile
       name: 'Practice activity from Sep 14, 2025 through Sep 13, 2026',
     }),
   ).toBeVisible()
+  const firstMonthLabel = page.locator('.activity-month-labels span').first()
+  await expect(firstMonthLabel).toHaveText('Sep')
+  const firstLabelBounds = await firstMonthLabel.boundingBox()
+  expect(firstLabelBounds?.width).toBeGreaterThanOrEqual(18)
   await expect(page.getByRole('gridcell', { name: /Dec 31, 2026/ })).toHaveCount(0)
-  await page.getByRole('gridcell', { name: /Sep 13, 2026: 5 practice actions/ }).click()
+  const todayCell = page.getByRole('gridcell', { name: /Sep 13, 2026: 5 practice actions/ })
+  await todayCell.scrollIntoViewIfNeeded()
+  const calendarBounds = await page.locator('.activity-year-calendar').boundingBox()
+  const todayBounds = await todayCell.boundingBox()
+  expect(todayBounds!.x + todayBounds!.width).toBeLessThan(
+    calendarBounds!.x + calendarBounds!.width - 8,
+  )
+  await todayCell.click()
   await expect(page.getByRole('heading', { name: '5 practice actions' })).toBeVisible()
   await expect(page.getByText('Food', { exact: true })).toBeVisible()
+
+  const friendBounds = await page.locator('.friend-profile-page').boundingBox()
+  const friendScroll = page.locator('.friend-profile-page .activity-year-scroll')
+  expect(await friendScroll.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
 
   await page.getByRole('button', { name: 'Months' }).click()
   await expect(page.getByRole('region', { name: 'Sep 2025' })).toBeVisible()
@@ -445,6 +461,48 @@ test('shows yearly activity by default and lets friends open the monthly profile
   await expect(page.getByRole('region', { name: 'Oct 2026' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Back to friends' }).click()
   await expect(page).toHaveURL('/?view=friends')
+
+  await page.goto('/?view=profile')
+  const accountBounds = await page.locator('.account-page').boundingBox()
+  const accountScroll = page.locator('.account-page .activity-year-scroll')
+  expect(accountBounds?.width).toBeCloseTo(friendBounds!.width, 1)
+  expect(await accountScroll.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
+
+  const cell = page.locator('.account-page .activity-cell:not(.activity-cell-hidden)').first()
+  const cellBounds = await cell.boundingBox()
+  expect(cellBounds?.height).toBeGreaterThanOrEqual(15)
+  expect(cellBounds?.width).toBeCloseTo(cellBounds!.height, 0.1)
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const wideCellBounds = await cell.boundingBox()
+  expect(wideCellBounds?.width).toBeCloseTo(wideCellBounds!.height, 0.1)
+  expect(wideCellBounds!.width).toBeGreaterThan(cellBounds!.width)
+
+  await page.setViewportSize({ width: 600, height: 800 })
+  const mobileCellBounds = await cell.boundingBox()
+  expect(mobileCellBounds?.width).toBeCloseTo(mobileCellBounds!.height, 0.1)
+  const weekdays = page.locator('.account-page .activity-weekdays')
+  await accountScroll.evaluate((el) => {
+    el.scrollLeft = 100
+  })
+  const scrolledAt100 = (await weekdays.boundingBox())!.x
+  await accountScroll.evaluate((el) => {
+    el.scrollLeft = 250
+  })
+  const scrolledAt250 = (await weekdays.boundingBox())!.x
+  expect(scrolledAt100).toBe(scrolledAt250)
+  await expect(weekdays).toBeVisible()
+
+  await page.getByRole('button', { name: 'Months' }).click()
+  const monthCell = page
+    .locator('.account-page .activity-month-days .activity-cell:not(.activity-cell-hidden)')
+    .first()
+  const monthCellBounds = await monthCell.boundingBox()
+  expect(monthCellBounds?.width).toBeCloseTo(monthCellBounds!.height, 0.1)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  const smallMonthCellBounds = await monthCell.boundingBox()
+  expect(smallMonthCellBounds?.width).toBeCloseTo(smallMonthCellBounds!.height, 0.1)
 })
 
 test('starts a word game and submits a browser recording for transcription', async ({ page }) => {
@@ -1092,6 +1150,7 @@ for (const width of [320, 390, 1440]) {
       await expect(page.getByText('No pending invitations.')).toBeInViewport()
     }
     await page.getByRole('link', { name: 'Your profile' }).click()
+    await page.getByRole('button', { name: 'Profile settings' }).click()
     await expect(page.getByLabel('Display name')).toBeVisible()
     if (width === 1440) {
       await expect(page.getByLabel('Display name')).toBeInViewport()

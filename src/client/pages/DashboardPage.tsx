@@ -30,6 +30,9 @@ export function DashboardPage() {
   const modal = panel ?? (params.get('add') === '1' ? 'add' : null)
   const [search, setSearch] = useState('')
   const [isBusy, setIsBusy] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(
+    params.get('edit') === '1' || params.get('section') === 'settings',
+  )
   const busy = useRef(false)
   const closeNotice = useCallback(() => setNotice(null), [])
   const closeError = useCallback(() => setError(null), [])
@@ -153,6 +156,9 @@ export function DashboardPage() {
             key={`${profile.username}:${profile.displayName}:${profile.timeZone ?? ''}`}
             profile={profile}
             disabled={isBusy}
+            isEditing={isEditingProfile}
+            onToggleEdit={() => setIsEditingProfile((prev) => !prev)}
+            onCloseEdit={() => setIsEditingProfile(false)}
             onSignOut={() => void run(signOut)}
             onCopy={async () => {
               if (await run(() => navigator.clipboard.writeText(profile.username)))

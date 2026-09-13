@@ -197,7 +197,7 @@ function YearCalendar({
 }) {
   const weeks = rangeWeeks(startDate, endDate)
   const labels = rangeMonthLabels(startDate, endDate, weeks[0]![0]!, weeks.length)
-  const columns = `repeat(${weeks.length}, minmax(12px, 1fr))`
+  const columns = `repeat(${weeks.length}, minmax(0, 1fr))`
   return (
     <div className="activity-year-scroll">
       <div className="activity-year-calendar">
@@ -451,7 +451,13 @@ function rangeMonthLabels(
   return monthsInRange(startDate, endDate).map(({ year, month, key }) => {
     const monthStart = new Date(Date.UTC(year, month, 1))
     const nextMonth = new Date(Date.UTC(year, month + 1, 1))
-    const column = Math.floor((monthStart.getTime() - gridStart.getTime()) / (7 * 86_400_000)) + 1
+    const column = Math.max(
+      1,
+      Math.min(
+        weekCount,
+        Math.floor((monthStart.getTime() - gridStart.getTime()) / (7 * 86_400_000)) + 1,
+      ),
+    )
     const nextColumn = Math.min(
       weekCount + 1,
       Math.floor((nextMonth.getTime() - gridStart.getTime()) / (7 * 86_400_000)) + 1,
