@@ -65,6 +65,12 @@ export const wordGameActionSchema = z.object({
   partnershipId: z.uuid(),
 })
 
+export const wordGameModeSchema = z.enum(['recorded', 'live_call'])
+
+export const startWordGameSchema = z.object({
+  mode: wordGameModeSchema,
+})
+
 export const createWordRoundSchema = z.object({
   topic: z.string().trim().min(2).max(40),
 })
@@ -91,12 +97,16 @@ export const wordGameRoundSchema = z.object({
   transcript: z.string().nullable(),
   transcriptWords: z.array(wordTranscriptSchema),
   audioAvailable: z.boolean(),
+  explanationMethod: z.enum(['recorded', 'live']).nullable(),
   usedForbiddenWord: z.boolean().nullable(),
   guess: z.string().nullable(),
   isCorrect: z.boolean().nullable(),
   score: z.number().int().min(0).max(1).nullable(),
   coachScore: z.number().int().min(0).max(100).nullable(),
   coachFeedback: z.string().nullable(),
+  recordingStartedAt: z.string().nullable().optional(),
+  recordingFinishedAt: z.string().nullable().optional(),
+  explainedAt: z.string().nullable().optional(),
   createdAt: z.string(),
   completedAt: z.string().nullable(),
 })
@@ -111,6 +121,7 @@ export const wordGameRoundSummarySchema = z.object({
   guess: z.string().nullable(),
   isCorrect: z.boolean().nullable(),
   score: z.number().int().min(0).max(1).nullable(),
+  explanationMethod: z.enum(['recorded', 'live']).nullable(),
   coachScore: z.number().int().min(0).max(100).nullable(),
   completedAt: z.string().nullable(),
 })
@@ -118,7 +129,9 @@ export const wordGameRoundSummarySchema = z.object({
 export const wordGameSchema = z.object({
   id: z.uuid(),
   partnershipId: z.uuid(),
+  mode: wordGameModeSchema,
   status: z.enum(['pending', 'active', 'paused', 'finished']),
+  serverTime: z.string().optional(),
   requestedById: z.uuid(),
   acceptedAt: z.string().nullable(),
   pausedAt: z.string().nullable().optional(),
@@ -142,6 +155,7 @@ export const wordGameSchema = z.object({
 
 export const wordGameSummarySchema = z.object({
   partnershipId: z.uuid(),
+  mode: wordGameModeSchema,
   status: z.enum(['pending', 'active', 'paused', 'finished']),
   requestedById: z.uuid(),
 })
@@ -149,6 +163,7 @@ export const wordGameSummarySchema = z.object({
 export const wordGameHistoryItemSchema = z.object({
   id: z.uuid(),
   partnershipId: z.uuid(),
+  mode: wordGameModeSchema,
   finishedAt: z.string(),
   partner: z.object({
     id: z.uuid(),
@@ -165,6 +180,7 @@ export const wordGameHistoryItemSchema = z.object({
 })
 
 export type WordGame = z.infer<typeof wordGameSchema>
+export type WordGameMode = z.infer<typeof wordGameModeSchema>
 export type WordGameHistoryItem = z.infer<typeof wordGameHistoryItemSchema>
 export type WordGameRound = z.infer<typeof wordGameRoundSchema>
 export type WordGameRoundSummary = z.infer<typeof wordGameRoundSummarySchema>

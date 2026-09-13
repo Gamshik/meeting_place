@@ -35,6 +35,7 @@ function game(overrides: Record<string, unknown> = {}) {
   return {
     id: gameId,
     partnershipId,
+    mode: 'recorded',
     status: 'active',
     requestedById: userId,
     acceptedAt: '2026-09-11T11:59:00+00:00',
@@ -58,6 +59,7 @@ function round(overrides: Record<string, unknown> = {}) {
     transcript: null,
     transcriptWords: [],
     audioAvailable: false,
+    explanationMethod: null,
     usedForbiddenWord: null,
     guess: null,
     isCorrect: null,
@@ -105,7 +107,14 @@ afterEach(() => {
 describe('explain-word game API', () => {
   it('lists shared games for the dashboard', async () => {
     mocks.rpc.mockResolvedValue({
-      data: [{ partnership_id: partnershipId, game_status: 'pending', requested_by: partnerId }],
+      data: [
+        {
+          partnership_id: partnershipId,
+          game_mode: 'live_call',
+          game_status: 'pending',
+          requested_by: partnerId,
+        },
+      ],
       error: null,
     })
 
@@ -113,7 +122,7 @@ describe('explain-word game API', () => {
 
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
-      data: [{ partnershipId, status: 'pending', requestedById: partnerId }],
+      data: [{ partnershipId, mode: 'live_call', status: 'pending', requestedById: partnerId }],
     })
     expect(mocks.rpc).toHaveBeenCalledWith('list_my_word_games')
   })
@@ -124,6 +133,7 @@ describe('explain-word game API', () => {
         {
           history_id: gameId,
           partnership_id: partnershipId,
+          game_mode: 'recorded',
           finished_at: '2026-09-11T12:10:00Z',
           partner_id: partnerId,
           partner_username: 'bob',
@@ -143,6 +153,7 @@ describe('explain-word game API', () => {
               guess: 'passport',
               isCorrect: true,
               score: 1,
+              explanationMethod: 'recorded',
               coachScore: 88,
               completedAt: '2026-09-11T12:05:00Z',
             },
@@ -249,7 +260,9 @@ describe('explain-word game API', () => {
       error: { code: 'P0001', message: 'word_game_partner_busy' },
     })
 
-    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}`, 'POST')
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}`, 'POST', {
+      mode: 'live_call',
+    })
 
     expect(response.status).toBe(409)
     await expect(response.json()).resolves.toEqual({
@@ -260,6 +273,153 @@ describe('explain-word game API', () => {
     })
     expect(mocks.rpc).toHaveBeenCalledWith('start_word_game', {
       p_partnership_id: partnershipId,
+      p_mode: 'live_call',
+    })
+  })
+
+  it('rejects a missing or unknown game mode before calling the database', async () => {
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}`, 'POST', {
+      mode: 'meeting',
+    })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'invalid_word_game_mode' },
+    })
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('expires a timed round through the atomic timeout operation', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({
+        data: game({
+          mode: 'live_call',
+          round: round({ status: 'awaiting_guess', explanationMethod: 'live' }),
+        }),
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: game({
+          mode: 'live_call',
+          round: round({
+            status: 'completed',
+            explanationMethod: 'live',
+            isCorrect: false,
+            score: 0,
+          }),
+        }),
+        error: null,
+      })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/timeout`,
+      'POST',
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('expire_word_game_round', {
+      p_round_id: roundId,
+    })
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        serverTime: expect.any(String),
+        round: { status: 'completed', explanationMethod: 'live', score: 0 },
+      },
+    })
+  })
+
+  it('treats a second timeout request for the completed round as successful', async () => {
+    const completedGame = game({
+      mode: 'live_call',
+      round: round({
+        status: 'completed',
+        explanationMethod: 'live',
+        isCorrect: false,
+        score: 0,
+      }),
+    })
+    mocks.rpc
+      .mockResolvedValueOnce({ data: completedGame, error: null })
+      .mockResolvedValueOnce({ data: completedGame, error: null })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/timeout`,
+      'POST',
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('expire_word_game_round', {
+      p_round_id: roundId,
+    })
+    await expect(response.json()).resolves.toMatchObject({
+      data: { round: { status: 'completed', score: 0 } },
+    })
+  })
+
+  it('does not allow a timeout before a recorded explanation is ready', async () => {
+    mocks.rpc.mockResolvedValueOnce({ data: game({ round: round() }), error: null })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/timeout`,
+      'POST',
+    )
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'word_game_round_not_available' },
+    })
+    expect(mocks.rpc).toHaveBeenCalledTimes(1)
+  })
+
+  it('marks the start of a recorded explanation for both players', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game({ round: round() }), error: null })
+      .mockResolvedValueOnce({
+        data: game({
+          round: round({ recordingStartedAt: '2026-09-11T12:00:10Z' }),
+        }),
+        error: null,
+      })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/recording-started`,
+      'POST',
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('start_word_game_recording', {
+      p_round_id: roundId,
+    })
+    await expect(response.json()).resolves.toMatchObject({
+      data: { round: { recordingStartedAt: '2026-09-11T12:00:10Z' } },
+    })
+  })
+
+  it('marks a recorded explanation as stopped before processing it', async () => {
+    const recordingStartedAt = '2026-09-11T12:00:10Z'
+    mocks.rpc
+      .mockResolvedValueOnce({
+        data: game({ round: round({ recordingStartedAt }) }),
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: game({
+          round: round({
+            recordingStartedAt,
+            recordingFinishedAt: '2026-09-11T12:00:40Z',
+          }),
+        }),
+        error: null,
+      })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/recording-stopped`,
+      'POST',
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('finish_word_game_recording', {
+      p_round_id: roundId,
     })
   })
 
@@ -440,7 +600,10 @@ describe('explain-word game API', () => {
   })
 
   it('stores and transcribes browser audio before making it available to the partner', async () => {
-    const openRound = round()
+    const openRound = round({
+      recordingStartedAt: '2026-09-11T12:00:10Z',
+      recordingFinishedAt: '2026-09-11T12:00:40Z',
+    })
     mocks.rpc
       .mockResolvedValueOnce({ data: game({ round: openRound }), error: null })
       .mockResolvedValueOnce({
@@ -512,6 +675,27 @@ describe('explain-word game API', () => {
     })
   })
 
+  it('rejects recording uploads in live-call mode', async () => {
+    mocks.rpc.mockResolvedValueOnce({
+      data: game({ mode: 'live_call', round: round({ explanationMethod: 'live' }) }),
+      error: null,
+    })
+    const form = new FormData()
+    form.set('audio', new File([new Uint8Array([1])], 'turn.wav', { type: 'audio/wav' }))
+
+    const response = await app.request(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
+      { method: 'POST', headers: { Authorization: 'Bearer token' }, body: form },
+      env,
+    )
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'word_game_round_not_available' },
+    })
+    expect(mocks.storageUpload).not.toHaveBeenCalled()
+  })
+
   it('returns a short-lived private recording link to a participant', async () => {
     mocks.rpc.mockResolvedValue({
       data: game({ round: round({ status: 'awaiting_guess', audioAvailable: true }) }),
@@ -535,7 +719,15 @@ describe('explain-word game API', () => {
   })
 
   it('rejects unsupported or oversized audio before calling OpenRouter', async () => {
-    mocks.rpc.mockResolvedValue({ data: game({ round: round() }), error: null })
+    mocks.rpc.mockResolvedValue({
+      data: game({
+        round: round({
+          recordingStartedAt: '2026-09-11T12:00:10Z',
+          recordingFinishedAt: '2026-09-11T12:00:40Z',
+        }),
+      }),
+      error: null,
+    })
     const providerFetch = vi.fn()
     vi.stubGlobal('fetch', providerFetch)
     const form = new FormData()

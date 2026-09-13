@@ -243,6 +243,8 @@ describe('database authorization and lifecycle', () => {
     expect(hidden.rows[0]!.result.round.forbiddenWords).toBeNull()
 
     await asUser(alice)
+    await rows('select public.start_word_game_recording($1)', [roundId])
+    await rows('select public.finish_word_game_recording($1)', [roundId])
     await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
       roundId,
       'You need this document to cross a border.',
@@ -257,6 +259,172 @@ describe('database authorization and lifecycle', () => {
     expect(guessed.rows[0]!.result.round).toMatchObject({ isCorrect: true, score: 1 })
     expect(guessed.rows[0]!.result.currentPlayerId).toBe(bob)
     await expect(rows('select * from public.word_game_rounds')).rejects.toThrow(/permission denied/)
+  })
+
+  it('enforces preparation, guessing, and timeout windows in live-call games', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string; mode: string } }>(
+      "select public.start_word_game($1,'live_call') result",
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    expect(game.rows[0]!.result.mode).toBe('live_call')
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+
+    await asUser(alice)
+    const created = await db.query<{
+      result: { round: { id: string; explanationMethod: string; status: string } }
+    }>('select public.create_word_game_round($1,$2,$3,$4,$5) result', [
+      gameId,
+      'Food',
+      'sandwich',
+      ['sandwich'],
+      ['sandwich'],
+    ])
+    const firstRoundId = created.rows[0]!.result.round.id
+    expect(created.rows[0]!.result.round).toMatchObject({
+      explanationMethod: 'live',
+      status: 'awaiting_guess',
+    })
+    const recordingAccess = await db.query<{ allowed: boolean }>(
+      'select public.can_access_word_game_recording($1,true) allowed',
+      [`${gameId}/${firstRoundId}.wav`],
+    )
+    expect(recordingAccess.rows[0]!.allowed).toBe(false)
+
+    await asUser(bob)
+    await db.exec('savepoint preparation_window')
+    await expect(
+      rows('select public.guess_word_game_round($1,$2)', [firstRoundId, 'sandwich']),
+    ).rejects.toThrow('word_game_guess_not_available')
+    await db.exec('rollback to savepoint preparation_window; reset role')
+    await db.query(
+      "update public.word_game_rounds set created_at = now() - interval '6 seconds' where id=$1",
+      [firstRoundId],
+    )
+    await asUser(alice)
+    await db.exec('savepoint live_recording_disabled')
+    await expect(
+      rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
+        firstRoundId,
+        'This sandwich is served between two pieces of bread.',
+        [],
+        90,
+        'A useful clue.',
+      ]),
+    ).rejects.toThrow('word_game_round_not_available')
+    await db.exec('rollback to savepoint live_recording_disabled')
+    await asUser(bob)
+    const scored = await db.query<{
+      result: { round: { isCorrect: boolean; score: number; usedForbiddenWord: boolean } }
+    }>('select public.guess_word_game_round($1,$2) result', [firstRoundId, 'sandwich'])
+    expect(scored.rows[0]!.result.round).toMatchObject({
+      isCorrect: true,
+      score: 1,
+    })
+
+    const expiring = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [gameId, 'Travel', 'passport', ['passport'], ['passport']],
+    )
+    const expiringRoundId = expiring.rows[0]!.result.round.id
+    await asUser(alice)
+    await db.exec('savepoint timeout_too_early')
+    await expect(
+      rows('select public.expire_word_game_round($1)', [expiringRoundId]),
+    ).rejects.toThrow('word_game_round_not_expired')
+    await db.exec('rollback to savepoint timeout_too_early; reset role')
+    await db.query(
+      "update public.word_game_rounds set created_at = now() - interval '96 seconds' where id=$1",
+      [expiringRoundId],
+    )
+    await asUser(alice)
+    const expired = await db.query<{
+      result: {
+        currentPlayerId: string
+        round: { isCorrect: boolean; score: number; status: string }
+      }
+    }>('select public.expire_word_game_round($1) result', [expiringRoundId])
+    expect(expired.rows[0]!.result).toMatchObject({
+      currentPlayerId: alice,
+      round: { isCorrect: false, score: 0, status: 'completed' },
+    })
+  })
+
+  it('synchronizes recording and enforces the recorded listening deadline', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+    await asUser(alice)
+    const created = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [gameId, 'Travel', 'passport', ['passport'], ['passport']],
+    )
+    const roundId = created.rows[0]!.result.round.id
+    const started = await db.query<{
+      result: { round: { recordingStartedAt: string } }
+    }>('select public.start_word_game_recording($1) result', [roundId])
+    expect(started.rows[0]!.result.round.recordingStartedAt).toBeTruthy()
+
+    await asUser(bob)
+    const partnerView = await db.query<{
+      result: { round: { recordingStartedAt: string; secretWord: string | null } }
+    }>('select public.get_word_game($1) result', [invitation.partnershipId])
+    expect(partnerView.rows[0]!.result.round.recordingStartedAt).toBeTruthy()
+    expect(partnerView.rows[0]!.result.round.secretWord).toBeNull()
+
+    await asUser(alice)
+    await rows('select public.finish_word_game_recording($1)', [roundId])
+    const submitted = await db.query<{
+      result: { round: { explainedAt: string; status: string } }
+    }>('select public.submit_word_game_transcript($1,$2,$3,$4,$5) result', [
+      roundId,
+      'A document used at a border.',
+      [],
+      null,
+      null,
+    ])
+    expect(submitted.rows[0]!.result.round).toMatchObject({ status: 'awaiting_guess' })
+    expect(submitted.rows[0]!.result.round.explainedAt).toBeTruthy()
+
+    await asUser(bob)
+    await db.exec('savepoint recorded_timeout_too_early')
+    await expect(rows('select public.expire_word_game_round($1)', [roundId])).rejects.toThrow(
+      'word_game_round_not_expired',
+    )
+    await db.exec('rollback to savepoint recorded_timeout_too_early; reset role')
+    await db.query(
+      "update public.word_game_rounds set explained_at = now() - interval '91 seconds' where id=$1",
+      [roundId],
+    )
+    await asUser(bob)
+    await db.exec('savepoint recorded_guess_too_late')
+    await expect(
+      rows('select public.guess_word_game_round($1,$2)', [roundId, 'passport']),
+    ).rejects.toThrow('word_game_guess_not_available')
+    await db.exec('rollback to savepoint recorded_guess_too_late')
+
+    const expired = await db.query<{
+      result: { currentPlayerId: string; round: { score: number; status: string } }
+    }>('select public.expire_word_game_round($1) result', [roundId])
+    expect(expired.rows[0]!.result).toMatchObject({
+      currentPlayerId: bob,
+      round: { score: 0, status: 'completed' },
+    })
   })
 
   it('uses every unseen pooled word before the least-recently-seen fallback', async () => {
@@ -397,6 +565,8 @@ describe('database authorization and lifecycle', () => {
     await asUser(bob)
     expect(await rows('select name from storage.objects')).toEqual([])
     await asUser(alice)
+    await rows('select public.start_word_game_recording($1)', [roundId])
+    await rows('select public.finish_word_game_recording($1)', [roundId])
     await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
       roundId,
       'A document used at a border.',
@@ -636,6 +806,8 @@ describe('database authorization and lifecycle', () => {
       'select public.create_word_game_round($1,$2,$3,$4,$5) result',
       [game.rows[0]!.result.id, 'Food', 'sandwich', ['sandwich'], ['sandwich']],
     )
+    await rows('select public.start_word_game_recording($1)', [created.rows[0]!.result.round.id])
+    await rows('select public.finish_word_game_recording($1)', [created.rows[0]!.result.round.id])
     await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
       created.rows[0]!.result.round.id,
       'It is a sandwich with two pieces of bread.',
@@ -682,6 +854,8 @@ describe('database authorization and lifecycle', () => {
       'select public.create_word_game_round($1,$2,$3,$4,$5) result',
       [gameId, 'Travel', 'passport', ['passport'], ['passport']],
     )
+    await rows('select public.start_word_game_recording($1)', [first.rows[0]!.result.round.id])
+    await rows('select public.finish_word_game_recording($1)', [first.rows[0]!.result.round.id])
     await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
       first.rows[0]!.result.round.id,
       'A document used at a border.',
@@ -699,6 +873,8 @@ describe('database authorization and lifecycle', () => {
       'select public.create_word_game_round($1,$2,$3,$4,$5) result',
       [gameId, 'Food', 'sandwich', ['sandwich'], ['sandwich']],
     )
+    await rows('select public.start_word_game_recording($1)', [second.rows[0]!.result.round.id])
+    await rows('select public.finish_word_game_recording($1)', [second.rows[0]!.result.round.id])
     await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
       second.rows[0]!.result.round.id,
       'A quick meal between bread.',

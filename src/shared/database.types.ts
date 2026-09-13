@@ -76,12 +76,15 @@ export type Database = {
           completed_at: string | null
           created_at: string
           explained_at: string | null
+          explanation_method: Database['public']['Enums']['word_explanation_method'] | null
           explainer_id: string
           forbidden_words: string[]
           game_id: string
           guess: string | null
           id: string
           is_correct: boolean | null
+          recording_finished_at: string | null
+          recording_started_at: string | null
           score: number | null
           secret_word: string
           speaking_duration_seconds: number | null
@@ -101,12 +104,15 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           explained_at?: string | null
+          explanation_method?: Database['public']['Enums']['word_explanation_method'] | null
           explainer_id: string
           forbidden_words: string[]
           game_id: string
           guess?: string | null
           id?: string
           is_correct?: boolean | null
+          recording_finished_at?: string | null
+          recording_started_at?: string | null
           score?: number | null
           secret_word: string
           speaking_duration_seconds?: number | null
@@ -194,6 +200,7 @@ export type Database = {
           id: string
           inviter_last_seen_at: string | null
           invitee_last_seen_at: string | null
+          mode: Database['public']['Enums']['word_game_mode']
           partnership_id: string
           paused_at: string | null
           presence_ready: boolean
@@ -211,6 +218,7 @@ export type Database = {
           id?: string
           inviter_last_seen_at?: string | null
           invitee_last_seen_at?: string | null
+          mode?: Database['public']['Enums']['word_game_mode']
           partnership_id: string
           paused_at?: string | null
           presence_ready?: boolean
@@ -286,9 +294,17 @@ export type Database = {
         Args: { p_profile_id: string; p_year: number }
         Returns: Json
       }
+      finish_word_game_recording: {
+        Args: { p_round_id: string }
+        Returns: Json
+      }
       end_word_game: {
         Args: { p_partnership_id: string }
         Returns: undefined
+      }
+      expire_word_game_round: {
+        Args: { p_round_id: string }
+        Returns: Json
       }
       heartbeat_word_game: {
         Args: { p_partnership_id: string }
@@ -301,6 +317,7 @@ export type Database = {
       list_my_word_games: {
         Args: Record<string, never>
         Returns: {
+          game_mode: Database['public']['Enums']['word_game_mode']
           game_status: Database['public']['Enums']['word_game_status']
           partnership_id: string
           requested_by: string
@@ -310,6 +327,7 @@ export type Database = {
         Args: Record<string, never>
         Returns: {
           finished_at: string
+          game_mode: Database['public']['Enums']['word_game_mode']
           history_id: string
           my_score: number
           partner_avatar_url: string | null
@@ -330,8 +348,15 @@ export type Database = {
         Args: { p_round_id: string }
         Returns: Json
       }
+      start_word_game_recording: {
+        Args: { p_round_id: string }
+        Returns: Json
+      }
       start_word_game: {
-        Args: { p_partnership_id: string }
+        Args: {
+          p_mode: Database['public']['Enums']['word_game_mode']
+          p_partnership_id: string
+        }
         Returns: Json
       }
       cancel_word_game: {
@@ -355,6 +380,8 @@ export type Database = {
     }
     Enums: {
       partnership_status: 'pending' | 'active' | 'declined' | 'ended'
+      word_explanation_method: 'recorded' | 'live'
+      word_game_mode: 'recorded' | 'live_call'
       word_game_status: 'pending' | 'active' | 'paused' | 'finished'
       word_round_status: 'explaining' | 'awaiting_guess' | 'completed' | 'skipped'
     }

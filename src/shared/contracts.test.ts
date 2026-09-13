@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   invitePartnerSchema,
+  startWordGameSchema,
   timeZoneSchema,
   updateProfileSchema,
   usernameSchema,
@@ -30,5 +31,10 @@ describe('shared request schemas', () => {
     expect(invitePartnerSchema.parse({ username: 'Partner_1' })).toEqual({
       username: 'partner_1',
     })
+  })
+
+  it('accepts only supported word-game modes', () => {
+    expect(startWordGameSchema.parse({ mode: 'live_call' })).toEqual({ mode: 'live_call' })
+    expect(startWordGameSchema.safeParse({ mode: 'meeting' }).success).toBe(false)
   })
 })

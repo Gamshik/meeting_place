@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import {
   createWordRoundSchema,
   guessWordRoundSchema,
+  startWordGameSchema,
   wordGameActionSchema,
   wordGameHistoryItemSchema,
   wordGameSchema,
@@ -29,6 +30,7 @@ wordGameRoutes.get('/', async (context) => {
   if (error) return gameDatabaseError(context, error)
   const games = (data ?? []).map((item) => ({
     partnershipId: item.partnership_id,
+    mode: item.game_mode,
     status: item.game_status,
     requestedById: item.requested_by,
   }))
@@ -43,6 +45,7 @@ wordGameRoutes.get('/history', async (context) => {
   const history = (data ?? []).map((item) => ({
     id: item.history_id,
     partnershipId: item.partnership_id,
+    mode: item.game_mode,
     finishedAt: item.finished_at,
     partner: {
       id: item.partner_id,
@@ -74,9 +77,14 @@ wordGameRoutes.get('/:partnershipId', async (context) => {
 
 wordGameRoutes.post('/:partnershipId', async (context) => {
   const parsed = parsePartnershipId(context.req.param('partnershipId'))
-  if (!parsed) return invalidPartnershipResponse(context)
+  const body: unknown = await context.req.json().catch(() => null)
+  const request = startWordGameSchema.safeParse(body)
+  if (!parsed || !request.success) {
+    return errorResponse(context, 400, 'invalid_word_game_mode', 'Choose how you want to play.')
+  }
   const { data, error } = await context.get('supabase').rpc('start_word_game', {
     p_partnership_id: parsed,
+    p_mode: request.data.mode,
   })
   if (error) return gameDatabaseError(context, error)
   return gameResponse(context, data, 201)
@@ -216,10 +224,13 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (cont
   if (
     !game ||
     game.status !== 'active' ||
+    game.mode !== 'recorded' ||
     !round ||
     round.id !== roundId ||
     round.status !== 'explaining' ||
     round.explainerId !== context.get('user').id ||
+    !round.recordingStartedAt ||
+    !round.recordingFinishedAt ||
     !round.secretWord
   ) {
     return errorResponse(
@@ -288,6 +299,91 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (cont
     p_transcript_words: transcription.words as Json,
     p_coach_score: coaching?.score ?? null,
     p_coach_feedback: coaching?.feedback ?? null,
+  })
+  if (error) return gameDatabaseError(context, error)
+  return gameResponse(context, data)
+})
+
+wordGameRoutes.post('/:partnershipId/rounds/:roundId/recording-started', async (context) => {
+  const partnershipId = parsePartnershipId(context.req.param('partnershipId'))
+  const roundId = parseUuid(context.req.param('roundId'))
+  if (!partnershipId || !roundId) return invalidPartnershipResponse(context)
+
+  const game = await getGame(context, partnershipId)
+  if (
+    game instanceof Response ||
+    game.mode !== 'recorded' ||
+    game.round?.id !== roundId ||
+    game.round.status !== 'explaining' ||
+    game.round.explainerId !== context.get('user').id
+  ) {
+    if (game instanceof Response) return game
+    return errorResponse(
+      context,
+      409,
+      'word_game_round_not_available',
+      'This recording cannot be started.',
+    )
+  }
+
+  const { data, error } = await context.get('supabase').rpc('start_word_game_recording', {
+    p_round_id: roundId,
+  })
+  if (error) return gameDatabaseError(context, error)
+  return gameResponse(context, data)
+})
+wordGameRoutes.post('/:partnershipId/rounds/:roundId/recording-stopped', async (context) => {
+  const partnershipId = parsePartnershipId(context.req.param('partnershipId'))
+  const roundId = parseUuid(context.req.param('roundId'))
+  if (!partnershipId || !roundId) return invalidPartnershipResponse(context)
+
+  const game = await getGame(context, partnershipId)
+  if (
+    game instanceof Response ||
+    game.mode !== 'recorded' ||
+    game.round?.id !== roundId ||
+    game.round.status !== 'explaining' ||
+    game.round.explainerId !== context.get('user').id ||
+    !game.round.recordingStartedAt
+  ) {
+    if (game instanceof Response) return game
+    return errorResponse(
+      context,
+      409,
+      'word_game_round_not_available',
+      'This recording cannot be stopped.',
+    )
+  }
+
+  const { data, error } = await context.get('supabase').rpc('finish_word_game_recording', {
+    p_round_id: roundId,
+  })
+  if (error) return gameDatabaseError(context, error)
+  return gameResponse(context, data)
+})
+
+wordGameRoutes.post('/:partnershipId/rounds/:roundId/timeout', async (context) => {
+  const partnershipId = parsePartnershipId(context.req.param('partnershipId'))
+  const roundId = parseUuid(context.req.param('roundId'))
+  if (!partnershipId || !roundId) return invalidPartnershipResponse(context)
+
+  const game = await getGame(context, partnershipId)
+  if (game instanceof Response) return game
+  const roundStatus = game.round?.status
+  if (
+    game.round?.id !== roundId ||
+    (roundStatus !== 'awaiting_guess' && roundStatus !== 'completed' && roundStatus !== 'skipped')
+  ) {
+    return errorResponse(
+      context,
+      409,
+      'word_game_round_not_available',
+      'This round cannot be ended.',
+    )
+  }
+
+  const { data, error } = await context.get('supabase').rpc('expire_word_game_round', {
+    p_round_id: roundId,
   })
   if (error) return gameDatabaseError(context, error)
   return gameResponse(context, data)
@@ -399,7 +495,7 @@ function gameResponse(
 ) {
   const game = parseGame(value)
   if (!game) return invalidGameStateResponse(context)
-  return context.json({ data: game }, status)
+  return context.json({ data: { ...game, serverTime: new Date().toISOString() } }, status)
 }
 
 function isOpenRound(game: WordGame) {
@@ -440,6 +536,8 @@ function gameDatabaseError(
     word_game_turn_not_available: [409, 'It is not your turn.'],
     word_game_round_in_progress: [409, 'Finish the current round first.'],
     word_game_round_not_available: [409, 'This explanation cannot be submitted.'],
+    word_game_live_round_not_available: [409, 'This live round cannot be ended.'],
+    word_game_round_not_expired: [409, 'This round still has time remaining.'],
     word_game_guess_not_available: [409, 'This round is not waiting for your guess.'],
     word_game_finished: [409, 'This game has finished.'],
     word_game_end_not_available: [409, 'This game cannot be ended now.'],
