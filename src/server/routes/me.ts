@@ -11,7 +11,7 @@ meRoutes.get('/', async (context) => {
   const user = context.get('user')
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, created_at')
+    .select('id, username, display_name, avatar_url, created_at, time_zone')
     .eq('id', user.id)
     .single()
 
@@ -26,6 +26,7 @@ meRoutes.get('/', async (context) => {
     displayName: data.display_name,
     avatarUrl: data.avatar_url,
     createdAt: data.created_at,
+    timeZone: data.time_zone,
   }
 
   return context.json({ data: profile })
@@ -50,13 +51,14 @@ meRoutes.patch('/', async (context) => {
   const values = {
     ...(parsed.data.username === undefined ? {} : { username: parsed.data.username }),
     ...(parsed.data.displayName === undefined ? {} : { display_name: parsed.data.displayName }),
+    ...(parsed.data.timeZone === undefined ? {} : { time_zone: parsed.data.timeZone }),
   }
 
   const { data, error } = await supabase
     .from('profiles')
     .update(values)
     .eq('id', user.id)
-    .select('id, username, display_name, avatar_url, created_at')
+    .select('id, username, display_name, avatar_url, created_at, time_zone')
     .single()
 
   if (error || !data) {
@@ -75,6 +77,7 @@ meRoutes.patch('/', async (context) => {
     displayName: data.display_name,
     avatarUrl: data.avatar_url,
     createdAt: data.created_at,
+    timeZone: data.time_zone,
   }
 
   return context.json({ data: profile })

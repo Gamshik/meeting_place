@@ -14,6 +14,11 @@ const ExplainWordGamePage = lazy(() =>
     default: module.ExplainWordGamePage,
   })),
 )
+const FriendProfilePage = lazy(() =>
+  import('./pages/FriendProfilePage').then((module) => ({
+    default: module.FriendProfilePage,
+  })),
+)
 
 export function App() {
   return (
@@ -25,6 +30,7 @@ export function App() {
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route element={<ProtectedRoute />}>
               <Route index element={<DashboardPage />} />
+              <Route path="profiles/:profileId" element={<FriendProfilePage />} />
               <Route path="games/explain-word/:partnershipId" element={<ExplainWordGamePage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

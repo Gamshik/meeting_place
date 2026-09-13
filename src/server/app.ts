@@ -5,6 +5,7 @@ import { errorResponse } from './lib/responses'
 import { requireAuthentication } from './middleware/auth'
 import { meRoutes } from './routes/me'
 import { partnershipRoutes } from './routes/partnerships'
+import { profileRoutes } from './routes/profiles'
 import { wordGameRoutes } from './routes/word-game'
 import type { AppEnvironment } from './types'
 
@@ -28,6 +29,7 @@ app.get('/api/health', (context) =>
 app.use('/api/*', requireAuthentication)
 app.route('/api/me', meRoutes)
 app.route('/api/partnerships', partnershipRoutes)
+app.route('/api/profiles', profileRoutes)
 app.route('/api/games/explain-word', wordGameRoutes)
 
 app.notFound((context) => {

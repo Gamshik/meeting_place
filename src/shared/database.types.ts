@@ -42,6 +42,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          time_zone: string | null
           updated_at: string
           username: string
         }
@@ -50,6 +51,7 @@ export type Database = {
           created_at?: string
           display_name: string
           id: string
+          time_zone?: string | null
           updated_at?: string
           username: string
         }
@@ -58,6 +60,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          time_zone?: string | null
           updated_at?: string
           username?: string
         }
@@ -72,6 +75,7 @@ export type Database = {
           coach_score: number | null
           completed_at: string | null
           created_at: string
+          explained_at: string | null
           explainer_id: string
           forbidden_words: string[]
           game_id: string
@@ -80,6 +84,7 @@ export type Database = {
           is_correct: boolean | null
           score: number | null
           secret_word: string
+          speaking_duration_seconds: number | null
           status: Database['public']['Enums']['word_round_status']
           topic: string
           transcript: string | null
@@ -95,6 +100,7 @@ export type Database = {
           coach_score?: number | null
           completed_at?: string | null
           created_at?: string
+          explained_at?: string | null
           explainer_id: string
           forbidden_words: string[]
           game_id: string
@@ -103,6 +109,7 @@ export type Database = {
           is_correct?: boolean | null
           score?: number | null
           secret_word: string
+          speaking_duration_seconds?: number | null
           status?: Database['public']['Enums']['word_round_status']
           topic: string
           transcript?: string | null
@@ -273,6 +280,10 @@ export type Database = {
       }
       get_word_game: {
         Args: { p_partnership_id: string }
+        Returns: Json
+      }
+      get_profile_activity: {
+        Args: { p_profile_id: string; p_year: number }
         Returns: Json
       }
       end_word_game: {

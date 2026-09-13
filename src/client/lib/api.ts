@@ -3,6 +3,7 @@ import type {
   PartnershipCursor,
   PartnershipPage,
   Profile,
+  ProfileActivity,
   UpdateProfileInput,
   WordGame,
   WordGameHistoryItem,
@@ -63,6 +64,10 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   getProfile: () => apiRequest<DataResponse<Profile>>('/api/me'),
+  getProfileActivity: (profileId: string, year: number) =>
+    apiRequest<DataResponse<ProfileActivity>>(
+      `/api/profiles/${profileId}/activity?${new URLSearchParams({ year: String(year) })}`,
+    ),
   updateProfile: (input: UpdateProfileInput) =>
     apiRequest<DataResponse<Profile>>('/api/me', {
       method: 'PATCH',

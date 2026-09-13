@@ -8,9 +8,11 @@ import { PartnerCard } from '../components/PartnerCard'
 import { Panel, Notice } from '../components/Panel'
 import { GameWorkspace } from '../components/GameWorkspace'
 import { ProfileEditor } from '../components/ProfileEditor'
+import { ProfileActivityPanel } from '../components/ProfileActivityPanel'
 import { RoundsTable } from '../components/RoundsTable'
 import { games, type GameDefinition } from '../lib/games'
 import { api } from '../lib/api'
+import { browserTimeZone } from '../lib/time-zone'
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -34,7 +36,15 @@ export function DashboardPage() {
   const loadProfile = useCallback(async () => {
     try {
       const response = await api.getProfile()
-      setProfile(response.data)
+      let loadedProfile = response.data
+      if (!loadedProfile.timeZone) {
+        try {
+          loadedProfile = (await api.updateProfile({ timeZone: browserTimeZone() })).data
+        } catch {
+          // The profile and UTC-backed calendar remain usable if initial timezone saving is offline.
+        }
+      }
+      setProfile(loadedProfile)
     } catch (error) {
       setError(messageFromError(error))
     } finally {
@@ -147,7 +157,7 @@ export function DashboardPage() {
             </div>
           </div>
           <ProfileEditor
-            key={`${profile.username}:${profile.displayName}`}
+            key={`${profile.username}:${profile.displayName}:${profile.timeZone ?? ''}`}
             profile={profile}
             disabled={isBusy}
             onCopy={async () => {
@@ -162,6 +172,7 @@ export function DashboardPage() {
               })
             }
           />
+          <ProfileActivityPanel profileId={profile.id} profileName={profile.displayName} isOwner />
           <button
             className="text-action profile-signout"
             disabled={isBusy}

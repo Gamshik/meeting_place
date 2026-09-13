@@ -10,7 +10,9 @@ type AppShellProps = {
 }
 export function AppShell({ children, profile, onNavigate }: AppShellProps) {
   const location = useLocation()
-  const view = new URLSearchParams(location.search).get('view') ?? 'games'
+  const view = location.pathname.startsWith('/profiles/')
+    ? 'friend-profile'
+    : (new URLSearchParams(location.search).get('view') ?? 'games')
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">

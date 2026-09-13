@@ -1,4 +1,5 @@
 import type { Partnership } from '../../shared/contracts'
+import { Link } from 'react-router-dom'
 
 type PartnerCardProps = {
   disabled?: boolean
@@ -27,27 +28,40 @@ export function PartnerCard({
     .join('')
     .slice(0, 2)
     .toUpperCase()
+  const identity = (
+    <>
+      {partnership.partner.avatarUrl ? (
+        <img
+          className="size-12 rounded-2xl object-cover"
+          src={partnership.partner.avatarUrl}
+          alt=""
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className="grid size-12 shrink-0 place-items-center rounded-full bg-stone-200 font-semibold text-stone-900">
+          {initials}
+        </div>
+      )}
+      <div className="min-w-0">
+        <h3 className="truncate font-semibold">{partnership.partner.displayName}</h3>
+        <p className="truncate text-sm text-stone-500">@{partnership.partner.username}</p>
+      </div>
+    </>
+  )
 
   return (
     <article className="friend-row">
-      <div className="flex min-w-0 items-center gap-4">
-        {partnership.partner.avatarUrl ? (
-          <img
-            className="size-12 rounded-2xl object-cover"
-            src={partnership.partner.avatarUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className="grid size-12 shrink-0 place-items-center rounded-full bg-stone-200 font-semibold text-stone-900">
-            {initials}
-          </div>
-        )}
-        <div className="min-w-0">
-          <h3 className="truncate font-semibold">{partnership.partner.displayName}</h3>
-          <p className="truncate text-sm text-stone-500">@{partnership.partner.username}</p>
-        </div>
-      </div>
+      {partnership.status === 'active' ? (
+        <Link
+          className="friend-profile-link flex min-w-0 items-center gap-4"
+          to={`/profiles/${partnership.partner.id}`}
+          aria-label={`View ${partnership.partner.displayName}’s profile`}
+        >
+          {identity}
+        </Link>
+      ) : (
+        <div className="flex min-w-0 items-center gap-4">{identity}</div>
+      )}
 
       {actionLabel || secondaryActionLabel ? (
         <div className="flex gap-2">

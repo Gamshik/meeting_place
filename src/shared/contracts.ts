@@ -8,14 +8,36 @@ export const usernameSchema = z
   .max(32, 'Username cannot exceed 32 characters')
   .regex(/^[a-z0-9_]+$/, 'Use only lowercase letters, numbers, and underscores')
 
+export const timeZoneSchema = z
+  .string()
+  .trim()
+  .min(1, 'Choose an activity timezone')
+  .max(64, 'Timezone is too long')
+  .regex(/^[A-Za-z0-9_+\-/]+$/, 'Choose a valid activity timezone')
+  .refine((value) => {
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: value }).format()
+      return true
+    } catch {
+      return false
+    }
+  }, 'Choose a supported activity timezone')
+
 export const updateProfileSchema = z
   .object({
     username: usernameSchema.optional(),
     displayName: z.string().trim().min(1).max(80).optional(),
+    timeZone: timeZoneSchema.optional(),
   })
-  .refine((value) => value.username !== undefined || value.displayName !== undefined, {
-    message: 'Provide at least one profile field',
-  })
+  .refine(
+    (value) =>
+      value.username !== undefined ||
+      value.displayName !== undefined ||
+      value.timeZone !== undefined,
+    {
+      message: 'Provide at least one profile field',
+    },
+  )
 
 export const invitePartnerSchema = z.object({
   username: usernameSchema,
@@ -33,6 +55,11 @@ export const partnershipListSchema = z
   .refine((value) => Boolean(value.beforeCreatedAt) === Boolean(value.beforeId), {
     message: 'Provide both cursor fields',
   })
+
+export const profileActivityRequestSchema = z.object({
+  profileId: z.uuid(),
+  year: z.coerce.number().int().min(2000).max(2100),
+})
 
 export const wordGameActionSchema = z.object({
   partnershipId: z.uuid(),
@@ -164,7 +191,52 @@ export type Profile = {
   displayName: string
   avatarUrl: string | null
   createdAt: string
+  timeZone: string | null
 }
+
+export const profileActivityDaySchema = z.object({
+  date: z.iso.date(),
+  interactionCount: z.number().int().positive(),
+  intensity: z.number().int().min(1).max(5),
+  gamesRequested: z.number().int().nonnegative(),
+  gamesAccepted: z.number().int().nonnegative(),
+  roundsStarted: z.number().int().nonnegative(),
+  explanationsSubmitted: z.number().int().nonnegative(),
+  guessesSubmitted: z.number().int().nonnegative(),
+  gamesCompleted: z.number().int().nonnegative(),
+  gamesPlayed: z.number().int().nonnegative(),
+  speakingDurationSeconds: z.number().int().nonnegative(),
+  topics: z.array(z.string()),
+})
+
+export const profileActivitySchema = z.object({
+  profile: z.object({
+    id: z.uuid(),
+    username: z.string(),
+    displayName: z.string(),
+    avatarUrl: z.string().nullable(),
+    createdAt: z.string(),
+    timeZone: timeZoneSchema,
+  }),
+  isOwner: z.boolean(),
+  year: z.number().int().min(2000).max(2100),
+  timeZone: z.string(),
+  totals: z.object({
+    activeDays: z.number().int().nonnegative(),
+    interactionCount: z.number().int().nonnegative(),
+    gamesPlayed: z.number().int().nonnegative(),
+    gamesCompleted: z.number().int().nonnegative(),
+    roundsStarted: z.number().int().nonnegative(),
+    explanationsSubmitted: z.number().int().nonnegative(),
+    guessesSubmitted: z.number().int().nonnegative(),
+    speakingDurationSeconds: z.number().int().nonnegative(),
+    topicsExplored: z.number().int().nonnegative(),
+  }),
+  days: z.array(profileActivityDaySchema),
+})
+
+export type ProfileActivity = z.infer<typeof profileActivitySchema>
+export type ProfileActivityDay = z.infer<typeof profileActivityDaySchema>
 
 export type Partnership = {
   id: string
