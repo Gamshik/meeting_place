@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import type { Partnership, WordGame } from '../../src/shared/contracts'
+import type { Partnership, ProfileActivity, WordGame } from '../../src/shared/contracts'
 
 const userId = '11111111-1111-4111-8111-111111111111'
 const partnerId = '22222222-2222-4222-8222-222222222222'
@@ -43,6 +43,7 @@ async function signIn(page: Page) {
           displayName: 'Alice',
           avatarUrl: null,
           createdAt: '2026-01-01T00:00:00Z',
+          timeZone: 'UTC',
         },
       },
     }),
@@ -50,6 +51,36 @@ async function signIn(page: Page) {
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [], nextCursor: null } }),
   )
+  await page.route('**/api/profiles/**', (route) => {
+    const requestedId = new URL(route.request().url()).pathname.split('/')[3] ?? userId
+    const isFriend = requestedId === partnerId
+    const data: ProfileActivity = {
+      profile: {
+        id: requestedId,
+        username: isFriend ? 'bob' : 'alice',
+        displayName: isFriend ? 'Bob' : 'Alice',
+        avatarUrl: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        timeZone: 'UTC',
+      },
+      isOwner: !isFriend,
+      year: 2026,
+      timeZone: 'UTC',
+      totals: {
+        activeDays: 0,
+        interactionCount: 0,
+        gamesPlayed: 0,
+        gamesCompleted: 0,
+        roundsStarted: 0,
+        explanationsSubmitted: 0,
+        guessesSubmitted: 0,
+        speakingDurationSeconds: 0,
+        topicsExplored: 0,
+      },
+      days: [],
+    }
+    return route.fulfill({ json: { data } })
+  })
   await page.route('**/api/games/explain-word/history', (route) =>
     route.fulfill({ json: { data: [] } }),
   )
@@ -268,9 +299,11 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
     release = resolve
   })
   let saves = 0
+  let savedProfile: Record<string, unknown> | null = null
   await page.route('**/api/me', async (route) => {
     if (route.request().method() === 'PATCH') {
       saves++
+      savedProfile = route.request().postDataJSON() as Record<string, unknown>
       await pending
     }
     await route.fulfill({
@@ -281,21 +314,97 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
           displayName: saves ? 'Alice Updated' : 'Alice',
           avatarUrl: null,
           createdAt: '2026-01-01T00:00:00Z',
+          timeZone: saves ? 'Europe/Minsk' : 'UTC',
         },
       },
     })
   })
   await page.goto('/?view=profile')
   await page.getByLabel('Display name').fill('Alice Updated')
+  await page.getByLabel('Activity timezone').fill('Europe/Minsk')
   await page.getByRole('button', { name: 'Save profile' }).click()
   await expect(page.getByRole('button', { name: 'Saving…' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled()
   release!()
   await expect(page.getByRole('status').filter({ hasText: 'Profile saved.' })).toBeVisible()
   expect(saves).toBe(1)
+  expect(savedProfile).toMatchObject({
+    displayName: 'Alice Updated',
+    username: 'alice',
+    timeZone: 'Europe/Minsk',
+  })
   await page.getByLabel('Display name').fill('Unsaved')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByLabel('Display name')).toHaveValue('Alice Updated')
+})
+
+test('shows yearly activity by default and lets friends open the monthly profile view', async ({
+  page,
+}) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  await page.unroute('**/api/profiles/**')
+  await page.route('**/api/profiles/**', (route) => {
+    const data: ProfileActivity = {
+      profile: {
+        id: partnerId,
+        username: 'bob',
+        displayName: 'Bob',
+        avatarUrl: null,
+        createdAt: '2026-01-01T00:00:00Z',
+        timeZone: 'UTC',
+      },
+      isOwner: false,
+      year: 2026,
+      timeZone: 'UTC',
+      totals: {
+        activeDays: 1,
+        interactionCount: 5,
+        gamesPlayed: 1,
+        gamesCompleted: 1,
+        roundsStarted: 1,
+        explanationsSubmitted: 1,
+        guessesSubmitted: 1,
+        speakingDurationSeconds: 13,
+        topicsExplored: 2,
+      },
+      days: [
+        {
+          date: '2026-09-13',
+          interactionCount: 5,
+          intensity: 2,
+          gamesRequested: 0,
+          gamesAccepted: 1,
+          roundsStarted: 1,
+          explanationsSubmitted: 1,
+          guessesSubmitted: 1,
+          gamesCompleted: 1,
+          gamesPlayed: 1,
+          speakingDurationSeconds: 13,
+          topics: ['Food', 'Travel'],
+        },
+      ],
+    }
+    return route.fulfill({ json: { data } })
+  })
+
+  await page.goto('/?view=friends')
+  await page.getByRole('link', { name: 'View Bob’s profile' }).click()
+  await expect(page).toHaveURL(`/profiles/${partnerId}`)
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bob’s practice activity' })).toBeVisible()
+  await expect(page.getByLabel('2026 practice summary')).toContainText('5practice actions')
+  await expect(page.getByRole('grid', { name: '2026 practice activity' })).toBeVisible()
+  await page.getByRole('gridcell', { name: /Sep 13, 2026: 5 practice actions/ }).click()
+  await expect(page.getByRole('heading', { name: '5 practice actions' })).toBeVisible()
+  await expect(page.getByText('Food', { exact: true })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Months' }).click()
+  await expect(page.getByRole('region', { name: 'Sep 2026' })).toContainText('1 active')
+  await page.getByRole('link', { name: 'Back to friends' }).click()
+  await expect(page).toHaveURL('/?view=friends')
 })
 
 test('starts a word game and submits a browser recording for transcription', async ({ page }) => {

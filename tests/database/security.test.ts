@@ -656,4 +656,113 @@ describe('database authorization and lifecycle', () => {
       usedForbiddenWord: true,
     })
   })
+
+  it('builds balanced activity and shares it only with active partners', async () => {
+    await asUser(alice)
+    await rows("update public.profiles set time_zone='Europe/Minsk' where id=$1", [alice])
+    await db.exec('savepoint invalid_profile_time_zone')
+    await expect(
+      rows("update public.profiles set time_zone='VPN/Nowhere' where id=$1", [alice]),
+    ).rejects.toThrow('invalid_time_zone')
+    await db.exec('rollback to savepoint invalid_profile_time_zone')
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+
+    await asUser(alice)
+    const first = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [gameId, 'Travel', 'passport', ['passport'], ['passport']],
+    )
+    await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
+      first.rows[0]!.result.round.id,
+      'A document used at a border.',
+      [{ word: 'border', start: 11.7, end: 12.2 }],
+      null,
+      null,
+    ])
+    await asUser(bob)
+    await rows('select public.guess_word_game_round($1,$2)', [
+      first.rows[0]!.result.round.id,
+      'passport',
+    ])
+
+    const second = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [gameId, 'Food', 'sandwich', ['sandwich'], ['sandwich']],
+    )
+    await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
+      second.rows[0]!.result.round.id,
+      'A quick meal between bread.',
+      [{ word: 'bread', start: 8.5, end: 9.1 }],
+      null,
+      null,
+    ])
+    await asUser(alice)
+    await rows('select public.guess_word_game_round($1,$2)', [
+      second.rows[0]!.result.round.id,
+      'sandwich',
+    ])
+    await rows('select public.end_word_game($1)', [invitation.partnershipId])
+
+    await db.exec('reset role')
+    const nearMidnightUtc = '2026-01-01T22:30:00Z'
+    await db.query(
+      'update public.word_games set created_at=$2, accepted_at=$2, finished_at=$2 where id=$1',
+      [gameId, nearMidnightUtc],
+    )
+    await db.query(
+      'update public.word_game_rounds set created_at=$2, explained_at=$2, completed_at=$2 where game_id=$1',
+      [gameId, nearMidnightUtc],
+    )
+    await asUser(alice)
+
+    const year = 2026
+    const aliceActivity = await db.query<{
+      result: {
+        isOwner: boolean
+        timeZone: string
+        totals: { interactionCount: number; speakingDurationSeconds: number }
+        days: { interactionCount: number; intensity: number }[]
+      }
+    }>('select public.get_profile_activity($1,$2) result', [alice, year])
+    expect(aliceActivity.rows[0]!.result).toMatchObject({
+      isOwner: true,
+      timeZone: 'Europe/Minsk',
+      totals: { interactionCount: 5, speakingDurationSeconds: 13 },
+    })
+    expect(aliceActivity.rows[0]!.result.days).toEqual([
+      expect.objectContaining({ date: '2026-01-02', interactionCount: 5, intensity: 2 }),
+    ])
+
+    await asUser(bob)
+    const sharedActivity = await db.query<{
+      result: { isOwner: boolean; totals: { interactionCount: number } }
+    }>('select public.get_profile_activity($1,$2) result', [alice, year])
+    expect(sharedActivity.rows[0]!.result).toMatchObject({
+      isOwner: false,
+      totals: { interactionCount: 5 },
+    })
+
+    await asUser(eve)
+    await db.exec('savepoint unrelated_profile_is_private')
+    await expect(rows('select public.get_profile_activity($1,$2)', [alice, year])).rejects.toThrow(
+      'profile_not_available',
+    )
+    await db.exec('rollback to savepoint unrelated_profile_is_private')
+
+    await asUser(bob)
+    await rows('select public.end_partnership($1)', [invitation.partnershipId])
+    await expect(rows('select public.get_profile_activity($1,$2)', [alice, year])).rejects.toThrow(
+      'profile_not_available',
+    )
+  })
 })

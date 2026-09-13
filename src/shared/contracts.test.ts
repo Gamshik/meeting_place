@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { invitePartnerSchema, updateProfileSchema, usernameSchema } from './contracts'
+import {
+  invitePartnerSchema,
+  timeZoneSchema,
+  updateProfileSchema,
+  usernameSchema,
+} from './contracts'
 
 describe('shared request schemas', () => {
   it('normalizes a username', () => {
@@ -13,6 +18,12 @@ describe('shared request schemas', () => {
 
   it('requires a profile change', () => {
     expect(updateProfileSchema.safeParse({}).success).toBe(false)
+  })
+
+  it('accepts real IANA timezones and rejects invented ones', () => {
+    expect(timeZoneSchema.safeParse('Europe/Minsk').success).toBe(true)
+    expect(updateProfileSchema.safeParse({ timeZone: 'America/New_York' }).success).toBe(true)
+    expect(timeZoneSchema.safeParse('VPN/Nowhere').success).toBe(false)
   })
 
   it('validates an invitation', () => {
