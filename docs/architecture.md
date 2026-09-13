@@ -84,6 +84,30 @@ reloads after its own mutations, so a temporary Realtime outage does not delay l
 These operations are database functions because they cross privacy boundaries or must remain
 atomic. Ordinary self-profile updates use standard row operations under RLS.
 
+## Profile activity and friend profiles
+
+The profile calendar is derived from canonical game and round records rather than a second mutable
+activity ledger. A successful game request or acceptance, round start, explanation submission,
+guess submission, and meaningful completed game each contribute one practice action to the relevant
+profile. Empty sessions, skipped rounds, page views, playback, and presence heartbeats do not count.
+Fixed daily thresholds map the action count to five visible intensity levels. The year and month
+layouts are two client-side arrangements of the same response.
+
+`word_game_rounds.explained_at` records the explanation action separately from the later guess, so
+actions that cross midnight are assigned to the day on which they happened. Speaking duration is
+derived from transcription word timestamps and is supporting context, not an intensity score.
+Activity timestamps remain UTC in storage and are grouped into calendar days using the profile
+owner's validated IANA timezone. New profiles start without a timezone; the client detects and saves
+the browser timezone on the first profile load, after which it changes only through profile settings.
+The value is never inferred from an IP address, so a VPN cannot silently move activity between days.
+All viewers therefore see the same dates for a given profile.
+
+`get_profile_activity` is the privacy boundary for both identity and activity aggregates. It returns
+a profile only to its owner or a user with a currently active partnership to that profile. Direct
+table access remains unchanged, and ending a partnership immediately removes cross-profile access.
+The response never includes transcripts, guesses, secret words, recording paths, AI coaching, or
+the identities of a profile's other partners.
+
 ## Explain-the-word game
 
 Each active partnership can have at most one unfinished `word_games` record and any number of

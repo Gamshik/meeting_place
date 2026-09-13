@@ -12,6 +12,7 @@ This repository contains the first vertical slice:
 - real-time invitation and partnership updates across signed-in browsers
 - invitation attempt limits and a cooldown after a relationship closes
 - paginated partner lists and accessible feedback while changes are saved
+- friend-only profiles with yearly and monthly practice activity calendars
 - a turn-based “explain the word” game with AI-generated cards, speech transcription, and private coaching
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
@@ -32,7 +33,13 @@ username lookup and explains that invitations are private. After sending, the In
 shows the pending request, with actions to accept, decline, or cancel. Search covers all loaded
 partnership pages, and refreshing does not drop older friends. Friend removal is under the friend's
 options menu and requires confirmation. Profile fields are editable directly, with Save, Cancel,
-and Copy username actions. Profiles are created on first Google sign-in.
+and Copy username actions. Profiles are created on first Google sign-in. A profile activity calendar
+counts successful game requests, acceptances, round starts, explanations, guesses, and meaningful
+game completions. The default year view connects consecutive active days; the month view regroups
+the same data into twelve familiar calendars. Active friends can open one another's profile and see
+these aggregates, while recordings, transcripts, answers, and private coaching remain protected.
+Each profile keeps an editable IANA activity timezone. It is initially detected from the browser,
+never inferred from an IP address, and determines the calendar day for both the owner and friends.
 
 Notifications open in a nonmodal panel anchored to the bell. Friend actions work directly in the
 panel during a game. A second game request remains visible, but joining stays disabled until the
@@ -355,5 +362,5 @@ checks in a separate database job, and runs browser tests in the main verificati
 ## Current scope
 
 The current application covers identity, two-person partnerships, and the first turn-based speaking
-activity. Meetings, background push notifications, cross-game activity history, realtime game
-updates, and billing belong in later vertical slices.
+activity. Meetings, background push notifications, additional game types in the shared activity
+calendar, realtime game updates, and billing belong in later vertical slices.
