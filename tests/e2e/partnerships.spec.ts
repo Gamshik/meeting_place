@@ -65,6 +65,8 @@ async function signIn(page: Page) {
       },
       isOwner: !isFriend,
       year: 2026,
+      startDate: '2025-09-14',
+      endDate: '2026-09-13',
       timeZone: 'UTC',
       totals: {
         activeDays: 0,
@@ -291,6 +293,12 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   page,
 }) => {
   await signIn(page)
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async () => undefined },
+    })
+  })
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [], nextCursor: null } }),
   )
@@ -320,11 +328,30 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
     })
   })
   await page.goto('/?view=profile')
+  await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your profile' })).toHaveCount(0)
+  const copyUsername = page.getByRole('button', { name: 'Copy username' })
+  await expect(copyUsername).toBeVisible()
+  await copyUsername.click()
+  const copiedNotice = page.getByRole('status').filter({ hasText: 'Username copied.' })
+  await expect(copiedNotice).toBeVisible()
+  expect((await copiedNotice.boundingBox())!.height).toBeLessThan(80)
+  await expect(copiedNotice).toHaveCSS('border-radius', '18px 18px 18px 6px')
+  await expect(page.getByText('Shown to friends and during games.')).toHaveCount(0)
+  await expect(page.getByText('Friends use this unique handle to find you.')).toHaveCount(0)
+  await expect(page.getByText('Sets where each practice day begins.')).toHaveCount(0)
+  const timeZoneLabelBounds = await page
+    .getByText('Activity timezone', { exact: true })
+    .boundingBox()
+  const timeZoneInputBounds = await page.getByLabel('Activity timezone').boundingBox()
+  expect(timeZoneInputBounds!.y).toBeGreaterThan(
+    timeZoneLabelBounds!.y + timeZoneLabelBounds!.height,
+  )
   await page.getByLabel('Display name').fill('Alice Updated')
-  await page.getByLabel('Activity timezone').fill('Europe/Minsk')
-  await page.getByRole('button', { name: 'Save profile' }).click()
+  await page.getByLabel('Activity timezone').selectOption('Europe/Minsk')
+  await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByRole('button', { name: 'Saving…' })).toBeDisabled()
-  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeDisabled()
   release!()
   await expect(page.getByRole('status').filter({ hasText: 'Profile saved.' })).toBeVisible()
   expect(saves).toBe(1)
@@ -334,7 +361,7 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
     timeZone: 'Europe/Minsk',
   })
   await page.getByLabel('Display name').fill('Unsaved')
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await expect(page.getByLabel('Display name')).toHaveValue('Alice Updated')
 })
 
@@ -358,6 +385,8 @@ test('shows yearly activity by default and lets friends open the monthly profile
       },
       isOwner: false,
       year: 2026,
+      startDate: '2025-09-14',
+      endDate: '2026-09-13',
       timeZone: 'UTC',
       totals: {
         activeDays: 1,
@@ -394,15 +423,26 @@ test('shows yearly activity by default and lets friends open the monthly profile
   await page.getByRole('link', { name: 'View Bob’s profile' }).click()
   await expect(page).toHaveURL(`/profiles/${partnerId}`)
   await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Practice with Bob' })).toBeVisible()
+  expect((await page.locator('.friend-profile-heading').boundingBox())!.height).toBeLessThan(140)
   await expect(page.getByRole('heading', { name: 'Bob’s practice activity' })).toBeVisible()
-  await expect(page.getByLabel('2026 practice summary')).toContainText('5practice actions')
-  await expect(page.getByRole('grid', { name: '2026 practice activity' })).toBeVisible()
+  await expect(page.getByLabel('Sep 14, 2025 to Sep 13, 2026 practice summary')).toContainText(
+    '5practice actions',
+  )
+  await expect(
+    page.getByRole('grid', {
+      name: 'Practice activity from Sep 14, 2025 through Sep 13, 2026',
+    }),
+  ).toBeVisible()
+  await expect(page.getByRole('gridcell', { name: /Dec 31, 2026/ })).toHaveCount(0)
   await page.getByRole('gridcell', { name: /Sep 13, 2026: 5 practice actions/ }).click()
   await expect(page.getByRole('heading', { name: '5 practice actions' })).toBeVisible()
   await expect(page.getByText('Food', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Months' }).click()
+  await expect(page.getByRole('region', { name: 'Sep 2025' })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Sep 2026' })).toContainText('1 active')
+  await expect(page.getByRole('region', { name: 'Oct 2026' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Back to friends' }).click()
   await expect(page).toHaveURL('/?view=friends')
 })
@@ -591,6 +631,40 @@ test('starts a word game and submits a browser recording for transcription', asy
 
 test('shows the other player an immediate choice when a word game finishes', async ({ page }) => {
   await signIn(page)
+  await page.addInitScript(() => {
+    const testWindow = window as Window & { recordingTrackStopped?: boolean }
+    const fakeTrack = {
+      stop() {
+        testWindow.recordingTrackStopped = true
+      },
+    }
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: {
+        getUserMedia: async () => {
+          testWindow.recordingTrackStopped = false
+          return { getTracks: () => [fakeTrack] }
+        },
+      },
+    })
+    class FakeMediaRecorder {
+      static isTypeSupported() {
+        return true
+      }
+      mimeType = 'audio/webm;codecs=opus'
+      state: RecordingState = 'inactive'
+      ondataavailable: ((event: { data: Blob }) => void) | null = null
+      onstop: (() => void) | null = null
+      start() {
+        this.state = 'recording'
+      }
+      stop() {
+        this.state = 'inactive'
+        this.onstop?.()
+      }
+    }
+    Object.defineProperty(window, 'MediaRecorder', { configurable: true, value: FakeMediaRecorder })
+  })
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
   )
@@ -605,7 +679,26 @@ test('shows the other player an immediate choice when a word game finishes', asy
     currentPlayerId: userId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
     scores: { you: 1, partner: 2 },
-    round: null,
+    round: {
+      id: '55555555-5555-4555-8555-555555555555',
+      turnNumber: 1,
+      explainerId: userId,
+      topic: 'Travel',
+      status: 'explaining',
+      secretWord: 'souvenir',
+      forbiddenWords: ['souvenir', 'souvenirs'],
+      transcript: null,
+      transcriptWords: [],
+      audioAvailable: false,
+      usedForbiddenWord: null,
+      guess: null,
+      isCorrect: null,
+      score: null,
+      coachScore: null,
+      coachFeedback: null,
+      createdAt: '2026-09-13T12:00:00Z',
+      completedAt: null,
+    },
     rounds: [],
   }
   let sendGameFinished: (() => void) | undefined
@@ -680,7 +773,8 @@ test('shows the other player an immediate choice when a word game finishes', asy
   })
 
   await page.goto(`/games/explain-word/${relationshipId}`)
-  await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
+  await page.getByRole('button', { name: 'Start recording' }).click()
+  await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible()
   await expect.poll(() => Boolean(sendGameFinished)).toBe(true)
 
   game = {
@@ -693,11 +787,21 @@ test('shows the other player an immediate choice when a word game finishes', asy
 
   const dialog = page.getByRole('dialog', { name: 'The game has finished' })
   await expect(dialog).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Stop recording' })).toHaveCount(0)
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as Window & { recordingTrackStopped?: boolean }).recordingTrackStopped,
+      ),
+    )
+    .toBe(true)
   await expect(dialog.getByLabel('Final score')).toContainText('You1:Bob3')
   await expect(dialog.getByRole('button', { name: 'Go home' })).toBeVisible()
   await dialog.getByRole('button', { name: 'View results' }).click()
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByText('This game was ended')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Game finished' })).toBeVisible()
+  await expect(page.getByText('Your result is saved. Review the rounds below')).toBeVisible()
+  await expect(page.getByText('souvenir', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Rounds' })).toBeVisible()
 })
 
@@ -849,6 +953,64 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
   await expect(rounds).toContainText('+1 correct')
 })
 
+test('returns to Games after cancelling a replay request from History', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  await page.unroute('**/api/games/explain-word/history')
+  await page.route('**/api/games/explain-word/history', (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            partnershipId: relationshipId,
+            finishedAt: '2026-09-11T12:10:00Z',
+            partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+            scores: { you: 2, partner: 1 },
+            roundCount: 0,
+            rounds: [],
+          },
+        ],
+      },
+    }),
+  )
+
+  const pendingGame: WordGame = {
+    id: '77777777-7777-4777-8777-777777777777',
+    partnershipId: relationshipId,
+    status: 'pending',
+    requestedById: userId,
+    acceptedAt: null,
+    currentPlayerId: userId,
+    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 0, partner: 0 },
+    round: null,
+    rounds: [],
+  }
+  let cancelled = false
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
+    if (route.request().method() === 'DELETE') {
+      cancelled = true
+      await route.fulfill({ status: 204 })
+    } else {
+      await route.fulfill({ json: { data: pendingGame } })
+    }
+  })
+
+  await page.goto('/?view=history')
+  await page.getByRole('button', { name: 'Play again' }).click()
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
+  await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
+
+  await page.getByRole('button', { name: 'Cancel invitation' }).click()
+
+  await expect.poll(() => cancelled).toBe(true)
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('heading', { name: 'Who are you practising with?' })).toBeVisible()
+})
+
 test('notifications are anchored, actionable, and do not block navigation', async ({ page }) => {
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
@@ -875,6 +1037,27 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
   await expect(panel).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Friends', exact: true })).toBeVisible()
+})
+
+test('keeps the app shell aligned between dashboard views with different heights', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 700 })
+  await signIn(page)
+  await page.goto('/')
+
+  const header = page.locator('.site-header')
+  const practiceBounds = await header.boundingBox()
+  expect(
+    await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarGutter),
+  ).toBe('stable')
+
+  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Friends', exact: true })).toBeVisible()
+  const friendsBounds = await header.boundingBox()
+
+  expect(friendsBounds?.x).toBe(practiceBounds?.x)
+  expect(friendsBounds?.width).toBe(practiceBounds?.width)
 })
 
 for (const width of [320, 390, 1440]) {

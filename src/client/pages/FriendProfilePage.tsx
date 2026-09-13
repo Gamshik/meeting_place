@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import type { Profile, ProfileActivity } from '../../shared/contracts'
+import { useCommunity } from '../community/CommunityContext'
 import { AppShell } from '../components/AppShell'
 import { ProfileActivityPanel } from '../components/ProfileActivityPanel'
 import { api } from '../lib/api'
@@ -9,6 +10,7 @@ import { browserTimeZone } from '../lib/time-zone'
 
 export function FriendProfilePage() {
   const { profileId = '' } = useParams()
+  const { partnerships } = useCommunity()
   const [viewer, setViewer] = useState<Profile | null>(null)
   const [friend, setFriend] = useState<Profile | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -40,6 +42,9 @@ export function FriendProfilePage() {
   const handleProfileLoaded = useCallback((activity: ProfileActivity) => {
     setFriend(activity.profile)
   }, [])
+  const partnership = partnerships.find(
+    (item) => item.status === 'active' && item.partner.id === profileId,
+  )
 
   if (!viewer) {
     return (
@@ -55,14 +60,25 @@ export function FriendProfilePage() {
         <Link className="profile-back-link" to="/?view=friends">
           ← Back to friends
         </Link>
-        <div className="friend-profile-heading">
+        <header className="friend-profile-heading">
           <ProfileAvatar profile={friend} />
-          <div>
-            <p className="eyebrow">Practice partner</p>
+          <div className="friend-profile-identity">
+            <p className="friend-profile-kicker">
+              <span aria-hidden="true" /> Practice partner
+            </p>
             <h1>{friend?.displayName ?? 'Friend profile'}</h1>
             {friend ? <p>@{friend.username}</p> : <p>Loading profile details…</p>}
           </div>
-        </div>
+          {partnership && friend ? (
+            <Link
+              className="button button-primary friend-profile-practice"
+              to={`/games/explain-word/${partnership.id}`}
+            >
+              Practice with {friend.displayName.split(/\s+/)[0]}
+              <span aria-hidden="true">↗</span>
+            </Link>
+          ) : null}
+        </header>
         <ProfileActivityPanel
           profileId={profileId}
           profileName={friend?.displayName}

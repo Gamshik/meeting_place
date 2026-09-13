@@ -220,6 +220,8 @@ export const profileActivitySchema = z.object({
   }),
   isOwner: z.boolean(),
   year: z.number().int().min(2000).max(2100),
+  startDate: z.iso.date(),
+  endDate: z.iso.date(),
   timeZone: z.string(),
   totals: z.object({
     activeDays: z.number().int().nonnegative(),

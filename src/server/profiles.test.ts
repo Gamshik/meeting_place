@@ -22,6 +22,8 @@ const activity = {
   },
   isOwner: false,
   year: 2026,
+  startDate: '2025-09-14',
+  endDate: '2026-09-13',
   timeZone: 'Europe/Minsk',
   totals: {
     activeDays: 1,

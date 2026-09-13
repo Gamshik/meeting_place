@@ -6,11 +6,13 @@ export function ProfileEditor({
   disabled,
   onSave,
   onCopy,
+  onSignOut,
 }: {
   profile: Profile
   disabled: boolean
   onSave: (input: { username: string; displayName: string; timeZone: string }) => Promise<boolean>
   onCopy: () => void
+  onSignOut: () => void
 }) {
   const [displayName, setDisplayName] = useState(profile.displayName)
   const [username, setUsername] = useState(profile.username)
@@ -24,8 +26,8 @@ export function ProfileEditor({
     if (!disabled && dirty) await onSave({ displayName, username, timeZone })
   }
   return (
-    <section className="profile-editor">
-      <div className="profile-summary">
+    <section className="profile-editor" aria-labelledby="profile-settings-title">
+      <header className="profile-editor-header">
         <div className="profile-avatar">
           {profile.avatarUrl ? (
             <img src={profile.avatarUrl} alt="" referrerPolicy="no-referrer" />
@@ -33,78 +35,89 @@ export function ProfileEditor({
             profile.displayName.slice(0, 1).toUpperCase()
           )}
         </div>
-        <div>
-          <p>@{profile.username}</p>
-          <button className="text-action" onClick={onCopy}>
-            Copy username
+        <div className="profile-editor-intro">
+          <p>My account</p>
+          <h1 id="profile-settings-title">Profile settings</h1>
+          <span>Manage the details your practice partners see.</span>
+        </div>
+        <div className="profile-handle">
+          <span>Friend handle</span>
+          <strong>@{profile.username}</strong>
+          <button type="button" className="text-action" aria-label="Copy username" onClick={onCopy}>
+            Copy
           </button>
         </div>
-      </div>
+      </header>
       <form onSubmit={submit}>
-        <label>
-          Display name
-          <input
-            className="input"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            maxLength={80}
-            required
-            disabled={disabled}
-          />
-        </label>
-        <label>
-          Username
-          <input
-            className="input"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-            minLength={3}
-            maxLength={32}
-            pattern="[A-Za-z0-9_]+"
-            required
-            disabled={disabled}
-          />
-        </label>
-        <label>
-          Activity timezone
-          <input
-            className="input"
-            value={timeZone}
-            list="activity-time-zone-options"
-            onChange={(event) => setTimeZone(event.target.value)}
-            maxLength={64}
-            required
-            disabled={disabled}
-            autoComplete="off"
-          />
-          <span className="profile-field-help">
-            Determines which day your practice belongs to. It is not based on your IP or VPN.
-          </span>
-          <datalist id="activity-time-zone-options">
-            {supportedTimeZones(timeZone).map((zone) => (
-              <option value={zone} key={zone} />
-            ))}
-          </datalist>
-        </label>
-        <div className="row-actions">
-          <button className="button button-primary" disabled={disabled || !dirty} type="submit">
-            {disabled ? 'Saving…' : 'Save profile'}
-          </button>
-          {dirty && (
-            <button
-              type="button"
-              className="button button-secondary"
+        <div className="profile-fields-grid">
+          <label>
+            <span>Display name</span>
+            <input
+              className="input"
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              maxLength={80}
+              required
               disabled={disabled}
-              onClick={() => {
-                setDisplayName(profile.displayName)
-                setUsername(profile.username)
-                setTimeZone(profile.timeZone ?? browserTimeZone())
-              }}
+            />
+          </label>
+          <label>
+            <span>Username</span>
+            <input
+              className="input"
+              value={username}
+              onChange={(event) => setUsername(event.target.value)}
+              minLength={3}
+              maxLength={32}
+              pattern="[A-Za-z0-9_]+"
+              required
+              disabled={disabled}
+            />
+          </label>
+          <label className="profile-timezone-field">
+            <span>Activity timezone</span>
+            <select
+              className="input"
+              value={timeZone}
+              onChange={(event) => setTimeZone(event.target.value)}
+              required
+              disabled={disabled}
             >
-              Cancel
-            </button>
-          )}
+              {supportedTimeZones(timeZone).map((zone) => (
+                <option value={zone} key={zone}>
+                  {zone}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
+        <footer className="profile-editor-footer">
+          <button type="button" className="profile-signout" disabled={disabled} onClick={onSignOut}>
+            Sign out
+          </button>
+          <div className="profile-save-area">
+            <p aria-live="polite">{dirty ? 'You have unsaved changes' : 'Everything is saved'}</p>
+            <div className="row-actions">
+              {dirty && (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  disabled={disabled}
+                  onClick={() => {
+                    setDisplayName(profile.displayName)
+                    setUsername(profile.username)
+                    setTimeZone(profile.timeZone ?? browserTimeZone())
+                  }}
+                >
+                  Reset
+                </button>
+              )}
+              <button className="button button-primary" disabled={disabled || !dirty} type="submit">
+                {disabled ? 'Saving…' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        </footer>
       </form>
     </section>
   )

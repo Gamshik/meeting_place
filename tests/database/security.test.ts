@@ -714,7 +714,7 @@ describe('database authorization and lifecycle', () => {
     await rows('select public.end_word_game($1)', [invitation.partnershipId])
 
     await db.exec('reset role')
-    const nearMidnightUtc = '2026-01-01T22:30:00Z'
+    const nearMidnightUtc = '2025-10-01T22:30:00Z'
     await db.query(
       'update public.word_games set created_at=$2, accepted_at=$2, finished_at=$2 where id=$1',
       [gameId, nearMidnightUtc],
@@ -730,6 +730,8 @@ describe('database authorization and lifecycle', () => {
       result: {
         isOwner: boolean
         timeZone: string
+        startDate: string
+        endDate: string
         totals: { interactionCount: number; speakingDurationSeconds: number }
         days: { interactionCount: number; intensity: number }[]
       }
@@ -737,10 +739,12 @@ describe('database authorization and lifecycle', () => {
     expect(aliceActivity.rows[0]!.result).toMatchObject({
       isOwner: true,
       timeZone: 'Europe/Minsk',
+      startDate: '2025-09-14',
+      endDate: '2026-09-13',
       totals: { interactionCount: 5, speakingDurationSeconds: 13 },
     })
     expect(aliceActivity.rows[0]!.result.days).toEqual([
-      expect.objectContaining({ date: '2026-01-02', interactionCount: 5, intensity: 2 }),
+      expect.objectContaining({ date: '2025-10-02', interactionCount: 5, intensity: 2 }),
     ])
 
     await asUser(bob)

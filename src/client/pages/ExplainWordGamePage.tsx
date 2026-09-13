@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import type { Profile, WordGame } from '../../shared/contracts'
@@ -26,6 +26,7 @@ export function ExplainWordGamePage() {
   const [showFinishedChoice, setShowFinishedChoice] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const joinedActiveSession = useRef(false)
+  const pendingRequestSeen = useRef(false)
 
   const loadGame = useCallback(
     async (quiet = false) => {
@@ -146,6 +147,14 @@ export function ExplainWordGamePage() {
     }
   }, [sessionStatus])
 
+  useEffect(() => {
+    if (sessionStatus === 'pending') {
+      pendingRequestSeen.current = true
+    } else if (!game && pendingRequestSeen.current) {
+      navigate('/', { replace: true })
+    }
+  }, [game, navigate, sessionStatus])
+
   async function run(action: () => Promise<{ data: WordGame } | void>) {
     if (isBusy) return
     setIsBusy(true)
@@ -170,6 +179,19 @@ export function ExplainWordGamePage() {
     } catch (actionError) {
       setError(messageFromError(actionError))
       setShowEndConfirmation(false)
+      setIsBusy(false)
+    }
+  }
+
+  async function closeGameInvitation(action: () => Promise<void>) {
+    if (isBusy) return
+    setIsBusy(true)
+    setError(null)
+    try {
+      await action()
+      navigate('/', { replace: true })
+    } catch (actionError) {
+      setError(messageFromError(actionError))
       setIsBusy(false)
     }
   }
@@ -278,8 +300,8 @@ export function ExplainWordGamePage() {
           disabled={isBusy}
           acceptBlocked={hasOtherOngoingGame}
           onAccept={() => run(() => api.acceptWordGame(partnershipId))}
-          onCancel={() => run(() => api.cancelWordGame(partnershipId))}
-          onDecline={() => run(() => api.declineWordGame(partnershipId))}
+          onCancel={() => closeGameInvitation(() => api.cancelWordGame(partnershipId))}
+          onDecline={() => closeGameInvitation(() => api.declineWordGame(partnershipId))}
         />
       ) : (
         <GameBoard
@@ -329,52 +351,54 @@ function GameBoard({
   return (
     <div className="game-board">
       {sessionLocked ? <SessionStatus game={game} userId={userId} /> : null}
-      <div className="game-play-area">
-        {!round || !openRound ? (
-          game.currentPlayerId === userId ? (
-            <NewRoundCard
-              disabled={isBusy || sessionLocked}
-              onCreate={(topic) => run(() => api.createWordRound(partnershipId, topic))}
-            />
-          ) : (
+      {game.status !== 'finished' ? (
+        <div className="game-play-area">
+          {!round || !openRound ? (
+            game.currentPlayerId === userId ? (
+              <NewRoundCard
+                disabled={isBusy || sessionLocked}
+                onCreate={(topic) => run(() => api.createWordRound(partnershipId, topic))}
+              />
+            ) : (
+              <WaitingCard
+                name={game.partner.displayName}
+                message="It is their turn to choose the next word."
+              />
+            )
+          ) : round.status === 'explaining' ? (
+            round.explainerId === userId ? (
+              <ExplainCard
+                disabled={isBusy || sessionLocked}
+                game={game}
+                onSkip={() => run(() => api.skipWordRound(partnershipId, round.id))}
+                onSubmit={(audio) =>
+                  run(() => api.submitWordExplanation(partnershipId, round.id, audio))
+                }
+              />
+            ) : (
+              <WaitingCard
+                name={game.partner.displayName}
+                message="They are recording an explanation."
+              />
+            )
+          ) : round.explainerId === userId ? (
             <WaitingCard
               name={game.partner.displayName}
-              message="It is their turn to choose the next word."
-            />
-          )
-        ) : round.status === 'explaining' ? (
-          round.explainerId === userId ? (
-            <ExplainCard
-              disabled={isBusy || sessionLocked}
-              game={game}
-              onSkip={() => run(() => api.skipWordRound(partnershipId, round.id))}
-              onSubmit={(audio) =>
-                run(() => api.submitWordExplanation(partnershipId, round.id, audio))
-              }
+              message="Your explanation is ready. They can now submit their guess."
             />
           ) : (
-            <WaitingCard
-              name={game.partner.displayName}
-              message="They are recording an explanation."
+            <GuessCard
+              disabled={isBusy || sessionLocked}
+              audioAvailable={round.audioAvailable}
+              partnershipId={partnershipId}
+              roundId={round.id}
+              transcript={round.transcript ?? ''}
+              onGuess={(guess) => run(() => api.guessWord(partnershipId, round.id, guess))}
             />
-          )
-        ) : round.explainerId === userId ? (
-          <WaitingCard
-            name={game.partner.displayName}
-            message="Your explanation is ready. They can now submit their guess."
-          />
-        ) : (
-          <GuessCard
-            disabled={isBusy || sessionLocked}
-            audioAvailable={round.audioAvailable}
-            partnershipId={partnershipId}
-            roundId={round.id}
-            transcript={round.transcript ?? ''}
-            onGuess={(guess) => run(() => api.guessWord(partnershipId, round.id, guess))}
-          />
-        )}
-        {round ? <RoundSummary game={game} userId={userId} /> : null}
-      </div>
+          )}
+          {round ? <RoundSummary game={game} userId={userId} /> : null}
+        </div>
+      ) : null}
       <section className="rounds-section" aria-labelledby="game-rounds-title">
         <div className="rounds-section-heading">
           <div>
@@ -677,14 +701,18 @@ function SessionStatus({ game, userId }: { game: WordGame; userId: string }) {
   if (game.status === 'finished') {
     const expiredWhilePaused = Boolean(game.reconnectDeadline)
     return (
-      <section className="mb-6 rounded-3xl border border-stone-300 bg-stone-100 p-6" role="status">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-600">
-          Game finished
-        </p>
-        <h2 className="mt-2 font-serif text-2xl font-semibold text-stone-900">
-          {expiredWhilePaused ? 'Your partner did not reconnect in time' : 'This game was ended'}
-        </h2>
-        <p className="mt-2 text-stone-600">The final score is saved. Game actions are disabled.</p>
+      <section className="session-finished-card" role="status">
+        <span className="session-finished-icon" aria-hidden="true">
+          ✓
+        </span>
+        <div>
+          <h2>{expiredWhilePaused ? 'Reconnect window ended' : 'Game finished'}</h2>
+          <p>
+            {expiredWhilePaused
+              ? `${game.partner.displayName} did not return. Your result is saved below.`
+              : 'Your result is saved. Review the rounds below or start a new game.'}
+          </p>
+        </div>
       </section>
     )
   }
@@ -914,6 +942,8 @@ function AudioRecorder({
   const recorder = useRef<MediaRecorder | null>(null)
   const stream = useRef<MediaStream | null>(null)
   const chunks = useRef<Blob[]>([])
+  const discardOnStop = useRef(false)
+  const recordingBlocked = useRef(false)
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [isRecording, setIsRecording] = useState(false)
@@ -923,17 +953,23 @@ function AudioRecorder({
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(
+  useLayoutEffect(
     () => () => {
+      recordingBlocked.current = true
+      discardOnStop.current = true
       if (stopTimer.current) clearTimeout(stopTimer.current)
       if (countdownTimer.current) clearInterval(countdownTimer.current)
+      if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop()
       stream.current?.getTracks().forEach((track) => track.stop())
-      if (audioUrl) URL.revokeObjectURL(audioUrl)
     },
-    [audioUrl],
+    [],
   )
 
+  useEffect(() => () => (audioUrl ? URL.revokeObjectURL(audioUrl) : undefined), [audioUrl])
+
   async function startRecording() {
+    recordingBlocked.current = false
+    discardOnStop.current = false
     setError(null)
     setAudio(null)
     setAudioUrl((current) => {
@@ -946,6 +982,10 @@ function AudioRecorder({
     }
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      if (recordingBlocked.current) {
+        mediaStream.getTracks().forEach((track) => track.stop())
+        return
+      }
       const mimeType = preferredMimeType()
       const mediaRecorder = new MediaRecorder(mediaStream, mimeType ? { mimeType } : undefined)
       stream.current = mediaStream
@@ -955,16 +995,23 @@ function AudioRecorder({
         if (event.data.size > 0) chunks.current.push(event.data)
       }
       mediaRecorder.onstop = async () => {
-        const recording = new Blob(chunks.current, { type: mediaRecorder.mimeType || 'audio/webm' })
         mediaStream.getTracks().forEach((track) => track.stop())
+        if (discardOnStop.current) {
+          chunks.current = []
+          return
+        }
         setIsRecording(false)
+        const recording = new Blob(chunks.current, { type: mediaRecorder.mimeType || 'audio/webm' })
         setIsPreparing(true)
         try {
           const wav = await convertRecordingToWav(recording)
+          if (recordingBlocked.current) return
           setAudio(wav)
           setAudioUrl(URL.createObjectURL(wav))
         } catch {
-          setError('This browser could not prepare the recording. Try Chrome, Edge, or Safari.')
+          if (!recordingBlocked.current) {
+            setError('This browser could not prepare the recording. Try Chrome, Edge, or Safari.')
+          }
         } finally {
           setIsPreparing(false)
         }
@@ -977,7 +1024,9 @@ function AudioRecorder({
         setSecondsRemaining((current) => Math.max(0, current - 1))
       }, 1_000)
     } catch {
-      setError('Allow microphone access to record your explanation.')
+      if (!recordingBlocked.current) {
+        setError('Allow microphone access to record your explanation.')
+      }
     }
   }
 

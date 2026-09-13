@@ -90,8 +90,9 @@ The profile calendar is derived from canonical game and round records rather tha
 activity ledger. A successful game request or acceptance, round start, explanation submission,
 guess submission, and meaningful completed game each contribute one practice action to the relevant
 profile. Empty sessions, skipped rounds, page views, playback, and presence heartbeats do not count.
-Fixed daily thresholds map the action count to five visible intensity levels. The year and month
-layouts are two client-side arrangements of the same response.
+Fixed daily thresholds map the action count to five visible intensity levels. The current activity
+response covers the previous 365 days through today, while an explicitly selected older year covers
+that calendar year. The trail and month layouts are two client-side arrangements of the same range.
 
 `word_game_rounds.explained_at` records the explanation action separately from the later guess, so
 actions that cross midnight are assigned to the day on which they happened. Speaking duration is

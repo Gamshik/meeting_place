@@ -149,17 +149,11 @@ export function DashboardPage() {
       )}
       {view === 'profile' ? (
         <section className="account-page">
-          <div className="page-heading section-heading">
-            <div>
-              <p className="eyebrow">Account</p>
-              <h1>Your profile</h1>
-              <p>Keep it recognisable for the people you practise with.</p>
-            </div>
-          </div>
           <ProfileEditor
             key={`${profile.username}:${profile.displayName}:${profile.timeZone ?? ''}`}
             profile={profile}
             disabled={isBusy}
+            onSignOut={() => void run(signOut)}
             onCopy={async () => {
               if (await run(() => navigator.clipboard.writeText(profile.username)))
                 setNotice('Username copied.')
@@ -173,13 +167,6 @@ export function DashboardPage() {
             }
           />
           <ProfileActivityPanel profileId={profile.id} profileName={profile.displayName} isOwner />
-          <button
-            className="text-action profile-signout"
-            disabled={isBusy}
-            onClick={() => void run(signOut)}
-          >
-            Sign out
-          </button>
         </section>
       ) : view === 'history' ? (
         <HistoryView

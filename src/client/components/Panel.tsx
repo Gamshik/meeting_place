@@ -61,9 +61,12 @@ export function Notice({
   }, [message, onClose, error])
   return (
     <div className={`toast ${error ? 'toast-error' : ''}`} role={error ? 'alert' : 'status'}>
-      <span>{message}</span>
+      <span className="toast-icon" aria-hidden="true">
+        {error ? '!' : '✓'}
+      </span>
+      <span className="toast-message">{message}</span>
       <button aria-label="Dismiss notification" onClick={onClose}>
-        ×
+        <span aria-hidden="true">×</span>
       </button>
     </div>
   )
