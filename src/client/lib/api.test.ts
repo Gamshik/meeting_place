@@ -68,4 +68,15 @@ describe('API error handling', () => {
     const headers = new Headers((fetchMock.mock.calls[0]![1] as RequestInit).headers)
     expect(headers.has('Content-Type')).toBe(false)
   })
+
+  it('sends the selected mode when starting a word game', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(Response.json({ data: {} }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await api.startWordGame('33333333-3333-4333-8333-333333333333', 'live_call')
+
+    expect(JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string)).toEqual({
+      mode: 'live_call',
+    })
+  })
 })

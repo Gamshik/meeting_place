@@ -120,6 +120,18 @@ Realtime can signal state changes, while round rows remain private. The game-sta
 its response for the caller, so an unfinished round's secret word and forbidden forms are visible
 only to the explainer.
 
+The inviter selects an immutable session mode before creating the request. `recorded` preserves the
+in-app audio workflow and automated forbidden-word scoring. `live_call` assumes an external meeting
+carries the conversation and never accepts a recording. Creating a live-call round atomically marks
+it ready for guessing and stores the server timestamp that synchronizes both clients: five seconds
+for preparation, sixty seconds to explain, and thirty final seconds for the guesser to think. Recorded
+rounds persist the moments microphone capture starts and stops so the listening player can follow
+the one-minute recording timer and then see when audio processing begins. Moving the round to
+`awaiting_guess` persists the explanation timestamp and starts a
+90-second playback and guessing window. The database rejects guesses outside each mode's window and
+allows either participant to atomically close an expired round. Live-call scoring
+depends on the normalized guess and uses the players' honor system for forbidden words.
+
 A profile can participate in only one active or paused game at a time across all partnerships. Game
 request creation and acceptance lock both participant profile rows in stable order, then check for
 another ongoing game before inserting or activating the request. This makes simultaneous operations
@@ -147,8 +159,8 @@ The Worker also calls
 the `pending` state and becomes active only when the other participant accepts. The browser converts
 recordings to mono WAV, and the Worker stores them in a private Supabase Storage bucket before
 transcription. Storage policies limit uploads to the current explainer and playback to the two active
-participants. The transcript, word timestamps, recording path, and private coaching are stored on
-the round. The partner's normalized answer and deterministic forbidden-word detection decide the
+participants. The recording-start and explanation timestamps, transcript, word timestamps,
+recording path, and private coaching are stored on the round. The partner's normalized answer and deterministic forbidden-word detection decide the
 shared point; AI coaching never changes the official score.
 
 The dashboard and game page poll the canonical game state while waiting for invitations, acceptance,

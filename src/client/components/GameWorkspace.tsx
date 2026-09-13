@@ -86,7 +86,7 @@ export function GameWorkspace({
                 Boolean(ongoingSession) && (action === 'invite' || action === 'join')
                   ? 'Finish current game'
                   : action === 'invite'
-                    ? 'Start a round'
+                    ? 'Choose a mode'
                     : action === 'join'
                       ? 'Join now'
                       : existing?.status === 'pending'
@@ -101,7 +101,7 @@ export function GameWorkspace({
                       ? 'Invite sent'
                       : action === 'open'
                         ? 'Game in progress'
-                        : `@${friend.partner.username}`
+                        : `@${friend.partner.username} · choose live or recorded`
               const initials = friend.partner.displayName
                 .split(' ')
                 .map((part) => part[0])

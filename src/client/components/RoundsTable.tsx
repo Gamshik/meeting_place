@@ -21,6 +21,7 @@ export function RoundsTable({
             <th scope="col">Round</th>
             <th scope="col">Explainer</th>
             <th scope="col">Topic</th>
+            <th scope="col">Clue</th>
             <th scope="col">Word</th>
             <th scope="col">Guess</th>
             <th scope="col">Result</th>
@@ -32,6 +33,13 @@ export function RoundsTable({
               <td>{round.turnNumber}</td>
               <td>{round.explainerId === partnerId ? partnerName : 'You'}</td>
               <td>{round.topic}</td>
+              <td>
+                {round.explanationMethod === 'live'
+                  ? 'Live call'
+                  : round.explanationMethod === 'recorded'
+                    ? 'Recorded'
+                    : '—'}
+              </td>
               <td>{round.word ?? 'Hidden'}</td>
               <td>{round.guess ?? '—'}</td>
               <td>

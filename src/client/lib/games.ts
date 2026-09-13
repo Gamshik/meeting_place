@@ -6,7 +6,6 @@ export type GameDefinition = {
   description: string
   path: string
   artwork?: 'word-cards'
-  start: (partnershipId: string) => Promise<unknown>
   accept: (partnershipId: string) => Promise<unknown>
   decline: (partnershipId: string) => Promise<unknown>
   cancel: (partnershipId: string) => Promise<unknown>
@@ -20,7 +19,6 @@ export const games: GameDefinition[] = [
     description: 'Describe a word without saying it. Your friend guesses, then you switch turns.',
     path: '/games/explain-word',
     artwork: 'word-cards',
-    start: api.startWordGame,
     accept: api.acceptWordGame,
     decline: api.declineWordGame,
     cancel: api.cancelWordGame,

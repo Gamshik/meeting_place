@@ -13,6 +13,7 @@ import { RoundsTable } from '../components/RoundsTable'
 import { games, type GameDefinition } from '../lib/games'
 import { api } from '../lib/api'
 import { browserTimeZone } from '../lib/time-zone'
+import { wordGameModeLabel } from '../lib/word-game-mode'
 
 export function DashboardPage() {
   const navigate = useNavigate()
@@ -110,12 +111,11 @@ export function DashboardPage() {
     friend: Partnership,
     action: 'invite' | 'join' | 'open',
   ) {
-    if (action === 'open') {
-      navigate(`${game.path}/${friend.id}`)
+    if (action === 'open' || action === 'invite') {
+      navigate(`${game.path}/${friend.id}${action === 'invite' ? '?new=1' : ''}`)
       return
     }
-    if (await mutate(() => (action === 'join' ? game.accept(friend.id) : game.start(friend.id))))
-      navigate(`${game.path}/${friend.id}`)
+    if (await mutate(() => game.accept(friend.id))) navigate(`${game.path}/${friend.id}`)
   }
   if (profileLoading || (isLoading && !profile))
     return (
@@ -480,6 +480,7 @@ function HistoryView({
                   </div>
                   <div className="history-meta">
                     <span>{result}</span>
+                    <span>{wordGameModeLabel(item.mode)}</span>
                     <span>{item.roundCount === 1 ? '1 round' : `${item.roundCount} rounds`}</span>
                     <span>@{item.partner.username}</span>
                   </div>

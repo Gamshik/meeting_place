@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useCommunity } from '../community/CommunityContext'
 import { api } from '../lib/api'
 import { games } from '../lib/games'
+import { wordGameModeLabel } from '../lib/word-game-mode'
 
 export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) {
   const { session } = useAuth()
@@ -162,6 +163,7 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
                   <strong>{partnership.partner.displayName}</strong> invited you to play{' '}
                   {game.title}.
                 </p>
+                <p className="notification-game-mode">{wordGameModeLabel(item.mode)}</p>
                 {hasOngoingGame ? (
                   <p className="notification-restriction">
                     Finish your current game before accepting another invitation.

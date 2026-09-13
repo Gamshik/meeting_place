@@ -7,6 +7,7 @@ import type {
   UpdateProfileInput,
   WordGame,
   WordGameHistoryItem,
+  WordGameMode,
   WordGameSummary,
 } from '../../shared/contracts'
 import { supabase } from './supabase'
@@ -99,9 +100,10 @@ export const api = {
   getWordGames: () => apiRequest<DataResponse<WordGameSummary[]>>('/api/games/explain-word'),
   getWordGameHistory: () =>
     apiRequest<DataResponse<WordGameHistoryItem[]>>('/api/games/explain-word/history'),
-  startWordGame: (partnershipId: string) =>
+  startWordGame: (partnershipId: string, mode: WordGameMode) =>
     apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}`, {
       method: 'POST',
+      body: JSON.stringify({ mode }),
     }),
   acceptWordGame: (partnershipId: string) =>
     apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}/accept`, {
@@ -135,6 +137,21 @@ export const api = {
       { method: 'POST', body: form },
     )
   },
+  startWordRecording: (partnershipId: string, roundId: string) =>
+    apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/recording-started`,
+      { method: 'POST' },
+    ),
+  finishWordRecording: (partnershipId: string, roundId: string) =>
+    apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/recording-stopped`,
+      { method: 'POST' },
+    ),
+  expireWordRound: (partnershipId: string, roundId: string) =>
+    apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/timeout`,
+      { method: 'POST' },
+    ),
   guessWord: (partnershipId: string, roundId: string, guess: string) =>
     apiRequest<DataResponse<WordGame>>(
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/guess`,

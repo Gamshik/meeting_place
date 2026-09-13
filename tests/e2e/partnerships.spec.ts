@@ -6,7 +6,7 @@ const partnerId = '22222222-2222-4222-8222-222222222222'
 const relationshipId = '33333333-3333-4333-8333-333333333333'
 const secondPartnerId = '88888888-8888-4888-8888-888888888888'
 const secondRelationshipId = '99999999-9999-4999-8999-999999999999'
-async function signIn(page: Page) {
+async function signIn(page: Page, id = userId) {
   await page.addInitScript(
     ({ id }) => {
       localStorage.setItem(
@@ -29,7 +29,7 @@ async function signIn(page: Page) {
         }),
       )
     },
-    { id: userId },
+    { id },
   )
   await page.route('https://browser-test.supabase.co/auth/v1/**', (route) =>
     route.fulfill({ status: 503, json: { message: 'Sign-out unavailable' } }),
@@ -38,9 +38,9 @@ async function signIn(page: Page) {
     route.fulfill({
       json: {
         data: {
-          id: userId,
-          username: 'alice',
-          displayName: 'Alice',
+          id,
+          username: id === partnerId ? 'bob' : 'alice',
+          displayName: id === partnerId ? 'Bob' : 'Alice',
           avatarUrl: null,
           createdAt: '2026-01-01T00:00:00Z',
           timeZone: 'UTC',
@@ -558,6 +558,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   const baseGame: WordGame = {
     id: gameId,
     partnershipId: relationshipId,
+    mode: 'recorded',
     status: 'active',
     requestedById: userId,
     acceptedAt: '2026-09-11T12:00:00Z',
@@ -617,12 +618,26 @@ test('starts a word game and submits a browser recording for transcription', asy
         round: {
           ...game.round!,
           status: 'awaiting_guess',
+          audioAvailable: true,
+          explainedAt: new Date().toISOString(),
           transcript: 'You need this document to cross a border.',
           transcriptWords: [],
           usedForbiddenWord: false,
           coachScore: 91,
           coachFeedback: 'Clear description. Add one more identifying detail.',
         },
+      }
+    } else if (path.endsWith('/recording-started')) {
+      game = {
+        ...game,
+        serverTime: new Date().toISOString(),
+        round: { ...game.round!, recordingStartedAt: new Date().toISOString() },
+      }
+    } else if (path.endsWith('/recording-stopped')) {
+      game = {
+        ...game,
+        serverTime: new Date().toISOString(),
+        round: { ...game.round!, recordingFinishedAt: new Date().toISOString() },
       }
     } else if (path.endsWith('/rounds')) {
       game = {
@@ -638,6 +653,7 @@ test('starts a word game and submits a browser recording for transcription', asy
           transcript: null,
           transcriptWords: [],
           audioAvailable: false,
+          explanationMethod: null,
           usedForbiddenWord: null,
           guess: null,
           isCorrect: null,
@@ -660,6 +676,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page.getByRole('dialog', { name: 'How to play' })).toBeVisible()
   await expect(page.getByText('Explain naturally')).toBeVisible()
   await page.getByRole('button', { name: 'Close rules' }).click()
+  await page.getByRole('radio', { name: /Recorded practice/ }).check()
   await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible({
@@ -731,6 +748,7 @@ test('shows the other player an immediate choice when a word game finishes', asy
   let game: WordGame = {
     id: gameId,
     partnershipId: relationshipId,
+    mode: 'recorded',
     status: 'active',
     requestedById: partnerId,
     acceptedAt: '2026-09-11T12:00:00Z',
@@ -748,6 +766,7 @@ test('shows the other player an immediate choice when a word game finishes', asy
       transcript: null,
       transcriptWords: [],
       audioAvailable: false,
+      explanationMethod: null,
       usedForbiddenWord: null,
       guess: null,
       isCorrect: null,
@@ -863,6 +882,226 @@ test('shows the other player an immediate choice when a word game finishes', asy
   await expect(page.getByRole('heading', { name: 'Rounds' })).toBeVisible()
 })
 
+test('synchronizes live-call preparation and guessing for both players', async ({ browser }) => {
+  const explainerContext = await browser.newContext()
+  const guesserContext = await browser.newContext()
+  const explainerPage = await explainerContext.newPage()
+  const guesserPage = await guesserContext.newPage()
+  await signIn(explainerPage)
+  await signIn(guesserPage, partnerId)
+  const roundId = '55555555-5555-4555-8555-555555555555'
+  const createdAt = new Date().toISOString()
+  const round: NonNullable<WordGame['round']> = {
+    id: roundId,
+    turnNumber: 1,
+    explainerId: userId,
+    topic: 'Travel',
+    status: 'awaiting_guess',
+    secretWord: 'passport',
+    forbiddenWords: ['passport', 'passports'],
+    transcript: null,
+    transcriptWords: [],
+    audioAvailable: false,
+    explanationMethod: 'live',
+    usedForbiddenWord: null,
+    guess: null,
+    isCorrect: null,
+    score: null,
+    coachScore: null,
+    coachFeedback: null,
+    createdAt,
+    completedAt: null,
+  }
+  const explainerGame: WordGame = {
+    id: '44444444-4444-4444-8444-444444444444',
+    partnershipId: relationshipId,
+    mode: 'live_call',
+    status: 'active',
+    requestedById: userId,
+    acceptedAt: '2026-09-11T12:00:00Z',
+    currentPlayerId: userId,
+    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 0, partner: 0 },
+    round,
+    rounds: [],
+  }
+  const guesserGame: WordGame = {
+    ...explainerGame,
+    partner: { id: userId, username: 'alice', displayName: 'Alice', avatarUrl: null },
+    round: { ...round, secretWord: null, forbiddenWords: null },
+  }
+  await explainerPage.route(`**/api/games/explain-word/${relationshipId}**`, (route) =>
+    route.fulfill({ json: { data: explainerGame } }),
+  )
+  await guesserPage.route(`**/api/games/explain-word/${relationshipId}**`, (route) =>
+    route.fulfill({ json: { data: guesserGame } }),
+  )
+
+  await Promise.all([
+    explainerPage.goto(`/games/explain-word/${relationshipId}`),
+    guesserPage.goto(`/games/explain-word/${relationshipId}`),
+  ])
+  await expect(explainerPage.getByText('Prepare the clue')).toBeVisible()
+  await expect(guesserPage.getByText('Prepare the clue')).toBeVisible()
+  await expect(explainerPage.getByRole('button', { name: /record/i })).toHaveCount(0)
+  await expect(guesserPage.getByLabel('Your answer')).toHaveCount(0)
+
+  await expect(explainerPage.getByText('Explain and guess')).toBeVisible({ timeout: 7_000 })
+  await expect(guesserPage.getByText('Explain and guess')).toBeVisible({ timeout: 7_000 })
+  await expect(explainerPage.getByText('Explain it now')).toBeVisible()
+  await expect(guesserPage.getByLabel('Your answer')).toBeVisible()
+  await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
+
+  await explainerContext.close()
+  await guesserContext.close()
+})
+
+test('gives both live-call players a final 30-second guessing phase', async ({ browser }) => {
+  const explainerContext = await browser.newContext()
+  const guesserContext = await browser.newContext()
+  const explainerPage = await explainerContext.newPage()
+  const guesserPage = await guesserContext.newPage()
+  await signIn(explainerPage)
+  await signIn(guesserPage, partnerId)
+  const createdAt = new Date(Date.now() - 65_000).toISOString()
+  const serverTime = new Date().toISOString()
+  const round: NonNullable<WordGame['round']> = {
+    id: '55555555-5555-4555-8555-555555555555',
+    turnNumber: 1,
+    explainerId: userId,
+    topic: 'Travel',
+    status: 'awaiting_guess',
+    secretWord: 'passport',
+    forbiddenWords: ['passport', 'passports'],
+    transcript: null,
+    transcriptWords: [],
+    audioAvailable: false,
+    explanationMethod: 'live',
+    usedForbiddenWord: null,
+    guess: null,
+    isCorrect: null,
+    score: null,
+    coachScore: null,
+    coachFeedback: null,
+    createdAt,
+    completedAt: null,
+  }
+  const game: WordGame = {
+    id: '44444444-4444-4444-8444-444444444444',
+    partnershipId: relationshipId,
+    mode: 'live_call',
+    status: 'active',
+    serverTime,
+    requestedById: userId,
+    acceptedAt: '2026-09-11T12:00:00Z',
+    currentPlayerId: userId,
+    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 0, partner: 0 },
+    round,
+    rounds: [],
+  }
+  await explainerPage.route(`**/api/games/explain-word/${relationshipId}**`, (route) =>
+    route.fulfill({ json: { data: game } }),
+  )
+  await guesserPage.route(`**/api/games/explain-word/${relationshipId}**`, (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          ...game,
+          partner: { id: userId, username: 'alice', displayName: 'Alice', avatarUrl: null },
+          round: { ...round, secretWord: null, forbiddenWords: null },
+        },
+      },
+    }),
+  )
+
+  await Promise.all([
+    explainerPage.goto(`/games/explain-word/${relationshipId}`),
+    guesserPage.goto(`/games/explain-word/${relationshipId}`),
+  ])
+  await expect(explainerPage.getByText('Final guess', { exact: true })).toBeVisible()
+  await expect(guesserPage.getByText('Final guess', { exact: true })).toBeVisible()
+  await expect(explainerPage.locator('.live-round-clock')).toHaveClass(/is-final-guess/)
+  await expect(guesserPage.locator('.live-round-clock')).toHaveClass(/is-final-guess/)
+  await expect(explainerPage.getByText('Clue finished')).toBeVisible()
+  await expect(explainerPage.getByRole('timer')).toHaveText(/0:(2[89]|30)/)
+  await expect(guesserPage.getByRole('timer')).toHaveText(/0:(2[89]|30)/)
+  await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
+  await expect(guesserPage.getByLabel('Your answer')).toBeVisible()
+
+  await explainerContext.close()
+  await guesserContext.close()
+})
+
+test('shows the guesser synchronized Recorded practice timers', async ({ page }) => {
+  await signIn(page)
+  const now = new Date().toISOString()
+  let game: WordGame = {
+    id: '44444444-4444-4444-8444-444444444444',
+    partnershipId: relationshipId,
+    mode: 'recorded',
+    status: 'active',
+    serverTime: now,
+    requestedById: userId,
+    acceptedAt: now,
+    currentPlayerId: partnerId,
+    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 0, partner: 0 },
+    round: {
+      id: '55555555-5555-4555-8555-555555555555',
+      turnNumber: 1,
+      explainerId: partnerId,
+      topic: 'Travel',
+      status: 'explaining',
+      secretWord: null,
+      forbiddenWords: null,
+      transcript: null,
+      transcriptWords: [],
+      audioAvailable: false,
+      explanationMethod: null,
+      usedForbiddenWord: null,
+      guess: null,
+      isCorrect: null,
+      score: null,
+      coachScore: null,
+      coachFeedback: null,
+      recordingStartedAt: now,
+      explainedAt: null,
+      createdAt: now,
+      completedAt: null,
+    },
+    rounds: [],
+  }
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
+    if (new URL(route.request().url()).pathname.endsWith('/audio')) {
+      return route.fulfill({ json: { data: { url: 'https://audio.example.test/recording.wav' } } })
+    }
+    return route.fulfill({ json: { data: game } })
+  })
+
+  await page.goto(`/games/explain-word/${relationshipId}`)
+  await expect(page.getByText('Recording in progress')).toBeVisible()
+  await expect(page.getByRole('timer')).toHaveText(/(0:59|1:00)/)
+  await expect(page.getByLabel('Your answer')).toHaveCount(0)
+
+  const explainedAt = new Date().toISOString()
+  game = {
+    ...game,
+    serverTime: explainedAt,
+    round: {
+      ...game.round!,
+      status: 'awaiting_guess',
+      audioAvailable: true,
+      explanationMethod: 'recorded',
+      transcript: 'You need this document to cross a border.',
+      explainedAt,
+    },
+  }
+  await expect(page.getByText('Listen and guess')).toBeVisible({ timeout: 4_500 })
+  await expect(page.getByRole('timer')).toHaveText(/(1:29|1:30)/)
+  await expect(page.getByLabel('Your answer')).toBeVisible()
+})
+
 test('shows the partner both the recording and transcript before their answer', async ({
   page,
 }) => {
@@ -871,7 +1110,9 @@ test('shows the partner both the recording and transcript before their answer', 
   const game: WordGame = {
     id: '44444444-4444-4444-8444-444444444444',
     partnershipId: relationshipId,
+    mode: 'recorded',
     status: 'active',
+    serverTime: new Date().toISOString(),
     requestedById: partnerId,
     acceptedAt: '2026-09-11T12:00:00Z',
     currentPlayerId: partnerId,
@@ -888,12 +1129,14 @@ test('shows the partner both the recording and transcript before their answer', 
       transcript: 'You need this document to cross a border.',
       transcriptWords: [],
       audioAvailable: true,
+      explanationMethod: 'recorded',
       usedForbiddenWord: false,
       guess: null,
       isCorrect: null,
       score: null,
       coachScore: null,
       coachFeedback: null,
+      explainedAt: new Date().toISOString(),
       createdAt: '2026-09-11T12:00:00Z',
       completedAt: null,
     },
@@ -908,6 +1151,7 @@ test('shows the partner both the recording and transcript before their answer', 
         guess: null,
         isCorrect: null,
         score: null,
+        explanationMethod: 'recorded',
         coachScore: null,
         completedAt: null,
       },
@@ -927,6 +1171,8 @@ test('shows the partner both the recording and transcript before their answer', 
     page.getByText('You need this document to cross a border.', { exact: true }),
   ).toBeVisible()
   await expect(page.getByText('Listen to their explanation')).toBeVisible()
+  await expect(page.getByText('Listen and guess')).toBeVisible()
+  await expect(page.getByRole('timer')).toHaveText(/(1:29|1:30)/)
   await expect(page.locator('audio')).toHaveAttribute(
     'src',
     'https://audio.example.test/recording.wav',
@@ -951,6 +1197,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
           {
             id: '44444444-4444-4444-8444-444444444444',
             partnershipId: relationshipId,
+            mode: 'recorded',
             finishedAt: '2026-09-11T12:10:00Z',
             partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
             scores: { you: 2, partner: 1 },
@@ -966,6 +1213,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
                 guess: 'passport',
                 isCorrect: true,
                 score: 1,
+                explanationMethod: 'recorded',
                 coachScore: 88,
                 completedAt: '2026-09-11T12:05:00Z',
               },
@@ -979,6 +1227,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
                 guess: null,
                 isCorrect: false,
                 score: 0,
+                explanationMethod: null,
                 coachScore: null,
                 completedAt: '2026-09-11T12:09:00Z',
               },
@@ -987,6 +1236,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
           {
             id: '77777777-7777-4777-8777-777777777777',
             partnershipId: relationshipId,
+            mode: 'live_call',
             finishedAt: '2026-09-10T10:10:00Z',
             partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
             scores: { you: 0, partner: 0 },
@@ -1024,6 +1274,7 @@ test('returns to Games after cancelling a replay request from History', async ({
           {
             id: '44444444-4444-4444-8444-444444444444',
             partnershipId: relationshipId,
+            mode: 'recorded',
             finishedAt: '2026-09-11T12:10:00Z',
             partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
             scores: { you: 2, partner: 1 },
@@ -1038,6 +1289,7 @@ test('returns to Games after cancelling a replay request from History', async ({
   const pendingGame: WordGame = {
     id: '77777777-7777-4777-8777-777777777777',
     partnershipId: relationshipId,
+    mode: 'recorded',
     status: 'pending',
     requestedById: userId,
     acceptedAt: null,
@@ -1077,7 +1329,14 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
   await page.route('**/api/games/explain-word', (route) =>
     route.fulfill({
       json: {
-        data: [{ partnershipId: relationshipId, status: 'pending', requestedById: partnerId }],
+        data: [
+          {
+            partnershipId: relationshipId,
+            mode: 'live_call',
+            status: 'pending',
+            requestedById: partnerId,
+          },
+        ],
       },
     }),
   )
@@ -1161,6 +1420,7 @@ for (const width of [320, 390, 1440]) {
 const activeGame: WordGame = {
   id: '44444444-4444-4444-8444-444444444444',
   partnershipId: relationshipId,
+  mode: 'recorded',
   status: 'active',
   requestedById: userId,
   acceptedAt: '2026-09-11T12:00:00Z',
@@ -1170,16 +1430,24 @@ const activeGame: WordGame = {
   round: null,
 }
 
-test('one explicit invitation action starts a game, prevents duplicates, and Friends has no play controls', async ({
-  page,
-}) => {
+test('dashboard opens mode selection before sending one invitation', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
   )
   let requests = 0
   let left = false
+  const previousGame: WordGame = {
+    ...activeGame,
+    status: 'finished',
+    finishedAt: '2026-09-10T12:00:00Z',
+  }
   await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
+    if (route.request().method() === 'GET' && requests === 0) {
+      await route.fulfill({ json: { data: previousGame } })
+      return
+    }
     if (route.request().method() === 'POST' && route.request().url().endsWith(relationshipId)) {
       requests++
       await new Promise((resolve) => setTimeout(resolve, 200))
@@ -1191,11 +1459,22 @@ test('one explicit invitation action starts a game, prevents duplicates, and Fri
   await page.goto('/?view=friends')
   await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
   await expect(
-    page.getByRole('button', { name: /Start a round|Join now|Jump back in/ }),
+    page.getByRole('button', { name: /Choose a mode|Join now|Jump back in/ }),
   ).toHaveCount(0)
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
-  await page.getByRole('button', { name: 'Start a round' }).dblclick()
-  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
+  await page.getByRole('button', { name: 'Choose a mode' }).click()
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}?new=1`)
+  expect(requests).toBe(0)
+  await expect(page.getByRole('radio', { name: /Live call/ })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Back to results' })).toHaveCount(0)
+  for (const width of [947, 760, 640, 601, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      `mode selection should fit a ${width}px viewport`,
+    ).toBe(true)
+  }
+  await page.getByRole('button', { name: 'Invite to play' }).dblclick()
   expect(requests).toBe(1)
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
   await page.getByRole('button', { name: 'Notifications', exact: true }).click()
@@ -1217,7 +1496,14 @@ test('joining directly from notifications accepts before entering the game', asy
       json: {
         data: accepted
           ? []
-          : [{ partnershipId: relationshipId, status: 'pending', requestedById: partnerId }],
+          : [
+              {
+                partnershipId: relationshipId,
+                mode: 'live_call',
+                status: 'pending',
+                requestedById: partnerId,
+              },
+            ],
       },
     }),
   )
@@ -1263,9 +1549,15 @@ test('blocks another game invitation while a game is already in progress', async
     route.fulfill({
       json: {
         data: [
-          { partnershipId: relationshipId, status: 'active', requestedById: userId },
+          {
+            partnershipId: relationshipId,
+            mode: 'recorded',
+            status: 'active',
+            requestedById: userId,
+          },
           {
             partnershipId: secondRelationshipId,
+            mode: 'live_call',
             status: 'pending',
             requestedById: secondPartnerId,
           },
@@ -1322,7 +1614,16 @@ test('resuming an existing game never sends a new request', async ({ page }) => 
   )
   await page.route('**/api/games/explain-word', (route) =>
     route.fulfill({
-      json: { data: [{ partnershipId: relationshipId, status: 'active', requestedById: userId }] },
+      json: {
+        data: [
+          {
+            partnershipId: relationshipId,
+            mode: 'recorded',
+            status: 'active',
+            requestedById: userId,
+          },
+        ],
+      },
     }),
   )
   let starts = 0
@@ -1345,6 +1646,12 @@ test('a busy friend is not invited and can be retried later', async ({ page }) =
   )
   let attempts = 0
   await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
+    if (route.request().method() === 'GET' && attempts < 2) {
+      return route.fulfill({
+        status: 404,
+        json: { error: { code: 'word_game_not_found', message: 'Not started' } },
+      })
+    }
     if (route.request().method() === 'POST' && route.request().url().endsWith(relationshipId)) {
       attempts++
       if (attempts === 1)
@@ -1362,13 +1669,13 @@ test('a busy friend is not invited and can be retried later', async ({ page }) =
   })
   await page.goto('/')
   await page.getByLabel('Play with').fill('bob')
-  await page.getByRole('button', { name: 'Start a round' }).click()
+  await page.getByRole('button', { name: 'Choose a mode' }).click()
+  await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page.getByRole('alert')).toContainText(
     'Your friend is already playing another game. Try again later.',
   )
-  await expect(page).toHaveURL('/')
-  await expect(page.getByLabel('Play with')).toHaveValue('bob')
-  await page.getByRole('button', { name: 'Start a round' }).click()
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}?new=1`)
+  await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
   expect(attempts).toBe(2)
 })
