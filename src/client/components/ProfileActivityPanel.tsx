@@ -72,7 +72,6 @@ export function ProfileActivityPanel({
     <section className="activity-panel" aria-labelledby="activity-heading">
       <div className="activity-heading">
         <div>
-          <p className="eyebrow">Practice trail</p>
           <h2 id="activity-heading">
             {owner ? 'Your practice activity' : `${firstName(displayName)}’s practice activity`}
           </h2>
@@ -352,8 +351,9 @@ function ActivityDayDetails({ day }: { day: ProfileActivityDay }) {
   return (
     <article className="activity-day-details" aria-live="polite">
       <div>
-        <p className="eyebrow">{formatDate(day.date)}</p>
-        <h3>{day.interactionCount} practice actions</h3>
+        <h3>
+          {formatDate(day.date)} · {day.interactionCount} practice actions
+        </h3>
         <p>
           {day.gamesPlayed} {day.gamesPlayed === 1 ? 'game' : 'games'} ·{' '}
           {formatDuration(day.speakingDurationSeconds)} speaking

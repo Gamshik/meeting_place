@@ -277,49 +277,47 @@ export function DashboardPage() {
         <>
           <section className="practice-hero">
             <div className="practice-hero-copy">
-              <p className="eyebrow">English, together</p>
               <h1>
-                Skip the small talk.
-                <span> Start speaking.</span>
+                Practice English.
+                <span> Play together.</span>
               </h1>
               <p className="practice-intro">
-                Pick a friend and go. We prepare the game, open the room, and give you something
-                worth talking about.
+                Choose a conversation game, invite a friend, and learn by playing. New games will
+                bring fresh ways to speak, listen, and think in English.
               </p>
               <div className="practice-actions">
-                <button className="button button-accent" onClick={() => setPanel('add')}>
-                  Invite someone
-                  <span aria-hidden="true">↗</span>
-                </button>
-                <span className="handle-chip">You’re @{profile.username}</span>
+                <a className="button button-accent practice-primary-action" href="#practice-games">
+                  Start a game
+                  <span aria-hidden="true">↓</span>
+                </a>
               </div>
             </div>
-            <div className="practice-card-stack" aria-hidden="true">
-              <div className="prompt-card prompt-card-back">
-                <span>01</span>
-                <strong>listen</strong>
-                <i>↗</i>
+            <div className="practice-library" aria-hidden="true">
+              <div className="practice-library-heading">
+                <strong>Game library</strong>
+                <span>Made for two</span>
               </div>
-              <div className="prompt-card prompt-card-front">
-                <div className="prompt-card-top">
-                  <span>Explain the word</span>
-                  <span>5–10 min</span>
+              <div className="practice-library-game">
+                <span className="practice-library-icon">Aa</span>
+                <div>
+                  <strong>Explain the word</strong>
+                  <span>Speak · listen · guess</span>
                 </div>
-                <strong>Imagine.</strong>
-                <div className="prompt-wave">
-                  {[28, 52, 38, 72, 48, 82, 56, 34, 64, 40].map((height, index) => (
-                    <i key={index} style={{ height }} />
-                  ))}
+                <span className="practice-library-arrow">↗</span>
+              </div>
+              <div className="practice-library-future">
+                <span className="practice-library-plus">＋</span>
+                <div>
+                  <strong>More games are coming</strong>
+                  <span>Your practice library will keep growing.</span>
                 </div>
-                <span>No prep. Just play.</span>
               </div>
             </div>
           </section>
 
-          <section className="quick-start-shell">
+          <section className="quick-start-shell" id="practice-games">
             <div className="quick-start-heading">
               <div>
-                <p className="eyebrow">Quick start</p>
                 <h2>Who are you practising with?</h2>
                 <p>Choose a person. Explain the word is already selected.</p>
               </div>

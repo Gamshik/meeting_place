@@ -17,6 +17,7 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [dismissedGameRequests, setDismissedGameRequests] = useState<string[]>([])
   const incomingFriends = partnerships.filter(
     (item) => item.status === 'pending' && item.direction === 'incoming',
   )
@@ -37,6 +38,10 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
     ...incomingGames.map(({ item }) => `${item.gameId}:${item.partnershipId}`),
   ]
   const unread = ids.length > 0
+  const gameRequest = incomingGames.find(
+    ({ item }) => !dismissedGameRequests.includes(`${item.gameId}:${item.partnershipId}`),
+  )
+
   useEffect(() => {
     if (!open) return
     heading.current?.focus()
@@ -202,6 +207,107 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
           </div>
         </section>
       )}
+      {gameRequest ? (
+        <GameRequestToast
+          acceptBlocked={hasOngoingGame}
+          gameTitle={gameRequest.game.title}
+          mode={wordGameModeLabel(gameRequest.item.mode)}
+          partnerName={gameRequest.partnership.partner.displayName}
+          pending={pending === gameRequest.item.partnershipId}
+          disabled={pending !== null}
+          onDismiss={() =>
+            setDismissedGameRequests((current) => [
+              ...current,
+              `${gameRequest.item.gameId}:${gameRequest.item.partnershipId}`,
+            ])
+          }
+          onJoin={() =>
+            void act(
+              gameRequest.item.partnershipId,
+              () => gameRequest.game.accept(gameRequest.item.partnershipId),
+              `${gameRequest.game.path}/${gameRequest.item.partnershipId}`,
+            )
+          }
+          onDecline={() =>
+            void act(gameRequest.item.partnershipId, () =>
+              gameRequest.game.decline(gameRequest.item.partnershipId),
+            )
+          }
+        />
+      ) : null}
     </div>
+  )
+}
+
+function GameRequestToast({
+  acceptBlocked,
+  disabled,
+  gameTitle,
+  mode,
+  partnerName,
+  pending,
+  onDecline,
+  onDismiss,
+  onJoin,
+}: {
+  acceptBlocked: boolean
+  disabled: boolean
+  gameTitle: string
+  mode: string
+  partnerName: string
+  pending: boolean
+  onDecline: () => void
+  onDismiss: () => void
+  onJoin: () => void
+}) {
+  const initial = partnerName.trim().charAt(0).toUpperCase() || '?'
+
+  return (
+    <aside
+      className="game-request-toast"
+      role="region"
+      aria-label="Game invitation"
+      aria-live="polite"
+    >
+      <div className="game-request-toast-heading">
+        <span className="game-request-avatar" aria-hidden="true">
+          {initial}
+        </span>
+        <div>
+          <p>Game invitation</p>
+          <strong>{partnerName} wants to play</strong>
+        </div>
+        <button type="button" aria-label="Dismiss game invitation" onClick={onDismiss}>
+          ×
+        </button>
+      </div>
+      <div className="game-request-details">
+        <strong>{gameTitle}</strong>
+        <span>{mode}</span>
+      </div>
+      {acceptBlocked ? (
+        <p className="game-request-restriction">
+          Finish your current game before joining this one.
+        </p>
+      ) : null}
+      <div className="game-request-actions">
+        <button
+          type="button"
+          className="button button-accent"
+          disabled={disabled || acceptBlocked}
+          onClick={onJoin}
+        >
+          {pending ? 'Joining…' : acceptBlocked ? 'Game in progress' : 'Join game'}
+        </button>
+        <button
+          type="button"
+          className="button game-request-decline"
+          disabled={disabled}
+          onClick={onDecline}
+        >
+          Decline
+        </button>
+      </div>
+    </aside>
   )
 }

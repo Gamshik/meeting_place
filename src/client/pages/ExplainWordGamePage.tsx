@@ -5,6 +5,7 @@ import type { Profile, WordGame, WordGameMode } from '../../shared/contracts'
 import { useAuth } from '../auth/AuthContext'
 import { useCommunity } from '../community/CommunityContext'
 import { AppShell } from '../components/AppShell'
+import { AudioPlayer } from '../components/AudioPlayer'
 import { RoundsTable } from '../components/RoundsTable'
 import { Notice } from '../components/Panel'
 import { api, ApiError } from '../lib/api'
@@ -422,7 +423,6 @@ function GameBoard({
       <section className="rounds-section" aria-labelledby="game-rounds-title">
         <div className="rounds-section-heading">
           <div>
-            <p className="eyebrow">Game record</p>
             <h2 id="game-rounds-title">Rounds</h2>
           </div>
           <span>{game.rounds?.length ?? 0}</span>
@@ -459,15 +459,12 @@ function GameStartCard({
   return (
     <section className="game-lobby game-lobby-ready">
       <div className="game-lobby-copy">
-        <p className="game-lobby-eyebrow">
-          <span aria-hidden="true" /> Two-player game
-        </p>
         <h2>Ready to play with {partnerLabel}?</h2>
         <p>Choose how you will talk, then send one invitation.</p>
         <fieldset className="game-mode-picker" disabled={disabled || blocked}>
           <legend>How are you playing?</legend>
           {WORD_GAME_MODES.map((option) => (
-            <label key={option.value}>
+            <label key={option.value} data-cursor={disabled || blocked ? undefined : 'interactive'}>
               <input
                 type="radio"
                 name="game-mode"
@@ -640,7 +637,6 @@ function EndGameDialog({
         <span className="end-game-symbol" aria-hidden="true">
           ■
         </span>
-        <p className="end-game-label">End game</p>
         <h2 id="end-game-title">Finish for both players?</h2>
         <p id="end-game-description">
           Both players will leave the game immediately. The final score will remain available to
@@ -702,7 +698,6 @@ function GameFinishedDialog({
         <span className="finished-game-symbol" aria-hidden="true">
           ✓
         </span>
-        <p className="finished-game-label">Game over</p>
         <h2 id="finished-game-title">The game has finished</h2>
         <p id="finished-game-description">
           Your final score is saved. You can review every round now or return home.
@@ -779,20 +774,13 @@ function SessionStatus({ game, userId }: { game: WordGame; userId: string }) {
         <i />
       </div>
       <div className="session-pause-copy">
-        <p className="session-pause-eyebrow">
-          <span aria-hidden="true" /> Game paused
-        </p>
-        <h2>
-          {partnerLeft
-            ? `Waiting for ${game.partner.displayName}`
-            : reconnectingSelf
-              ? 'Reconnecting you…'
-              : 'Reconnecting players…'}
-        </h2>
+        <h2>Game paused</h2>
         <p>
           {reconnectingSelf
             ? 'Trying to bring you back. Your round and recording are safe.'
-            : 'Your round is safe. Play resumes when both players are back online.'}
+            : partnerLeft
+              ? `Waiting for ${game.partner.displayName}. Your round is safe.`
+              : 'Reconnecting players. Your round is safe.'}
         </p>
       </div>
       <div
@@ -832,9 +820,6 @@ function GameInvitation({
         <i>{isRequester ? '…' : '!'}</i>
       </div>
       <div className="game-invitation-copy">
-        <p className="game-lobby-eyebrow">
-          <span aria-hidden="true" /> {isRequester ? 'Invitation sent' : 'Game invitation'}
-        </p>
         <GameModeBadge mode={game.mode} />
         <h2>
           {isRequester
@@ -906,13 +891,12 @@ function NewRoundCard({
   const [topic, setTopic] = useState(TOPICS[0]!)
   return (
     <section className="game-stage new-round-card">
-      <p className="game-card-eyebrow">Your turn</p>
       <h2>Choose a topic</h2>
       <p className="new-round-intro">Pick a direction and we’ll find a fresh word for you.</p>
       <fieldset className="topic-picker" disabled={disabled}>
         <legend>Topic</legend>
         {TOPICS.map((option) => (
-          <label key={option}>
+          <label key={option} data-cursor={disabled ? undefined : 'interactive'}>
             <input
               type="radio"
               name="word-topic"
@@ -1205,7 +1189,6 @@ function LiveCallRound({
         </section>
       ) : isPreparing ? (
         <section className="game-surface live-listener-card" role="status">
-          <p className="game-card-eyebrow">Get ready</p>
           <h2>Listen for {game.partner.displayName}’s clue</h2>
           <p>The answer field will appear when the preparation timer ends.</p>
         </section>
@@ -1478,9 +1461,11 @@ function AudioRecorder({
         </p>
       ) : null}
       {audioUrl ? (
-        <audio className="audio-recorder-preview" controls src={audioUrl}>
-          Your browser cannot play this recording.
-        </audio>
+        <AudioPlayer
+          className="audio-recorder-preview"
+          src={audioUrl}
+          label="Your recorded explanation"
+        />
       ) : null}
       {error ? (
         <p role="alert" className="audio-recorder-error">
@@ -1532,6 +1517,8 @@ function GuessCard({
     event.preventDefault()
     if (guess.trim()) void onGuess(guess)
   }
+  const guessInputId = `word-guess-${roundId}`
+
   return (
     <section className="game-surface">
       <h2 className="mt-3 font-serif text-3xl font-semibold">What word did they describe?</h2>
@@ -1546,9 +1533,7 @@ function GuessCard({
       ) : audioUrl ? (
         <div className="mt-6 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
           <p className="mb-2 text-sm font-medium text-stone-700">Listen to their explanation</p>
-          <audio className="w-full" controls src={audioUrl}>
-            Your browser cannot play this recording.
-          </audio>
+          <AudioPlayer src={audioUrl} label="Partner’s recorded explanation" />
         </div>
       ) : audioAvailable && !audioError ? (
         <p role="status" className="mt-5 text-sm text-stone-500">
@@ -1565,14 +1550,17 @@ function GuessCard({
           “{transcript}”
         </blockquote>
       ) : null}
-      <form className="mt-6" onSubmit={submit}>
-        <label className="text-sm font-medium" htmlFor="word-guess">
+      <form className="mt-6" autoComplete="off" onSubmit={submit}>
+        <label className="text-sm font-medium" htmlFor={guessInputId}>
           Your answer
         </label>
         <div className="mt-2 flex gap-2">
           <input
-            id="word-guess"
+            id={guessInputId}
+            name={guessInputId}
+            type="text"
             className="input"
+            autoComplete="off"
             value={guess}
             maxLength={80}
             required
@@ -1671,7 +1659,6 @@ function WaitingCard({ name, message }: { name: string; message: string }) {
           <i />
         </span>
       </div>
-      <p className="waiting-label">Partner's turn</p>
       <h2>Waiting for {name}</h2>
       <p>{message}</p>
     </section>

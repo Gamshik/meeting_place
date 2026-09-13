@@ -82,7 +82,6 @@ export function ProfileEditor({
         <section className="profile-editor-drawer" aria-labelledby="profile-settings-title">
           <div className="profile-editor-drawer-header">
             <div>
-              <p className="eyebrow">Settings</p>
               <h2 id="profile-settings-title">Profile settings</h2>
               <p>Manage the details your practice partners see.</p>
             </div>

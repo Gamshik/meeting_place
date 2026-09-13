@@ -695,6 +695,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   pauseSession = false
   await expect(page.getByText('Game paused', { exact: true })).toHaveCount(0, { timeout: 6_000 })
   await page.getByRole('button', { name: 'Stop recording' }).click()
+  await expect(page.getByRole('button', { name: 'Play Your recorded explanation' })).toBeVisible()
   await page.getByRole('button', { name: 'Send explanation' }).click()
   await expect(page.getByText('AI coaching · 91/100')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
@@ -1177,7 +1178,19 @@ test('shows the partner both the recording and transcript before their answer', 
     'src',
     'https://audio.example.test/recording.wav',
   )
-  await expect(page.getByLabel('Your answer')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Play Partner’s recorded explanation' }),
+  ).toBeVisible()
+  const recordingProgress = page.getByLabel('Partner’s recorded explanation progress')
+  await recordingProgress.hover()
+  await expect(page.locator('html')).toHaveClass(/custom-cursor-interactive/)
+  await expect(recordingProgress).toHaveCSS('cursor', 'none')
+  await page.getByRole('button', { name: 'Playback speed, 1 times' }).click()
+  await expect(page.getByRole('button', { name: 'Playback speed, 1.25 times' })).toBeVisible()
+  const answerInput = page.getByLabel('Your answer')
+  await expect(answerInput).toBeVisible()
+  await expect(answerInput).toHaveAttribute('autocomplete', 'off')
+  await expect(answerInput).toHaveAttribute('name', `word-guess-${roundId}`)
   const liveRounds = page.getByRole('table')
   await expect(liveRounds).toContainText('Travel')
   await expect(liveRounds).toContainText('Hidden')
@@ -1339,6 +1352,16 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
     }),
   )
   await page.goto('/')
+  const gameRequest = page.getByRole('region', { name: 'Game invitation' })
+  await expect(gameRequest).toBeVisible()
+  await expect(gameRequest).toContainText('Bob wants to play')
+  await expect(gameRequest).toContainText('Live call')
+  const requestBounds = (await gameRequest.boundingBox())!
+  const viewport = page.viewportSize()!
+  expect(requestBounds.x + requestBounds.width).toBeGreaterThan(viewport.width - 40)
+  expect(requestBounds.y + requestBounds.height).toBeGreaterThan(viewport.height - 40)
+  await gameRequest.getByRole('button', { name: 'Dismiss game invitation' }).click()
+  await expect(gameRequest).toHaveCount(0)
   await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
   const panel = page.getByRole('region', { name: 'Notifications' })
   await expect(panel.getByRole('button', { name: 'Join game' })).toBeVisible()
@@ -1391,8 +1414,16 @@ for (const width of [320, 390, 1440]) {
       await page.getByRole('link', { name: 'Practice', exact: true }).click()
     }
     await page.getByRole('link', { name: 'Invite your first friend', exact: true }).click()
-    await expect(page.getByRole('dialog', { name: 'Invite a friend' })).toBeVisible()
-    expect((await page.getByRole('dialog').boundingBox())!.height).toBeLessThan(400)
+    const inviteDialog = page.getByRole('dialog', { name: 'Invite a friend' })
+    await expect(inviteDialog).toBeVisible()
+    expect((await inviteDialog.boundingBox())!.height).toBeLessThan(400)
+    if (width === 1440) {
+      const closeButton = page.getByRole('button', { name: 'Close panel' })
+      await closeButton.hover()
+      const dialogCursor = inviteDialog.locator('.custom-cursor')
+      await expect(dialogCursor).toHaveCSS('opacity', '1')
+      await expect(dialogCursor).toHaveCSS('width', '38px')
+    }
     const sendButton = page.getByRole('button', { name: 'Send invite', exact: true })
     expect((await sendButton.boundingBox())!.height).toBeLessThan(60)
     expect(await sendButton.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe(
@@ -1465,6 +1496,10 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   expect(requests).toBe(0)
   await expect(page.getByRole('radio', { name: /Live call/ })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Back to results' })).toHaveCount(0)
+  const recordedModeCard = page.getByRole('radio', { name: /Recorded practice/ }).locator('..')
+  await recordedModeCard.hover()
+  await expect(page.locator('html')).toHaveClass(/custom-cursor-interactive/)
+  await expect(recordedModeCard).toHaveCSS('cursor', 'none')
   for (const width of [947, 760, 640, 601, 390]) {
     await page.setViewportSize({ width, height: 844 })
     expect(
@@ -1475,6 +1510,10 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   await page.getByRole('button', { name: 'Invite to play' }).dblclick()
   expect(requests).toBe(1)
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
+  const foodTopicCard = page.getByRole('radio', { name: 'Food' }).locator('..')
+  await foodTopicCard.hover()
+  await expect(page.locator('html')).toHaveClass(/custom-cursor-interactive/)
+  await expect(foodTopicCard).toHaveCSS('cursor', 'none')
   await page.getByRole('button', { name: 'Notifications', exact: true }).click()
   await expect(page.getByRole('region', { name: 'Notifications' })).toBeVisible()
   expect(left).toBe(false)
@@ -1510,11 +1549,11 @@ test('joining directly from notifications accepts before entering the game', asy
     return route.fulfill({ json: { data: activeGame } })
   })
   await page.goto('/')
-  await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
-  await page
-    .getByRole('region', { name: 'Notifications' })
-    .getByRole('button', { name: 'Join game' })
-    .click()
+  const gameRequest = page.getByRole('region', { name: 'Game invitation' })
+  await expect(gameRequest).toBeVisible()
+  await expect(gameRequest.getByRole('button', { name: 'Join game' })).toBeVisible()
+  await expect(gameRequest.getByRole('button', { name: 'Decline' })).toBeVisible()
+  await gameRequest.getByRole('button', { name: 'Join game' }).click()
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
   expect(accepted).toBe(true)
 })
@@ -1566,7 +1605,11 @@ test('blocks another game invitation while a game is already in progress', async
 
   await page.goto('/')
   await expect(page.getByRole('button', { name: 'Jump back in' })).toBeEnabled()
-  await expect(page.getByRole('button', { name: 'Finish current game' })).toBeDisabled()
+  await expect(
+    page
+      .getByRole('region', { name: 'Game invitation' })
+      .getByRole('button', { name: 'Game in progress' }),
+  ).toBeDisabled()
   await expect(page.getByText('Finish your current game first', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()

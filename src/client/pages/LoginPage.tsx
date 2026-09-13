@@ -48,7 +48,6 @@ export function LoginPage() {
       </header>
       <section className="login-hero">
         <div className="login-copy">
-          <p className="eyebrow">English, together</p>
           <h1>
             Speak before
             <br />

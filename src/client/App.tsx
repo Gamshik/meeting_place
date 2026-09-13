@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { AuthProvider } from './auth/AuthProvider'
 import { FullPageLoader, ProtectedRoute } from './auth/ProtectedRoute'
+import { CustomCursor } from './components/CustomCursor'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
 import { LoginPage } from './pages/LoginPage'
 
@@ -23,6 +24,7 @@ const FriendProfilePage = lazy(() =>
 export function App() {
   return (
     <BrowserRouter>
+      <CustomCursor />
       <AuthProvider>
         <Suspense fallback={<FullPageLoader label="Opening your meeting place…" />}>
           <Routes>

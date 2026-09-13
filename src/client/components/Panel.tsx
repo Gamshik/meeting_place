@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { CustomCursorSurface } from './CustomCursor'
 
 export function Panel({
   title,
@@ -31,6 +32,7 @@ export function Panel({
         if (event.target === event.currentTarget) onClose()
       }}
     >
+      <CustomCursorSurface />
       <div className="panel-content">
         <div className="panel-heading">
           <h2>{title}</h2>
