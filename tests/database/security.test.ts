@@ -356,6 +356,49 @@ describe('database authorization and lifecycle', () => {
     })
   })
 
+  it('lets only the creator change the duration and snapshots it per round', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const started = await db.query<{
+      result: { id: string; explanationDurationSeconds: number }
+    }>("select public.start_word_game($1,'live_call',$2) result", [invitation.partnershipId, 120])
+    const gameId = started.rows[0]!.result.id
+    expect(started.rows[0]!.result.explanationDurationSeconds).toBe(120)
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+
+    await asUser(alice)
+    const created = await db.query<{
+      result: { round: { id: string; explanationDurationSeconds: number } }
+    }>('select public.create_word_game_round($1,$2,$3,$4,$5) result', [
+      gameId,
+      'Food',
+      'sandwich',
+      ['sandwich'],
+      ['sandwich'],
+    ])
+    expect(created.rows[0]!.result.round.explanationDurationSeconds).toBe(120)
+
+    const updated = await db.query<{
+      result: {
+        explanationDurationSeconds: number
+        round: { explanationDurationSeconds: number }
+      }
+    }>('select public.update_word_game_settings($1,$2) result', [invitation.partnershipId, 180])
+    expect(updated.rows[0]!.result).toMatchObject({
+      explanationDurationSeconds: 180,
+      round: { explanationDurationSeconds: 120 },
+    })
+
+    await asUser(bob)
+    await expect(
+      rows('select public.update_word_game_settings($1,$2)', [invitation.partnershipId, 240]),
+    ).rejects.toThrow('word_game_settings_not_available')
+  })
+
   it('synchronizes recording and enforces the recorded listening deadline', async () => {
     await asUser(alice)
     const invitation = await invite('bob')
@@ -912,11 +955,15 @@ describe('database authorization and lifecycle', () => {
         days: { interactionCount: number; intensity: number }[]
       }
     }>('select public.get_profile_activity($1,$2) result', [alice, year])
+    const activityWindow = await db.query<{ start_date: string; end_date: string }>(`
+      select ((now() at time zone 'Europe/Minsk')::date - 364)::text start_date,
+        (now() at time zone 'Europe/Minsk')::date::text end_date
+    `)
     expect(aliceActivity.rows[0]!.result).toMatchObject({
       isOwner: true,
       timeZone: 'Europe/Minsk',
-      startDate: '2025-09-14',
-      endDate: '2026-09-13',
+      startDate: activityWindow.rows[0]!.start_date,
+      endDate: activityWindow.rows[0]!.end_date,
       totals: { interactionCount: 5, speakingDurationSeconds: 13 },
     })
     expect(aliceActivity.rows[0]!.result.days).toEqual([

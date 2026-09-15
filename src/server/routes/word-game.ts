@@ -4,6 +4,7 @@ import {
   createWordRoundSchema,
   guessWordRoundSchema,
   startWordGameSchema,
+  updateWordGameSettingsSchema,
   wordGameActionSchema,
   wordGameHistoryItemSchema,
   wordGameSchema,
@@ -85,9 +86,30 @@ wordGameRoutes.post('/:partnershipId', async (context) => {
   const { data, error } = await context.get('supabase').rpc('start_word_game', {
     p_partnership_id: parsed,
     p_mode: request.data.mode,
+    p_explanation_duration_seconds: request.data.explanationDurationSeconds,
   })
   if (error) return gameDatabaseError(context, error)
   return gameResponse(context, data, 201)
+})
+
+wordGameRoutes.patch('/:partnershipId/settings', async (context) => {
+  const partnershipId = parsePartnershipId(context.req.param('partnershipId'))
+  const body: unknown = await context.req.json().catch(() => null)
+  const request = updateWordGameSettingsSchema.safeParse(body)
+  if (!partnershipId || !request.success) {
+    return errorResponse(
+      context,
+      400,
+      'invalid_word_game_settings',
+      'Choose an explanation time between 30 and 300 seconds.',
+    )
+  }
+  const { data, error } = await context.get('supabase').rpc('update_word_game_settings', {
+    p_partnership_id: partnershipId,
+    p_explanation_duration_seconds: request.data.explanationDurationSeconds,
+  })
+  if (error) return gameDatabaseError(context, error)
+  return gameResponse(context, data)
 })
 
 wordGameRoutes.post('/:partnershipId/accept', (context) => respondToGame(context, true))
@@ -541,6 +563,7 @@ function gameDatabaseError(
     word_game_guess_not_available: [409, 'This round is not waiting for your guess.'],
     word_game_finished: [409, 'This game has finished.'],
     word_game_end_not_available: [409, 'This game cannot be ended now.'],
+    word_game_settings_not_available: [409, 'Only the game creator can change its settings.'],
   }
   if (error.code === 'P0001' && known[error.message]) {
     const [status, message] = known[error.message]!

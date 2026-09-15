@@ -34,7 +34,15 @@ describe('shared request schemas', () => {
   })
 
   it('accepts only supported word-game modes', () => {
-    expect(startWordGameSchema.parse({ mode: 'live_call' })).toEqual({ mode: 'live_call' })
+    expect(
+      startWordGameSchema.parse({ mode: 'live_call', explanationDurationSeconds: 120 }),
+    ).toEqual({ mode: 'live_call', explanationDurationSeconds: 120 })
     expect(startWordGameSchema.safeParse({ mode: 'meeting' }).success).toBe(false)
+    expect(
+      startWordGameSchema.safeParse({ mode: 'recorded', explanationDurationSeconds: 29 }).success,
+    ).toBe(false)
+    expect(
+      startWordGameSchema.safeParse({ mode: 'recorded', explanationDurationSeconds: 301 }).success,
+    ).toBe(false)
   })
 })

@@ -67,8 +67,15 @@ export const wordGameActionSchema = z.object({
 
 export const wordGameModeSchema = z.enum(['recorded', 'live_call'])
 
+export const explanationDurationSecondsSchema = z.coerce.number().int().min(30).max(300)
+
 export const startWordGameSchema = z.object({
   mode: wordGameModeSchema,
+  explanationDurationSeconds: explanationDurationSecondsSchema,
+})
+
+export const updateWordGameSettingsSchema = z.object({
+  explanationDurationSeconds: explanationDurationSecondsSchema,
 })
 
 export const createWordRoundSchema = z.object({
@@ -98,6 +105,7 @@ export const wordGameRoundSchema = z.object({
   transcriptWords: z.array(wordTranscriptSchema),
   audioAvailable: z.boolean(),
   explanationMethod: z.enum(['recorded', 'live']).nullable(),
+  explanationDurationSeconds: explanationDurationSecondsSchema,
   usedForbiddenWord: z.boolean().nullable(),
   guess: z.string().nullable(),
   isCorrect: z.boolean().nullable(),
@@ -133,6 +141,7 @@ export const wordGameSchema = z.object({
   status: z.enum(['pending', 'active', 'paused', 'finished']),
   serverTime: z.string().optional(),
   requestedById: z.uuid(),
+  explanationDurationSeconds: explanationDurationSecondsSchema,
   acceptedAt: z.string().nullable(),
   pausedAt: z.string().nullable().optional(),
   reconnectDeadline: z.string().nullable().optional(),

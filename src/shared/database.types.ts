@@ -77,6 +77,7 @@ export type Database = {
           created_at: string
           explained_at: string | null
           explanation_method: Database['public']['Enums']['word_explanation_method'] | null
+          explanation_duration_seconds: number
           explainer_id: string
           forbidden_words: string[]
           game_id: string
@@ -105,6 +106,7 @@ export type Database = {
           created_at?: string
           explained_at?: string | null
           explanation_method?: Database['public']['Enums']['word_explanation_method'] | null
+          explanation_duration_seconds?: number
           explainer_id: string
           forbidden_words: string[]
           game_id: string
@@ -196,6 +198,7 @@ export type Database = {
           created_at: string
           current_player_id: string
           disconnected_player_id: string | null
+          explanation_duration_seconds: number
           finished_at: string | null
           id: string
           inviter_last_seen_at: string | null
@@ -214,6 +217,7 @@ export type Database = {
           created_at?: string
           current_player_id: string
           disconnected_player_id?: string | null
+          explanation_duration_seconds?: number
           finished_at?: string | null
           id?: string
           inviter_last_seen_at?: string | null
@@ -354,9 +358,14 @@ export type Database = {
       }
       start_word_game: {
         Args: {
+          p_explanation_duration_seconds: number
           p_mode: Database['public']['Enums']['word_game_mode']
           p_partnership_id: string
         }
+        Returns: Json
+      }
+      update_word_game_settings: {
+        Args: { p_explanation_duration_seconds: number; p_partnership_id: string }
         Returns: Json
       }
       cancel_word_game: {

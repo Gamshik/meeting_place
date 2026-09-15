@@ -36,6 +36,7 @@ function game(overrides: Record<string, unknown> = {}) {
     id: gameId,
     partnershipId,
     mode: 'recorded',
+    explanationDurationSeconds: 60,
     status: 'active',
     requestedById: userId,
     acceptedAt: '2026-09-11T11:59:00+00:00',
@@ -60,6 +61,7 @@ function round(overrides: Record<string, unknown> = {}) {
     transcriptWords: [],
     audioAvailable: false,
     explanationMethod: null,
+    explanationDurationSeconds: 60,
     usedForbiddenWord: null,
     guess: null,
     isCorrect: null,
@@ -262,6 +264,7 @@ describe('explain-word game API', () => {
 
     const response = await jsonRequest(`/api/games/explain-word/${partnershipId}`, 'POST', {
       mode: 'live_call',
+      explanationDurationSeconds: 120,
     })
 
     expect(response.status).toBe(409)
@@ -274,7 +277,41 @@ describe('explain-word game API', () => {
     expect(mocks.rpc).toHaveBeenCalledWith('start_word_game', {
       p_partnership_id: partnershipId,
       p_mode: 'live_call',
+      p_explanation_duration_seconds: 120,
     })
+  })
+
+  it('lets the creator update the explanation time for future rounds', async () => {
+    mocks.rpc.mockResolvedValue({
+      data: game({ explanationDurationSeconds: 180 }),
+      error: null,
+    })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/settings`,
+      'PATCH',
+      { explanationDurationSeconds: 180 },
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: { explanationDurationSeconds: 180 },
+    })
+    expect(mocks.rpc).toHaveBeenCalledWith('update_word_game_settings', {
+      p_partnership_id: partnershipId,
+      p_explanation_duration_seconds: 180,
+    })
+  })
+
+  it('rejects explanation times outside 30 to 300 seconds', async () => {
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/settings`,
+      'PATCH',
+      { explanationDurationSeconds: 301 },
+    )
+
+    expect(response.status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
   })
 
   it('rejects a missing or unknown game mode before calling the database', async () => {
