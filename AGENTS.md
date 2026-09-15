@@ -28,6 +28,13 @@ partnerships, but every partnership contains exactly two users.
 - Return API errors as `{ "error": { "code", "message", "details?" } }`.
 - Prefer small feature-focused components over large generic abstractions.
 - Use accessible labels, native controls, visible focus states, and plain English interface copy.
+- Treat Neubrutalism as the core visual language. New and updated interface elements must use flat
+  high-contrast fills, strong dark outlines, hard offset shadows, bold typography, and deliberately
+  compact corner radii. Avoid soft drop shadows, glass effects, and decorative gradients unless an
+  existing feature specifically requires them.
+- Make interactive elements feel tactile: their hard shadow should shorten or disappear on hover
+  and press without relying on color alone. Preserve keyboard focus visibility and reduced-motion
+  behavior while applying this treatment.
 - Run Prettier instead of manually aligning code.
 
 ## Required verification
