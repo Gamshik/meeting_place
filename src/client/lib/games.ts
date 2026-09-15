@@ -16,7 +16,7 @@ export const games: GameDefinition[] = [
   {
     id: 'explain-word',
     title: 'Explain the word',
-    description: 'Describe a word without saying it. Your friend guesses, then you switch turns.',
+    description: 'Describe it. Guess it. Switch roles.',
     path: '/games/explain-word',
     artwork: 'word-cards',
     accept: api.acceptWordGame,

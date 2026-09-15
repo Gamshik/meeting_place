@@ -5,7 +5,7 @@ export const WORD_GAME_MODES = [
     value: 'live_call',
     label: 'Live call',
     symbol: '↗',
-    description: 'Speak for one minute, then give the guesser 30 seconds to decide.',
+    description: 'Speak for the chosen time, then give the guesser 30 seconds to decide.',
     previewTitle: 'Your call carries the clue',
     previewDescription: 'Keep Meeting Place open for words, timers, guesses, and scores.',
   },

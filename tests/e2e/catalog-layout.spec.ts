@@ -29,12 +29,8 @@ for (const width of [320, 1440]) {
       `<html><head>${styles.map((href) => `<link rel="stylesheet" href="${href}">`).join('')}</head><body><main class="main-content">${markup}</main></body></html>`,
     )
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    if (width === 320) {
-      await expect(page.getByRole('combobox', { name: 'Choose a game' })).toBeVisible()
-      await expect(page.getByRole('combobox').locator('option')).toHaveCount(6)
-    } else {
-      await expect(page.getByRole('button', { name: 'Practice game 6' })).toBeVisible()
-      await expect(page.getByRole('button')).toHaveCount(6)
-    }
+    await expect(page.getByRole('button', { name: 'Practice game 6' })).toBeVisible()
+    await expect(page.getByRole('button')).toHaveCount(6)
+    await expect(page.getByLabel('More games coming soon')).toBeVisible()
   })
 }

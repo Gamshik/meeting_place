@@ -10,12 +10,14 @@ export function GameWorkspace({
   friends,
   sessions,
   disabled,
+  gameSelected,
   onAction,
 }: {
   game: GameDefinition
   friends: Partnership[]
   sessions: GameSession[]
   disabled: boolean
+  gameSelected: boolean
   onAction: (friend: Partnership, action: 'invite' | 'join' | 'open') => Promise<void>
 }) {
   const [search, setSearch] = useState('')
@@ -47,7 +49,11 @@ export function GameWorkspace({
         left.partner.displayName.localeCompare(right.partner.displayName),
     )
   return (
-    <section className="game-workspace" aria-label={`Play ${game.title}`}>
+    <section
+      className="game-workspace"
+      aria-label={`Choose a friend for ${game.title}`}
+      data-ready={gameSelected}
+    >
       {friends.length ? (
         <>
           {friends.length > 4 ? (
@@ -82,26 +88,6 @@ export function GameWorkspace({
                   : existing.status === 'pending' && existing.requestedById !== session?.user.id
                     ? 'join'
                     : 'open'
-              const label =
-                Boolean(ongoingSession) && (action === 'invite' || action === 'join')
-                  ? 'Finish current game'
-                  : action === 'invite'
-                    ? 'Choose a mode'
-                    : action === 'join'
-                      ? 'Join now'
-                      : existing?.status === 'pending'
-                        ? 'Waiting room'
-                        : 'Jump back in'
-              const status =
-                Boolean(ongoingSession) && (action === 'invite' || action === 'join')
-                  ? 'Finish your current game first'
-                  : action === 'join'
-                    ? 'Invited you · ready now'
-                    : action === 'open' && existing?.status === 'pending'
-                      ? 'Invite sent'
-                      : action === 'open'
-                        ? 'Game in progress'
-                        : `@${friend.partner.username} · choose live or recorded`
               const initials = friend.partner.displayName
                 .split(' ')
                 .map((part) => part[0])
@@ -120,13 +106,13 @@ export function GameWorkspace({
                     )}
                     <div>
                       <h3>{friend.partner.displayName}</h3>
-                      <p>{status}</p>
                     </div>
                   </div>
                   <button
                     type="button"
                     className={`button ${action === 'join' ? 'button-accent' : 'button-primary'} quick-play-button`}
                     disabled={
+                      !gameSelected ||
                       disabled ||
                       pendingFriend !== null ||
                       (Boolean(ongoingSession) && (action === 'invite' || action === 'join'))
@@ -136,12 +122,7 @@ export function GameWorkspace({
                       void onAction(friend, action).finally(() => setPendingFriend(null))
                     }}
                   >
-                    {pendingFriend === friend.id
-                      ? action === 'join'
-                        ? 'Joining…'
-                        : 'Opening…'
-                      : label}
-                    <span aria-hidden="true">↗</span>
+                    {action === 'invite' ? 'Start' : action === 'join' ? 'Join' : 'Continue'}
                   </button>
                 </article>
               )

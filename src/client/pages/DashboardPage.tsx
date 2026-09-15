@@ -7,6 +7,7 @@ import { AppShell } from '../components/AppShell'
 import { PartnerCard } from '../components/PartnerCard'
 import { Panel, Notice } from '../components/Panel'
 import { GameWorkspace } from '../components/GameWorkspace'
+import { GameCatalog } from '../components/GameCatalog'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { ProfileActivityPanel } from '../components/ProfileActivityPanel'
 import { RoundsTable } from '../components/RoundsTable'
@@ -19,7 +20,8 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const view = params.get('view') ?? 'games'
-  const selectedGame = games.find((game) => game.id === params.get('game')) ?? games[0]!
+  const selectedGame = games.find((game) => game.id === params.get('game'))
+  const workspaceGame = selectedGame ?? games[0]!
   const invitationView = params.get('section') === 'invitations'
   const { signOut } = useAuth()
   const { partnerships, sessions, history, isLoading, error: loadError, refresh } = useCommunity()
@@ -258,10 +260,16 @@ export function DashboardPage() {
                 {filtered.map((friend) => (
                   <div className="friend-management" key={friend.id}>
                     <PartnerCard partnership={friend} />
-                    <details className="friend-options">
-                      <summary aria-label={`Manage ${friend.partner.displayName}`}>•••</summary>
-                      <button onClick={() => setPanel(`remove:${friend.id}`)}>Remove friend</button>
-                    </details>
+                    <button
+                      type="button"
+                      className="friend-remove-trigger"
+                      aria-label={`Remove ${friend.partner.displayName}`}
+                      onClick={() => setPanel(`remove:${friend.id}`)}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" />
+                      </svg>
+                    </button>
                   </div>
                 ))}
                 {!filtered.length && (
@@ -274,101 +282,59 @@ export function DashboardPage() {
           )}
         </section>
       ) : (
-        <>
-          <section className="practice-hero">
-            <div className="practice-hero-copy">
-              <h1>
-                Practice English.
-                <span> Play together.</span>
-              </h1>
-              <p className="practice-intro">
-                Choose a conversation game, invite a friend, and learn by playing. New games will
-                bring fresh ways to speak, listen, and think in English.
-              </p>
-              <div className="practice-actions">
-                <a className="button button-accent practice-primary-action" href="#practice-games">
-                  Start a game
-                  <span aria-hidden="true">↓</span>
-                </a>
-              </div>
+        <section className="quick-start-shell" id="practice-games">
+          <div className="practice-step-heading">
+            <span aria-hidden="true">1</span>
+            <h1>Choose a game</h1>
+          </div>
+          <GameCatalog
+            items={games}
+            selectedId={selectedGame?.id}
+            onPlay={(game) => {
+              const nextParams = new URLSearchParams(params)
+              if (selectedGame?.id === game.id) nextParams.delete('game')
+              else nextParams.set('game', game.id)
+              setParams(nextParams, { replace: true })
+            }}
+          />
+          {active.length > 0 ? (
+            <div className="live-note" role="status">
+              <span className="live-dot" aria-hidden="true" />
+              {active.length === 1
+                ? 'One game is ready to continue.'
+                : `${active.length} games are ready to continue.`}
             </div>
-            <div className="practice-library" aria-hidden="true">
-              <div className="practice-library-heading">
-                <strong>Game library</strong>
-                <span>Made for two</span>
-              </div>
-              <div className="practice-library-game">
-                <span className="practice-library-icon">Aa</span>
-                <div>
-                  <strong>Explain the word</strong>
-                  <span>Speak · listen · guess</span>
-                </div>
-                <span className="practice-library-arrow">↗</span>
-              </div>
-              <div className="practice-library-future">
-                <span className="practice-library-plus">＋</span>
-                <div>
-                  <strong>More games are coming</strong>
-                  <span>Your practice library will keep growing.</span>
-                </div>
-              </div>
+          ) : null}
+          <div className="practice-friend-step" data-ready={Boolean(selectedGame)}>
+            <div className="practice-step-heading">
+              <span aria-hidden="true">2</span>
+              <h2>Choose a friend</h2>
             </div>
-          </section>
-
-          <section className="quick-start-shell" id="practice-games">
-            <div className="quick-start-heading">
-              <div>
-                <h2>Who are you practising with?</h2>
-                <p>Choose a person. Explain the word is already selected.</p>
-              </div>
-              <div className="game-pill" aria-label={`${selectedGame.title}, five to ten minutes`}>
-                <span className="game-pill-icon" aria-hidden="true">
-                  Aa
-                </span>
-                <span>
-                  <strong>{selectedGame.title}</strong>
-                  <small>5–10 min · 2 players</small>
-                </span>
-              </div>
-            </div>
-            {active.length > 0 ? (
-              <div className="live-note" role="status">
-                <span className="live-dot" aria-hidden="true" />
-                {active.length === 1
-                  ? 'One game is ready to continue.'
-                  : `${active.length} games are ready to continue.`}
-              </div>
-            ) : null}
             {isLoading ? (
               <p role="status">Loading your friends…</p>
             ) : (
               <GameWorkspace
-                key={selectedGame.id}
-                game={selectedGame}
+                key={workspaceGame.id}
+                game={workspaceGame}
+                gameSelected={Boolean(selectedGame)}
                 friends={friends}
                 sessions={sessions}
                 disabled={isBusy}
-                onAction={(friend, action) => play(selectedGame, friend, action)}
+                onAction={(friend, action) => play(workspaceGame, friend, action)}
               />
             )}
+          </div>
+          {incoming.length > 0 ? (
             <div className="quick-start-footer">
-              <p>
-                Someone missing?{' '}
-                <button className="text-action" onClick={() => setPanel('add')}>
-                  Invite them by username
-                </button>
-              </p>
-              {incoming.length > 0 ? (
-                <button
-                  className="text-action"
-                  onClick={() => setParams({ view: 'friends', section: 'invitations' })}
-                >
-                  {incoming.length} friend {incoming.length === 1 ? 'request' : 'requests'} waiting
-                </button>
-              ) : null}
+              <button
+                className="text-action"
+                onClick={() => setParams({ view: 'friends', section: 'invitations' })}
+              >
+                {incoming.length} friend {incoming.length === 1 ? 'request' : 'requests'} waiting
+              </button>
             </div>
-          </section>
-        </>
+          ) : null}
+        </section>
       )}
       {modal === 'add' && (
         <Panel
