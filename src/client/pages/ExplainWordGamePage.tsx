@@ -14,17 +14,17 @@ import { WORD_GAME_MODES, wordGameModeLabel } from '../lib/word-game-mode'
 
 const TOPICS = ['Everyday life', 'Food', 'Travel', 'Nature', 'Work and study', 'Technology']
 const LIVE_PREPARATION_MS = 5_000
-const LIVE_EXPLANATION_MS = 60_000
 const LIVE_FINAL_GUESS_MS = 30_000
-const RECORDED_RECORDING_MS = 60_000
 const RECORDED_GUESS_MS = 90_000
+const DEFAULT_EXPLANATION_SECONDS = 60
+const EXPLANATION_PRESETS = [60, 120, 180, 240, 300]
 
 export function ExplainWordGamePage() {
   const { partnershipId = '' } = useParams()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { session } = useAuth()
-  const { partnerships, sessions } = useCommunity()
+  const { sessions } = useCommunity()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [game, setGame] = useState<WordGame | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -33,8 +33,10 @@ export function ExplainWordGamePage() {
   const [showEndConfirmation, setShowEndConfirmation] = useState(false)
   const [showFinishedChoice, setShowFinishedChoice] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [settingsNotice, setSettingsNotice] = useState<string | null>(null)
   const joinedActiveSession = useRef(false)
   const pendingRequestSeen = useRef(false)
+  const lastGameSetting = useRef<{ gameId: string; seconds: number } | null>(null)
 
   const loadGame = useCallback(
     async (quiet = false) => {
@@ -86,7 +88,6 @@ export function ExplainWordGamePage() {
       (item.status === 'active' || item.status === 'paused') &&
       (item.gameId !== 'explain-word' || item.partnershipId !== partnershipId),
   )
-  const partner = partnerships.find((item) => item.id === partnershipId)?.partner
   const wantsNewGame = searchParams.get('new') === '1'
   const showModeSelection = !game || (wantsNewGame && game.status === 'finished')
 
@@ -170,6 +171,20 @@ export function ExplainWordGamePage() {
     }
   }, [game, navigate, sessionStatus])
 
+  useEffect(() => {
+    if (!game) {
+      lastGameSetting.current = null
+      return
+    }
+    const previous = lastGameSetting.current
+    if (previous?.gameId === game.id && previous.seconds !== game.explanationDurationSeconds) {
+      setSettingsNotice(
+        `Explanation time changed to ${formatDuration(game.explanationDurationSeconds)}. It will apply from the next round.`,
+      )
+    }
+    lastGameSetting.current = { gameId: game.id, seconds: game.explanationDurationSeconds }
+  }, [game])
+
   async function run(action: () => Promise<{ data: WordGame } | void>) {
     if (isBusy) return false
     setIsBusy(true)
@@ -186,8 +201,8 @@ export function ExplainWordGamePage() {
     }
   }
 
-  async function startGame(mode: WordGameMode) {
-    if (await run(() => api.startWordGame(partnershipId, mode))) {
+  async function startGame(mode: WordGameMode, explanationDurationSeconds: number) {
+    if (await run(() => api.startWordGame(partnershipId, mode, explanationDurationSeconds))) {
       setSearchParams({}, { replace: true })
     }
   }
@@ -268,12 +283,20 @@ export function ExplainWordGamePage() {
           <div className="game-title-row">
             <div>
               <h1>Explain the word</h1>
-              <p>Describe it without saying it. Then switch roles.</p>
             </div>
             {game && !showModeSelection ? <GameModeBadge mode={game.mode} /> : null}
           </div>
         </div>
         <div className="game-header-tools">
+          {game && !showModeSelection && game.status !== 'finished' ? (
+            <GameTimeSettings
+              key={`${game.id}:${game.explanationDurationSeconds}`}
+              disabled={isBusy}
+              game={game}
+              isCreator={game.requestedById === session.user.id}
+              onSave={(seconds) => run(() => api.updateWordGameSettings(partnershipId, seconds))}
+            />
+          ) : null}
           {game && game.status !== 'pending' && !showModeSelection ? (
             <Scoreboard game={game} />
           ) : null}
@@ -310,15 +333,12 @@ export function ExplainWordGamePage() {
       </header>
 
       {error ? <Notice error message={error} onClose={() => setError(null)} /> : null}
+      {settingsNotice ? (
+        <Notice message={settingsNotice} onClose={() => setSettingsNotice(null)} />
+      ) : null}
 
       {showModeSelection ? (
-        <GameStartCard
-          currentPlayerName={profile.displayName}
-          partnerName={partner?.displayName}
-          disabled={isBusy}
-          blocked={hasOtherOngoingGame}
-          onStart={startGame}
-        />
+        <GameStartCard disabled={isBusy} blocked={hasOtherOngoingGame} onStart={startGame} />
       ) : game.status === 'pending' ? (
         <GameInvitation
           game={game}
@@ -417,52 +437,46 @@ function GameBoard({
               }
             />
           )}
-          {round ? <RoundSummary game={game} userId={userId} /> : null}
+          {round && !openRound ? <RoundSummary game={game} userId={userId} /> : null}
         </div>
       ) : null}
-      <section className="rounds-section" aria-labelledby="game-rounds-title">
-        <div className="rounds-section-heading">
-          <div>
-            <h2 id="game-rounds-title">Rounds</h2>
+      {game.status === 'finished' && (game.rounds?.length ?? 0) > 0 ? (
+        <section className="rounds-section" aria-labelledby="game-rounds-title">
+          <div className="rounds-section-heading">
+            <div>
+              <h2 id="game-rounds-title">Rounds</h2>
+            </div>
+            <span>{game.rounds?.length ?? 0}</span>
           </div>
-          <span>{game.rounds?.length ?? 0}</span>
-        </div>
-        <RoundsTable
-          rounds={game.rounds ?? []}
-          partnerId={game.partner.id}
-          partnerName={game.partner.displayName}
-        />
-      </section>
+          <RoundsTable
+            rounds={game.rounds ?? []}
+            partnerId={game.partner.id}
+            partnerName={game.partner.displayName}
+          />
+        </section>
+      ) : null}
     </div>
   )
 }
 
 function GameStartCard({
   blocked,
-  currentPlayerName,
   disabled,
   onStart,
-  partnerName,
 }: {
   blocked: boolean
-  currentPlayerName: string
   disabled: boolean
-  onStart: (mode: WordGameMode) => Promise<void>
-  partnerName?: string
+  onStart: (mode: WordGameMode, explanationDurationSeconds: number) => Promise<void>
 }) {
   const [mode, setMode] = useState<WordGameMode>('live_call')
-  const selectedMode = WORD_GAME_MODES.find((option) => option.value === mode)!
-  const partnerLabel = partnerName ?? 'your partner'
-  const currentInitial = currentPlayerName.trim().charAt(0).toUpperCase() || 'Y'
-  const partnerInitial = partnerName?.trim().charAt(0).toUpperCase() || '?'
-
+  const [explanationDurationSeconds, setExplanationDurationSeconds] = useState(
+    DEFAULT_EXPLANATION_SECONDS,
+  )
   return (
     <section className="game-lobby game-lobby-ready">
       <div className="game-lobby-copy">
-        <h2>Ready to play with {partnerLabel}?</h2>
-        <p>Choose how you will talk, then send one invitation.</p>
         <fieldset className="game-mode-picker" disabled={disabled || blocked}>
-          <legend>How are you playing?</legend>
+          <legend>Mode</legend>
           {WORD_GAME_MODES.map((option) => (
             <label key={option.value} data-cursor={disabled || blocked ? undefined : 'interactive'}>
               <input
@@ -472,23 +486,25 @@ function GameStartCard({
                 checked={mode === option.value}
                 onChange={() => setMode(option.value)}
               />
-              <span className="game-mode-option-icon" aria-hidden="true">
-                {option.symbol}
-              </span>
               <span>
                 <strong>{option.label}</strong>
-                <small>{option.description}</small>
               </span>
               <i aria-hidden="true" />
             </label>
           ))}
         </fieldset>
+        <DurationPicker
+          disabled={disabled || blocked}
+          idPrefix="new-game"
+          value={explanationDurationSeconds}
+          onChange={setExplanationDurationSeconds}
+        />
         <div className="game-lobby-actions">
           <button
             type="button"
             className="button button-accent game-lobby-action"
             disabled={disabled || blocked}
-            onClick={() => void onStart(mode)}
+            onClick={() => void onStart(mode, explanationDurationSeconds)}
           >
             {disabled ? 'Sending…' : blocked ? 'Finish your current game first' : 'Invite to play'}
           </button>
@@ -499,20 +515,124 @@ function GameStartCard({
           </p>
         ) : null}
       </div>
-      <div className="game-lobby-preview" aria-hidden="true">
-        <div className="game-lobby-players">
-          <span>{currentInitial}</span>
-          <i>
-            <b />
-            <b />
-            <b />
-          </i>
-          <span>{partnerInitial}</span>
-        </div>
-        <strong>{selectedMode.previewTitle}</strong>
-        <p>{selectedMode.previewDescription}</p>
-      </div>
     </section>
+  )
+}
+
+function GameTimeSettings({
+  disabled,
+  game,
+  isCreator,
+  onSave,
+}: {
+  disabled: boolean
+  game: WordGame
+  isCreator: boolean
+  onSave: (seconds: number) => Promise<boolean>
+}) {
+  const [value, setValue] = useState(game.explanationDurationSeconds)
+
+  if (!isCreator) {
+    return (
+      <div className="game-time-readout" title="The game creator controls this setting">
+        <span>Explain</span>
+        <strong>{formatDuration(game.explanationDurationSeconds)}</strong>
+      </div>
+    )
+  }
+
+  return (
+    <details className="game-time-settings">
+      <summary aria-label="Change explanation time">
+        <span>Explain</span>
+        <strong>{formatDuration(game.explanationDurationSeconds)}</strong>
+        <i aria-hidden="true">⌄</i>
+      </summary>
+      <div className="game-time-settings-popover">
+        <div>
+          <strong>Explanation time</strong>
+          <p>Changes apply from the next round for both players.</p>
+        </div>
+        <DurationPicker
+          compact
+          disabled={disabled}
+          idPrefix="active-game"
+          value={value}
+          onChange={setValue}
+        />
+        <button
+          type="button"
+          className="button button-primary"
+          disabled={disabled || value === game.explanationDurationSeconds}
+          onClick={() => void onSave(value)}
+        >
+          {disabled ? 'Saving…' : 'Save for next round'}
+        </button>
+      </div>
+    </details>
+  )
+}
+
+function DurationPicker({
+  compact = false,
+  disabled,
+  idPrefix,
+  onChange,
+  value,
+}: {
+  compact?: boolean
+  disabled: boolean
+  idPrefix: string
+  onChange: (value: number) => void
+  value: number
+}) {
+  const inputId = `${idPrefix}-explanation-seconds`
+  const [draft, setDraft] = useState(String(value))
+
+  const commitDraft = () => {
+    const parsed = Number(draft)
+    const next = Number.isFinite(parsed) ? Math.min(300, Math.max(30, Math.round(parsed))) : value
+    setDraft(String(next))
+    onChange(next)
+  }
+
+  return (
+    <fieldset className={`duration-picker ${compact ? 'is-compact' : ''}`} disabled={disabled}>
+      <legend>{compact ? 'Quick choices' : 'Explanation time'}</legend>
+      <div className="duration-presets" aria-label="Explanation time presets">
+        {EXPLANATION_PRESETS.map((seconds) => (
+          <button
+            key={seconds}
+            type="button"
+            className={value === seconds ? 'is-selected' : ''}
+            aria-pressed={value === seconds}
+            onClick={() => {
+              setDraft(String(seconds))
+              onChange(seconds)
+            }}
+          >
+            {seconds / 60} min
+          </button>
+        ))}
+      </div>
+      <label className="duration-custom" htmlFor={inputId}>
+        <span>Custom</span>
+        <span>
+          <input
+            id={inputId}
+            type="number"
+            min="30"
+            max="300"
+            step="1"
+            inputMode="numeric"
+            value={draft}
+            onBlur={commitDraft}
+            onChange={(event) => setDraft(event.currentTarget.value)}
+          />
+          seconds
+        </span>
+      </label>
+    </fieldset>
   )
 }
 
@@ -569,7 +689,7 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
             <span>2</span>
             <div>
               <strong>Explain naturally</strong>
-              <p>Speak in your call or record up to one minute without saying the secret word.</p>
+              <p>Speak for the game’s chosen time without saying the secret word.</p>
             </div>
           </li>
           <li>
@@ -591,8 +711,8 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           <span aria-hidden="true">!</span>
           <p>
             Recorded practice checks forbidden words automatically. Live call gives both players
-            five seconds to prepare, one minute for the clue, and 30 final seconds to guess. In
-            Recorded practice, the guesser gets 90 seconds after the recording arrives.
+            five seconds to prepare, the creator’s chosen time for the clue, and 30 final seconds to
+            guess. In Recorded practice, the guesser gets 90 seconds after the recording arrives.
           </p>
         </div>
       </section>
@@ -892,9 +1012,8 @@ function NewRoundCard({
   return (
     <section className="game-stage new-round-card">
       <h2>Choose a topic</h2>
-      <p className="new-round-intro">Pick a direction and we’ll find a fresh word for you.</p>
       <fieldset className="topic-picker" disabled={disabled}>
-        <legend>Topic</legend>
+        <legend className="sr-only">Topic</legend>
         {TOPICS.map((option) => (
           <label key={option} data-cursor={disabled ? undefined : 'interactive'}>
             <input
@@ -952,6 +1071,7 @@ function ExplainCard({
       <SecretWordBrief round={round} />
       <AudioRecorder
         disabled={disabled}
+        durationSeconds={round.explanationDurationSeconds}
         recordingStartedAt={round.recordingStartedAt}
         serverTime={game.serverTime}
         onStart={onRecordingStart}
@@ -990,7 +1110,7 @@ function RecordedRound({
   const recordingStartedAt = parseTimestamp(round.recordingStartedAt)
   const recordingFinishedAt = parseTimestamp(round.recordingFinishedAt)
   const explainedAt = parseTimestamp(round.explainedAt)
-  const recordingEndsAt = recordingStartedAt + RECORDED_RECORDING_MS
+  const recordingEndsAt = recordingStartedAt + round.explanationDurationSeconds * 1000
   const guessEndsAt = explainedAt + RECORDED_GUESS_MS
   const isGuessing = round.status === 'awaiting_guess'
   const isExpired = isGuessing && explainedAt > 0 && now >= guessEndsAt
@@ -1052,6 +1172,7 @@ function RecordedRound({
   return (
     <div className="recorded-round">
       <RoundClock
+        compact
         description={
           isExpired
             ? 'No answer was submitted before the listening window ended.'
@@ -1104,7 +1225,7 @@ function LiveCallRound({
 }) {
   const round = game.round!
   const preparationEndsAt = Date.parse(round.createdAt) + LIVE_PREPARATION_MS
-  const explanationEndsAt = preparationEndsAt + LIVE_EXPLANATION_MS
+  const explanationEndsAt = preparationEndsAt + round.explanationDurationSeconds * 1000
   const roundEndsAt = explanationEndsAt + LIVE_FINAL_GUESS_MS
   const now = useServerNow(game.serverTime)
   const expirationAttempted = useRef(false)
@@ -1167,25 +1288,6 @@ function LiveCallRound({
             </button>
           </div>
           <SecretWordBrief round={round} />
-          <div className="live-call-instruction" role="status">
-            <span aria-hidden="true">↗</span>
-            <div>
-              <strong>
-                {isPreparing
-                  ? 'Plan your explanation'
-                  : isExplaining
-                    ? 'Explain it now'
-                    : 'Clue finished'}
-              </strong>
-              <p>
-                {isPreparing
-                  ? 'Think of a clear clue without saying the secret or forbidden words.'
-                  : isExplaining
-                    ? 'Use your meeting audio. Your partner can answer while you speak.'
-                    : 'Stay quiet while your partner uses the final 30 seconds to think.'}
-              </p>
-            </div>
-          </div>
         </section>
       ) : isPreparing ? (
         <section className="game-surface live-listener-card" role="status">
@@ -1210,6 +1312,7 @@ function LiveCallRound({
 }
 
 function RoundClock({
+  compact = false,
   description,
   expired = false,
   finalGuess = false,
@@ -1217,6 +1320,7 @@ function RoundClock({
   remainingMs,
   title,
 }: {
+  compact?: boolean
   description: string
   expired?: boolean
   finalGuess?: boolean
@@ -1227,12 +1331,12 @@ function RoundClock({
   const secondsRemaining = Math.max(0, Math.ceil(remainingMs / 1000))
   return (
     <section
-      className={`live-round-clock ${preparing ? 'is-preparing' : ''} ${finalGuess ? 'is-final-guess' : ''} ${expired ? 'is-expired' : ''}`}
+      className={`live-round-clock ${compact ? 'is-compact' : ''} ${preparing ? 'is-preparing' : ''} ${finalGuess ? 'is-final-guess' : ''} ${expired ? 'is-expired' : ''}`}
       aria-label={`${title}: ${secondsRemaining} seconds remaining`}
     >
       <div>
         <p>{title}</p>
-        <span>{description}</span>
+        <span className={compact ? 'sr-only' : undefined}>{description}</span>
       </div>
       <strong role="timer">{formatCountdown(secondsRemaining)}</strong>
     </section>
@@ -1272,6 +1376,7 @@ function SecretWordBrief({ round }: { round: NonNullable<WordGame['round']> }) {
 
 function AudioRecorder({
   disabled,
+  durationSeconds,
   onStart,
   onStop,
   onSubmit,
@@ -1279,6 +1384,7 @@ function AudioRecorder({
   serverTime,
 }: {
   disabled: boolean
+  durationSeconds: number
   onStart: () => Promise<boolean>
   onStop: () => Promise<boolean>
   onSubmit: (audio: Blob) => Promise<unknown>
@@ -1293,7 +1399,7 @@ function AudioRecorder({
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [isRecording, setIsRecording] = useState(false)
-  const [secondsRemaining, setSecondsRemaining] = useState(60)
+  const [secondsRemaining, setSecondsRemaining] = useState(durationSeconds)
   const [isPreparing, setIsPreparing] = useState(false)
   const [audio, setAudio] = useState<Blob | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
@@ -1379,9 +1485,9 @@ function AudioRecorder({
         return
       }
       mediaRecorder.start()
-      setSecondsRemaining(60)
+      setSecondsRemaining(durationSeconds)
       setIsRecording(true)
-      stopTimer.current = setTimeout(stopRecording, 60_000)
+      stopTimer.current = setTimeout(stopRecording, durationSeconds * 1000)
       countdownTimer.current = setInterval(() => {
         setSecondsRemaining((current) => Math.max(0, current - 1))
       }, 1_000)
@@ -1408,7 +1514,7 @@ function AudioRecorder({
         </span>
         <div>
           <p>Record your explanation</p>
-          <small>Up to one minute · Speak clearly and naturally</small>
+          <small>Up to {formatDuration(durationSeconds)} · Speak clearly and naturally</small>
         </div>
       </div>
       <div className="audio-recorder-actions">
@@ -1446,7 +1552,7 @@ function AudioRecorder({
                 ? Math.max(
                     0,
                     Math.ceil(
-                      (Date.parse(recordingStartedAt) + RECORDED_RECORDING_MS - now) / 1000,
+                      (Date.parse(recordingStartedAt) + durationSeconds * 1000 - now) / 1000,
                     ),
                   )
                 : secondsRemaining,
@@ -1698,6 +1804,13 @@ function preferredMimeType() {
 
 function formatCountdown(seconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function formatDuration(seconds: number) {
+  if (seconds < 60) return `${seconds} sec`
+  const minutes = Math.floor(seconds / 60)
+  const remainder = seconds % 60
+  return remainder === 0 ? `${minutes} min` : `${minutes}:${String(remainder).padStart(2, '0')}`
 }
 
 function parseTimestamp(value?: string | null) {

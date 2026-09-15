@@ -157,8 +157,7 @@ test('accepts then ends a partnership and shows sign-out failures', async ({ pag
     "You're all caught up.",
   )
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
-  await page.getByLabel('Manage Bob').click()
-  await page.getByRole('button', { name: 'Remove friend', exact: true }).click()
+  await page.getByRole('button', { name: 'Remove Bob', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Remove friend', exact: true }).click()
   await expect(page.getByText('Add a friend using their username.')).toBeVisible()
   await page.getByRole('link', { name: 'Your profile', exact: true }).click()
@@ -561,6 +560,7 @@ test('starts a word game and submits a browser recording for transcription', asy
     mode: 'recorded',
     status: 'active',
     requestedById: userId,
+    explanationDurationSeconds: 60,
     acceptedAt: '2026-09-11T12:00:00Z',
     currentPlayerId: userId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -654,6 +654,7 @@ test('starts a word game and submits a browser recording for transcription', asy
           transcriptWords: [],
           audioAvailable: false,
           explanationMethod: null,
+          explanationDurationSeconds: 60,
           usedForbiddenWord: null,
           guess: null,
           isCorrect: null,
@@ -684,7 +685,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   })
   await page.getByRole('button', { name: 'Give me a word' }).click()
   await expect(page.getByText('passport', { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Rounds' })).toBeInViewport()
+  await expect(page.getByRole('heading', { name: 'Rounds' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Start recording' }).click()
   await expect(page.getByText('1:00 remaining')).toBeVisible()
   await expect(page.getByText(/0:5[89] remaining/)).toBeVisible({ timeout: 2_500 })
@@ -752,6 +753,7 @@ test('shows the other player an immediate choice when a word game finishes', asy
     mode: 'recorded',
     status: 'active',
     requestedById: partnerId,
+    explanationDurationSeconds: 60,
     acceptedAt: '2026-09-11T12:00:00Z',
     currentPlayerId: userId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -768,6 +770,7 @@ test('shows the other player an immediate choice when a word game finishes', asy
       transcriptWords: [],
       audioAvailable: false,
       explanationMethod: null,
+      explanationDurationSeconds: 60,
       usedForbiddenWord: null,
       guess: null,
       isCorrect: null,
@@ -904,6 +907,7 @@ test('synchronizes live-call preparation and guessing for both players', async (
     transcriptWords: [],
     audioAvailable: false,
     explanationMethod: 'live',
+    explanationDurationSeconds: 60,
     usedForbiddenWord: null,
     guess: null,
     isCorrect: null,
@@ -919,6 +923,7 @@ test('synchronizes live-call preparation and guessing for both players', async (
     mode: 'live_call',
     status: 'active',
     requestedById: userId,
+    explanationDurationSeconds: 60,
     acceptedAt: '2026-09-11T12:00:00Z',
     currentPlayerId: userId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -949,7 +954,6 @@ test('synchronizes live-call preparation and guessing for both players', async (
 
   await expect(explainerPage.getByText('Explain and guess')).toBeVisible({ timeout: 7_000 })
   await expect(guesserPage.getByText('Explain and guess')).toBeVisible({ timeout: 7_000 })
-  await expect(explainerPage.getByText('Explain it now')).toBeVisible()
   await expect(guesserPage.getByLabel('Your answer')).toBeVisible()
   await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
 
@@ -978,6 +982,7 @@ test('gives both live-call players a final 30-second guessing phase', async ({ b
     transcriptWords: [],
     audioAvailable: false,
     explanationMethod: 'live',
+    explanationDurationSeconds: 60,
     usedForbiddenWord: null,
     guess: null,
     isCorrect: null,
@@ -994,6 +999,7 @@ test('gives both live-call players a final 30-second guessing phase', async ({ b
     status: 'active',
     serverTime,
     requestedById: userId,
+    explanationDurationSeconds: 60,
     acceptedAt: '2026-09-11T12:00:00Z',
     currentPlayerId: userId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -1024,7 +1030,6 @@ test('gives both live-call players a final 30-second guessing phase', async ({ b
   await expect(guesserPage.getByText('Final guess', { exact: true })).toBeVisible()
   await expect(explainerPage.locator('.live-round-clock')).toHaveClass(/is-final-guess/)
   await expect(guesserPage.locator('.live-round-clock')).toHaveClass(/is-final-guess/)
-  await expect(explainerPage.getByText('Clue finished')).toBeVisible()
   await expect(explainerPage.getByRole('timer')).toHaveText(/0:(2[89]|30)/)
   await expect(guesserPage.getByRole('timer')).toHaveText(/0:(2[89]|30)/)
   await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
@@ -1044,6 +1049,7 @@ test('shows the guesser synchronized Recorded practice timers', async ({ page })
     status: 'active',
     serverTime: now,
     requestedById: userId,
+    explanationDurationSeconds: 60,
     acceptedAt: now,
     currentPlayerId: partnerId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -1060,6 +1066,7 @@ test('shows the guesser synchronized Recorded practice timers', async ({ page })
       transcriptWords: [],
       audioAvailable: false,
       explanationMethod: null,
+      explanationDurationSeconds: 60,
       usedForbiddenWord: null,
       guess: null,
       isCorrect: null,
@@ -1115,6 +1122,7 @@ test('shows the partner both the recording and transcript before their answer', 
     status: 'active',
     serverTime: new Date().toISOString(),
     requestedById: partnerId,
+    explanationDurationSeconds: 60,
     acceptedAt: '2026-09-11T12:00:00Z',
     currentPlayerId: partnerId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -1131,6 +1139,7 @@ test('shows the partner both the recording and transcript before their answer', 
       transcriptWords: [],
       audioAvailable: true,
       explanationMethod: 'recorded',
+      explanationDurationSeconds: 60,
       usedForbiddenWord: false,
       guess: null,
       isCorrect: null,
@@ -1191,10 +1200,7 @@ test('shows the partner both the recording and transcript before their answer', 
   await expect(answerInput).toBeVisible()
   await expect(answerInput).toHaveAttribute('autocomplete', 'off')
   await expect(answerInput).toHaveAttribute('name', `word-guess-${roundId}`)
-  const liveRounds = page.getByRole('table')
-  await expect(liveRounds).toContainText('Travel')
-  await expect(liveRounds).toContainText('Hidden')
-  await expect(liveRounds).toContainText('In progress')
+  await expect(page.getByRole('table')).toHaveCount(0)
 })
 
 test('shows every finished game and its rounds in History', async ({ page }) => {
@@ -1303,6 +1309,7 @@ test('returns to Games after cancelling a replay request from History', async ({
     mode: 'recorded',
     status: 'pending',
     requestedById: userId,
+    explanationDurationSeconds: 60,
     acceptedAt: null,
     currentPlayerId: userId,
     partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
@@ -1329,7 +1336,7 @@ test('returns to Games after cancelling a replay request from History', async ({
 
   await expect.poll(() => cancelled).toBe(true)
   await expect(page).toHaveURL('/')
-  await expect(page.getByRole('heading', { name: 'Who are you practising with?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
 })
 
 test('notifications are anchored, actionable, and do not block navigation', async ({ page }) => {
@@ -1398,15 +1405,36 @@ test('keeps the app shell aligned between dashboard views with different heights
   expect(friendsBounds?.width).toBe(practiceBounds?.width)
 })
 
+test('requires a game selection before a friend can be chosen', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({
+      json: { data: [relationship('incoming', 'active')], nextCursor: null },
+    }),
+  )
+  await page.goto('/')
+
+  const game = page.getByRole('button', { name: 'Explain the word' })
+  const start = page.getByRole('button', { name: 'Start' })
+  await expect(game).toHaveAttribute('aria-pressed', 'false')
+  await expect(start).toBeDisabled()
+
+  await game.click()
+  await expect(game).toHaveAttribute('aria-pressed', 'true')
+  await expect(start).toBeEnabled()
+
+  await game.click()
+  await expect(game).toHaveAttribute('aria-pressed', 'false')
+  await expect(start).toBeDisabled()
+})
+
 for (const width of [320, 390, 1440]) {
   test(`compact add-friend flow fits ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await signIn(page)
     await page.goto('/')
     if (width === 1440) {
-      await expect(
-        page.getByRole('heading', { name: 'Who are you practising with?' }),
-      ).toBeInViewport()
+      await expect(page.getByRole('heading', { name: 'Choose a game' })).toBeInViewport()
       await page.getByRole('link', { name: 'History', exact: true }).click()
       await expect(
         page.getByRole('heading', { name: 'Your finished games will live here' }),
@@ -1452,6 +1480,7 @@ const activeGame: WordGame = {
   mode: 'recorded',
   status: 'active',
   requestedById: userId,
+  explanationDurationSeconds: 60,
   acceptedAt: '2026-09-11T12:00:00Z',
   currentPlayerId: userId,
   partner: relationship('incoming').partner,
@@ -1466,6 +1495,7 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
   )
   let requests = 0
+  let requestedDuration = 0
   let left = false
   const previousGame: WordGame = {
     ...activeGame,
@@ -1479,6 +1509,7 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
     }
     if (route.request().method() === 'POST' && route.request().url().endsWith(relationshipId)) {
       requests++
+      requestedDuration = route.request().postDataJSON().explanationDurationSeconds
       await new Promise((resolve) => setTimeout(resolve, 200))
     }
     if (route.request().method() === 'DELETE' && route.request().url().endsWith('/presence'))
@@ -1487,14 +1518,14 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   })
   await page.goto('/?view=friends')
   await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: /Choose a mode|Join now|Jump back in/ }),
-  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Start' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
-  await page.getByRole('button', { name: 'Choose a mode' }).click()
+  await page.getByRole('button', { name: 'Explain the word' }).click()
+  await page.getByRole('button', { name: 'Start' }).click()
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}?new=1`)
   expect(requests).toBe(0)
   await expect(page.getByRole('radio', { name: /Live call/ })).toBeChecked()
+  await page.getByRole('button', { name: '3 min' }).click()
   await expect(page.getByRole('button', { name: 'Back to results' })).toHaveCount(0)
   const recordedModeCard = page.getByRole('radio', { name: /Recorded practice/ }).locator('..')
   await recordedModeCard.hover()
@@ -1509,6 +1540,7 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   }
   await page.getByRole('button', { name: 'Invite to play' }).dblclick()
   expect(requests).toBe(1)
+  expect(requestedDuration).toBe(180)
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
   const foodTopicCard = page.getByRole('radio', { name: 'Food' }).locator('..')
   await foodTopicCard.hover()
@@ -1520,6 +1552,29 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
   await expect.poll(() => left).toBe(true)
+})
+
+test('the game creator can change the next round explanation time', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  let game = activeGame
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith('/settings')) {
+      game = { ...game, explanationDurationSeconds: 180 }
+    }
+    await route.fulfill({ json: { data: game } })
+  })
+
+  await page.goto(`/games/explain-word/${relationshipId}`)
+  await page.locator('summary[aria-label="Change explanation time"]').click()
+  await page.getByRole('button', { name: '3 min' }).click()
+  await page.getByRole('button', { name: 'Save for next round' }).click()
+
+  await expect(page.getByText(/Explanation time changed to 3 min/)).toBeVisible()
+  await expect(page.getByText(/It will apply from the next round/)).toBeVisible()
 })
 
 test('joining directly from notifications accepts before entering the game', async ({ page }) => {
@@ -1604,13 +1659,16 @@ test('blocks another game invitation while a game is already in progress', async
   )
 
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Jump back in' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Explain the word' }).click()
+  const activeFriendCard = page
+    .locator('article.quick-friend')
+    .filter({ has: page.getByRole('heading', { name: 'Bob', exact: true }) })
+  await expect(activeFriendCard.getByRole('button', { name: 'Continue' })).toBeEnabled()
   await expect(
     page
       .getByRole('region', { name: 'Game invitation' })
       .getByRole('button', { name: 'Game in progress' }),
   ).toBeDisabled()
-  await expect(page.getByText('Finish your current game first', { exact: true })).toBeVisible()
 
   await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
   const notifications = page.getByRole('region', { name: 'Notifications' })
@@ -1674,8 +1732,9 @@ test('resuming an existing game never sends a new request', async ({ page }) => 
     return route.fulfill({ json: { data: activeGame } })
   })
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Jump back in', exact: true })).toHaveCount(1)
-  await page.getByRole('button', { name: 'Jump back in', exact: true }).click()
+  await page.getByRole('button', { name: 'Explain the word' }).click()
+  await expect(page.getByRole('button', { name: 'Continue', exact: true })).toHaveCount(1)
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
   expect(starts).toBe(0)
 })
@@ -1709,8 +1768,9 @@ test('a busy friend is not invited and can be retried later', async ({ page }) =
     return route.fulfill({ json: { data: activeGame } })
   })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Explain the word' }).click()
   await page.getByLabel('Play with').fill('bob')
-  await page.getByRole('button', { name: 'Choose a mode' }).click()
+  await page.getByRole('button', { name: 'Start' }).click()
   await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page.getByRole('alert')).toContainText(
     'Your friend is already playing another game. Try again later.',

@@ -100,10 +100,15 @@ export const api = {
   getWordGames: () => apiRequest<DataResponse<WordGameSummary[]>>('/api/games/explain-word'),
   getWordGameHistory: () =>
     apiRequest<DataResponse<WordGameHistoryItem[]>>('/api/games/explain-word/history'),
-  startWordGame: (partnershipId: string, mode: WordGameMode) =>
+  startWordGame: (partnershipId: string, mode: WordGameMode, explanationDurationSeconds: number) =>
     apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}`, {
       method: 'POST',
-      body: JSON.stringify({ mode }),
+      body: JSON.stringify({ mode, explanationDurationSeconds }),
+    }),
+  updateWordGameSettings: (partnershipId: string, explanationDurationSeconds: number) =>
+    apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}/settings`, {
+      method: 'PATCH',
+      body: JSON.stringify({ explanationDurationSeconds }),
     }),
   acceptWordGame: (partnershipId: string) =>
     apiRequest<DataResponse<WordGame>>(`/api/games/explain-word/${partnershipId}/accept`, {

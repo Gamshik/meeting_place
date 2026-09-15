@@ -14,7 +14,8 @@ This repository contains the first vertical slice:
 - paginated partner lists and accessible feedback while changes are saved
 - friend-only profiles with yearly and monthly practice activity calendars
 - a turn-based “explain the word” game with Live call and Recorded practice modes, AI-generated
-  cards, speech transcription, and private coaching
+  cards, creator-controlled 30–300 second explanation rounds, speech transcription, and private
+  coaching
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
 
@@ -327,16 +328,19 @@ To exercise the speaking game manually, apply the latest migration, configure th
 values above, and sign in with two accounts that have an active partnership. The first player sends
 a game request. Confirm that the other browser shows the request in **Notifications**, and that neither
 player can start a round before the second player accepts. Confirm that the invitation shows the mode
-selected by its sender. In Recorded practice, the first player chooses a topic, records an
+selected by its sender. The creator chooses a 30–300 second explanation time before inviting. They
+can change it later from the game header; both players see the update immediately, while the current
+round keeps its original timer and the new value begins with the next round. In Recorded practice,
+the first player chooses a topic, records an
 explanation, and sends it. While recording, confirm that the second browser sees the synchronized
-one-minute recording timer. After the explanation arrives, both players must see the 90-second
+configured recording timer. After the explanation arrives, both players must see the 90-second
 listening timer and the guesser receives an audio player, the transcript, and the answer field. The
 secret must stay hidden from the guesser until the result; a correct guess
 awards the explainer one point, saying the secret produces no point, private AI coaching appears only
 to the explainer, and the next turn belongs to the previous guesser. In Live call, confirm that
 creating a word starts the same five-second preparation countdown in both browsers. When it ends,
-both players must see the one-minute explanation timer and only the guesser must receive the answer
-field. When the clue ends, both see a final 30-second guessing timer and the explainer is told to
+both players must see the configured explanation timer and only the guesser must receive the answer
+field. When the configured clue time ends, both see a final 30-second guessing timer and the explainer is told to
 stay quiet. The explainer speaks in the external call; no recording controls should appear. A matching guess is
 scored using the honor system for forbidden words. Browser microphone access for Recorded practice
 requires localhost or HTTPS.
