@@ -285,7 +285,7 @@ test('serves production security headers on a browser route', async ({ page }) =
   expect(headers['x-content-type-options']).toBe('nosniff')
   expect(headers['x-frame-options']).toBe('DENY')
   expect(headers['permissions-policy']).toContain('microphone=(self)')
-  await expect(page.getByRole('button', { name: 'Start practising with Google' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start practicing with Google' })).toBeVisible()
 })
 
 test('prevents duplicate profile saves and restores saved values after cancel', async ({
@@ -691,6 +691,8 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page.getByText(/0:5[89] remaining/)).toBeVisible({ timeout: 2_500 })
   pauseSession = true
   await expect(page.getByText('Game paused', { exact: true })).toBeVisible({ timeout: 6_000 })
+  const pauseCard = page.locator('.session-pause-card')
+  expect(await pauseCard.evaluate((element) => element.clientWidth)).toBeLessThanOrEqual(760)
   await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible()
   await expect(page.getByText(/0:[0-5][0-9] remaining/)).toBeVisible()
   pauseSession = false
@@ -701,8 +703,18 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page.getByText('Your explanation is ready.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
   await page.getByRole('button', { name: 'End game' }).click()
-  await expect(page.getByRole('dialog', { name: 'Finish for both players?' })).toBeVisible()
-  await page.getByRole('button', { name: 'End game for everyone' }).click()
+  const endDialog = page.getByRole('dialog', { name: 'End game?' })
+  await expect(endDialog).toBeVisible()
+  await expect(endDialog.locator('p')).toHaveCount(0)
+  expect(await endDialog.evaluate((element) => element.clientHeight)).toBeLessThanOrEqual(250)
+  await expect(endDialog.locator('.end-game-player')).toHaveCount(2)
+  expect(await endDialog.locator('.end-game-player').allTextContents()).toEqual(['', ''])
+  await expect(endDialog).toHaveCSS('animation-name', 'end-game-dialog-arrive')
+  await expect(endDialog.locator('.end-game-player.is-left')).toHaveCSS(
+    'animation-name',
+    'end-game-player-left',
+  )
+  await endDialog.getByRole('button', { name: 'End game', exact: true }).click()
   await expect(page).toHaveURL('/')
 })
 
@@ -951,14 +963,116 @@ test('synchronizes live-call preparation and guessing for both players', async (
   await expect(guesserPage.getByText('Get ready', { exact: true })).toBeVisible()
   await expect(explainerPage.getByRole('button', { name: /record/i })).toHaveCount(0)
   await expect(guesserPage.getByLabel('Your answer')).toHaveCount(0)
+  await expect(guesserPage.locator('.live-ready-cue')).toBeVisible()
+  expect(
+    await guesserPage.locator('.live-ready-cue').evaluate((element) => element.clientHeight),
+  ).toBeLessThanOrEqual(140)
+  await expect(guesserPage.locator('.live-listener-card')).toHaveCount(0)
 
   await expect(explainerPage.getByText('Explain now')).toBeVisible({ timeout: 7_000 })
   await expect(guesserPage.getByText('Guess now')).toBeVisible({ timeout: 7_000 })
+  await expect(guesserPage.locator('.live-ready-cue')).toHaveCount(0)
   await expect(guesserPage.getByLabel('Your answer')).toBeVisible()
+  await expect(guesserPage.locator('.guess-card')).toBeVisible()
+  expect(
+    await guesserPage.locator('.guess-card').evaluate((element) => element.clientWidth),
+  ).toBeLessThanOrEqual(760)
+  expect(
+    await guesserPage.locator('.guess-card').evaluate((element) => element.clientHeight),
+  ).toBeLessThanOrEqual(160)
   await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
 
   await explainerContext.close()
   await guesserContext.close()
+})
+
+test('lets the explainer approve an inexact guess without automatic checking', async ({ page }) => {
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  const roundId = '55555555-5555-4555-8555-555555555555'
+  let game: WordGame = {
+    id: '44444444-4444-4444-8444-444444444444',
+    partnershipId: relationshipId,
+    mode: 'live_call',
+    status: 'active',
+    requestedById: userId,
+    explanationDurationSeconds: 60,
+    acceptedAt: '2026-09-18T12:00:00Z',
+    currentPlayerId: userId,
+    partner: { id: partnerId, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 0, partner: 0 },
+    round: {
+      id: roundId,
+      turnNumber: 1,
+      explainerId: userId,
+      topic: 'Travel',
+      status: 'awaiting_guess',
+      secretWord: 'passport',
+      forbiddenWords: ['passport', 'passports'],
+      transcript: null,
+      transcriptWords: [],
+      audioAvailable: false,
+      explanationMethod: 'live',
+      explanationDurationSeconds: 60,
+      usedForbiddenWord: false,
+      guess: 'travel document',
+      isCorrect: null,
+      score: null,
+      coachScore: null,
+      coachFeedback: null,
+      createdAt: '2026-09-18T12:00:00Z',
+      completedAt: null,
+    },
+    rounds: [],
+  }
+  let submittedReview: unknown
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/presence') && route.request().method() === 'DELETE') {
+      await route.fulfill({ status: 204 })
+      return
+    }
+    if (path.endsWith('/review')) {
+      submittedReview = route.request().postDataJSON()
+      game = {
+        ...game,
+        currentPlayerId: partnerId,
+        scores: { you: 1, partner: 0 },
+        round: {
+          ...game.round!,
+          status: 'completed',
+          isCorrect: true,
+          score: 1,
+          completedAt: '2026-09-18T12:01:00Z',
+        },
+      }
+    }
+    await route.fulfill({ json: { data: game } })
+  })
+
+  await page.goto(`/games/explain-word/${relationshipId}`)
+  await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Meeting Place home' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Lobby' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Does this answer count?' })).toBeVisible()
+  await expect(page.getByText('Answer review', { exact: true })).toHaveCount(0)
+  expect(
+    await page.locator('.guess-review-card').evaluate((element) => element.clientWidth),
+  ).toBeLessThanOrEqual(720)
+  expect(
+    await page.locator('.guess-review-card').evaluate((element) => element.clientHeight),
+  ).toBeLessThanOrEqual(240)
+  await expect(page.getByText('travel document', { exact: true })).toBeVisible()
+  await expect(page.getByText('passport', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Approve answer' }).click()
+
+  expect(submittedReview).toEqual({ approved: true })
+  await expect(page.getByRole('status', { name: 'Round 1: Correct!' })).toBeVisible()
+  await expect(page.getByText('travel document', { exact: true })).toBeVisible()
+  await expect(page.getByText('passport', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Score')).toContainText('You1:Bob0')
 })
 
 test('gives both live-call players a final 30-second guessing phase', async ({ browser }) => {

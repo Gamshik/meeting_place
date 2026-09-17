@@ -162,6 +162,11 @@ export const api = {
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/guess`,
       { method: 'POST', body: JSON.stringify({ guess }) },
     ),
+  reviewWordGuess: (partnershipId: string, roundId: string, approved: boolean) =>
+    apiRequest<DataResponse<WordGame>>(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/review`,
+      { method: 'POST', body: JSON.stringify({ approved }) },
+    ),
   getWordRoundAudio: (partnershipId: string, roundId: string) =>
     apiRequest<DataResponse<{ url: string }>>(
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/audio`,

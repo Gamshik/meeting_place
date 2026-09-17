@@ -98,6 +98,7 @@ export function ExplainWordGamePage() {
   )
   const wantsNewGame = searchParams.get('new') === '1'
   const showModeSelection = !game || (wantsNewGame && game.status === 'finished')
+  const isRoom = Boolean(game && !showModeSelection)
 
   useEffect(() => {
     if (wantsNewGame && game && game.status !== 'finished') {
@@ -267,6 +268,7 @@ export function ExplainWordGamePage() {
   return (
     <AppShell
       profile={profile}
+      variant={isRoom ? 'room' : 'default'}
       onNavigate={() => {
         if (game?.status === 'active' || game?.status === 'paused') {
           void api.leaveWordGame(partnershipId).catch(() => undefined)
@@ -274,19 +276,21 @@ export function ExplainWordGamePage() {
       }}
     >
       <header
-        className={`game-page-header ${game && game.status !== 'pending' ? 'is-active' : ''}`}
+        className={`game-page-header ${game && game.status !== 'pending' ? 'is-active' : ''} ${isRoom ? 'is-room' : ''}`}
       >
         <div className="game-page-heading">
           <Link
             className="game-back-link"
             to="/"
+            aria-label="Lobby"
+            title="Return to lobby"
             onClick={() => {
               if (game?.status === 'active' || game?.status === 'paused') {
                 void api.leaveWordGame(partnershipId).catch(() => undefined)
               }
             }}
           >
-            ← Games
+            <RoomControlIcon icon="leave" />
           </Link>
           <div className="game-title-row">
             <div>
@@ -295,6 +299,9 @@ export function ExplainWordGamePage() {
           </div>
         </div>
         <div className="game-header-tools">
+          {game && game.status !== 'pending' && !showModeSelection ? (
+            <Scoreboard game={game} />
+          ) : null}
           {game && !showModeSelection && game.status !== 'finished' ? (
             <GameTimeSettings
               key={`${game.id}:${game.explanationDurationSeconds}`}
@@ -303,9 +310,6 @@ export function ExplainWordGamePage() {
               isCreator={game.requestedById === session.user.id}
               onSave={(seconds) => run(() => api.updateWordGameSettings(partnershipId, seconds))}
             />
-          ) : null}
-          {game && game.status !== 'pending' && !showModeSelection ? (
-            <Scoreboard game={game} />
           ) : null}
           <button
             type="button"
@@ -320,11 +324,12 @@ export function ExplainWordGamePage() {
             <button
               type="button"
               className="game-end-control"
+              aria-label={isBusy ? 'Ending game' : 'End game'}
+              title="End game"
               disabled={isBusy}
               onClick={() => setShowEndConfirmation(true)}
             >
-              <span aria-hidden="true" />
-              {isBusy ? 'Ending…' : 'End game'}
+              <RoomControlIcon icon="finish" />
             </button>
           ) : game?.status === 'finished' && !showModeSelection ? (
             <button
@@ -399,6 +404,7 @@ function GameBoard({
 }) {
   const round = game.round
   const openRound = round?.status === 'explaining' || round?.status === 'awaiting_guess'
+  const needsGuessReview = round?.status === 'awaiting_guess' && round.guess !== null
   const sessionLocked = game.status !== 'active'
 
   return (
@@ -415,6 +421,15 @@ function GameBoard({
             ) : (
               <WaitingCard compact name={game.partner.displayName} title="Next word incoming" />
             )
+          ) : needsGuessReview ? (
+            <GuessReviewCard
+              disabled={isBusy || sessionLocked}
+              game={game}
+              userId={userId}
+              onReview={(approved) =>
+                run(() => api.reviewWordGuess(partnershipId, round.id, approved))
+              }
+            />
           ) : game.mode === 'live_call' ? (
             <LiveCallRound
               key={round.id}
@@ -441,7 +456,7 @@ function GameBoard({
               }
             />
           )}
-          {round && !openRound ? <RoundSummary game={game} userId={userId} /> : null}
+          {round && !openRound ? <RoundOutcome key={round.id} round={round} /> : null}
         </div>
       ) : null}
       {game.status === 'finished' && (game.rounds?.length ?? 0) > 0 ? (
@@ -540,8 +555,12 @@ function GameTimeSettings({
 
   if (!isCreator) {
     return (
-      <div className="game-time-readout" title="The game creator controls this setting">
-        <span>Explain</span>
+      <div
+        className="game-time-readout"
+        aria-label={`Explanation time: ${formatDuration(game.explanationDurationSeconds)}`}
+        title="The game creator controls this setting"
+      >
+        <RoomControlIcon icon="timer" />
         <strong>{formatDuration(game.explanationDurationSeconds)}</strong>
       </div>
     )
@@ -550,7 +569,7 @@ function GameTimeSettings({
   return (
     <details className="game-time-settings" ref={details}>
       <summary aria-label="Change explanation time" ref={summary}>
-        <span>Explain</span>
+        <RoomControlIcon icon="timer" />
         <strong>{formatDuration(game.explanationDurationSeconds)}</strong>
         <i aria-hidden="true">⌄</i>
       </summary>
@@ -647,7 +666,7 @@ function DurationPicker({
             onBlur={commitDraft}
             onChange={(event) => setDraft(event.currentTarget.value)}
           />
-          seconds
+          sec
         </span>
       </label>
     </fieldset>
@@ -693,7 +712,8 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           </button>
         </div>
         <p id="game-rules-description" className="sr-only">
-          Choose a topic, explain the word, let your partner guess, then switch roles.
+          Choose a topic, explain the word, let your partner guess, review synonyms, then switch
+          roles.
         </p>
         <ol className="rules-steps">
           <li>
@@ -718,7 +738,7 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
               <RulesStepIcon step="guess" />
             </span>
             <strong>Partner guesses</strong>
-            <small>+1 if correct</small>
+            <small>Review synonyms</small>
           </li>
           <li>
             <span className="rules-step-number">4</span>
@@ -733,12 +753,12 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           <div>
             <span aria-hidden="true">↗</span>
             <strong>Live call</strong>
-            <small>5s prepare · 30s guess</small>
+            <small>Talk together</small>
           </div>
           <div>
             <span aria-hidden="true">●</span>
             <strong>Recorded</strong>
-            <small>Word check · 90s guess</small>
+            <small>Reply later</small>
           </div>
         </div>
       </section>
@@ -819,17 +839,12 @@ function EndGameDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="end-game-title"
-        aria-describedby="end-game-description"
         className="game-dialog end-game-dialog"
       >
-        <span className="end-game-symbol" aria-hidden="true">
-          ■
-        </span>
-        <h2 id="end-game-title">Finish for both players?</h2>
-        <p id="end-game-description">
-          Both players will leave the game immediately. The final score will remain available to
-          review, but the game cannot be resumed.
-        </p>
+        <div className="end-game-heading">
+          <EndGameArtwork />
+          <h2 id="end-game-title">End game?</h2>
+        </div>
         <div className="game-dialog-actions">
           <button
             ref={cancelButton}
@@ -846,10 +861,29 @@ function EndGameDialog({
             disabled={isBusy}
             onClick={onConfirm}
           >
-            {isBusy ? 'Ending…' : 'End game for everyone'}
+            {isBusy ? 'Ending…' : 'End game'}
           </button>
         </div>
       </section>
+    </div>
+  )
+}
+
+function EndGameArtwork() {
+  return (
+    <div className="end-game-artwork" aria-hidden="true">
+      <span className="end-game-player is-left">
+        <i />
+      </span>
+      <span className="end-game-link">
+        <i />
+        <i />
+        <i />
+      </span>
+      <span className="end-game-break">×</span>
+      <span className="end-game-player is-right">
+        <i />
+      </span>
     </div>
   )
 }
@@ -1011,12 +1045,23 @@ function GameInvitation({
         <i>{isRequester ? '…' : '!'}</i>
       </div>
       <div className="game-invitation-copy">
-        {!isRequester ? <GameModeBadge mode={game.mode} /> : null}
+        {isRequester ? (
+          <span className="game-invitation-status">Invitation sent</span>
+        ) : (
+          <GameModeBadge mode={game.mode} />
+        )}
         <h2>
           {isRequester
             ? `Waiting for ${game.partner.displayName}`
             : `${game.partner.displayName} invited you`}
         </h2>
+        {isRequester ? (
+          <span className="game-invitation-waiting-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        ) : null}
         {!isRequester ? (
           <p>Join the shared game now. The player who sent the invitation will explain first.</p>
         ) : null}
@@ -1098,9 +1143,28 @@ function NewRoundCard({
         className="button button-accent new-round-action"
         type="button"
         disabled={disabled}
+        aria-label={disabled ? 'Creating a word' : 'Give me a word'}
+        title={disabled ? 'Creating a word…' : 'Give me a word'}
+        data-busy={disabled ? 'true' : undefined}
         onClick={() => void onCreate(topic)}
       >
-        {disabled ? 'Creating…' : 'Give me a word'}
+        <svg className="word-deal-icon" viewBox="0 0 108 66" aria-hidden="true">
+          <g className="word-deal-card word-deal-card-back">
+            <rect x="18" y="15" width="52" height="38" rx="7" />
+          </g>
+          <g className="word-deal-card word-deal-card-middle">
+            <rect x="29" y="11" width="52" height="38" rx="7" />
+            <path d="M42 23h25M42 30h16" />
+          </g>
+          <g className="word-deal-card word-deal-card-front">
+            <rect x="40" y="7" width="52" height="38" rx="7" />
+            <path className="word-deal-question" d="M62 19c1-5 11-5 11 1 0 5-6 4-6 9M67 35h.01" />
+          </g>
+          <path className="word-deal-arrow" d="M20 58c21 7 56 4 73-8m0 0-2 8m2-8-8-2" />
+          <path className="word-deal-spark word-deal-spark-one" d="M99 7v9M95 11.5h8" />
+          <path className="word-deal-spark word-deal-spark-two" d="M8 27v7M4.5 30.5h7" />
+        </svg>
+        <span className="sr-only">{disabled ? 'Creating a word' : 'Give me a word'}</span>
       </button>
     </section>
   )
@@ -1439,9 +1503,26 @@ function LiveCallRound({
           <SecretWordBrief round={round} />
         </section>
       ) : isPreparing ? (
-        <section className="game-surface live-listener-card" role="status">
-          <h2>Listen for {game.partner.displayName}’s clue</h2>
-          <p>The answer field will appear when the preparation timer ends.</p>
+        <section
+          className="live-ready-cue"
+          role="status"
+          aria-label={`Get ready to listen to ${game.partner.displayName}’s clue`}
+        >
+          <div className="live-ready-person is-partner" aria-hidden="true">
+            <span>{game.partner.displayName.trim().charAt(0).toLocaleUpperCase()}</span>
+            <strong>{game.partner.displayName}</strong>
+          </div>
+          <div className="live-ready-wave" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </div>
+          <div className="live-ready-person is-you" aria-hidden="true">
+            <span>You</span>
+            <strong>Listen</strong>
+          </div>
         </section>
       ) : isExpired ? (
         <WaitingCard name="the next round" message="No guess was submitted before time ran out." />
@@ -1782,8 +1863,10 @@ function GuessCard({
   const guessInputId = `word-guess-${roundId}`
 
   return (
-    <section className="game-surface">
-      <h2 className="mt-3 font-serif text-3xl font-semibold">What word did they describe?</h2>
+    <section className={`game-surface guess-card ${liveCall ? 'is-live' : 'is-recorded'}`}>
+      <div className="guess-card-heading">
+        <h2>What word did they describe?</h2>
+      </div>
       {!liveCall && audioUrl ? (
         <div className="mt-6 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
           <p className="mb-2 text-sm font-medium text-stone-700">Listen to their explanation</p>
@@ -1804,24 +1887,29 @@ function GuessCard({
           “{transcript}”
         </blockquote>
       ) : null}
-      <form className="mt-6" autoComplete="off" onSubmit={submit}>
-        <label className="text-sm font-medium" htmlFor={guessInputId}>
+      <form className="guess-card-form" autoComplete="off" onSubmit={submit}>
+        <label className="sr-only" htmlFor={guessInputId}>
           Your answer
         </label>
-        <div className="mt-2 flex gap-2">
+        <div className="guess-card-controls">
           <input
             id={guessInputId}
             name={guessInputId}
             type="text"
-            className="input"
+            className="input guess-card-input"
             autoComplete="off"
+            placeholder="Type your answer"
             value={guess}
             maxLength={80}
             required
             disabled={disabled}
             onChange={(event) => setGuess(event.target.value)}
           />
-          <button className="button button-primary shrink-0" disabled={disabled} type="submit">
+          <button
+            className="button button-primary guess-card-submit"
+            disabled={disabled}
+            type="submit"
+          >
             {disabled ? 'Checking…' : 'Submit guess'}
           </button>
         </div>
@@ -1830,73 +1918,106 @@ function GuessCard({
   )
 }
 
-function RoundSummary({ game, userId }: { game: WordGame; userId: string }) {
-  const round = game.round!
-  const isFinished = round.status === 'completed' || round.status === 'skipped'
-  const isMyTurn = round.explainerId === userId
+function RoundOutcome({ round }: { round: NonNullable<WordGame['round']> }) {
+  const outcome = round.status === 'skipped' ? 'skipped' : round.isCorrect ? 'success' : 'missed'
+  const answer = round.status === 'skipped' ? 'Skipped' : round.guess || 'No answer'
+  const label =
+    outcome === 'success' ? 'Correct!' : outcome === 'skipped' ? 'Word skipped' : 'Not quite'
+
   return (
-    <section className="round-recap" aria-label={`Round ${round.turnNumber} summary`}>
-      <div className="round-recap-heading">
+    <section
+      className={`round-outcome round-outcome-${outcome}`}
+      aria-label={`Round ${round.turnNumber}: ${label}`}
+      aria-live="polite"
+      role="status"
+    >
+      <div className="round-outcome-verdict">
+        <span className="round-outcome-mark" aria-hidden="true">
+          {outcome === 'success' ? '✓' : outcome === 'skipped' ? '↷' : '×'}
+        </span>
         <div>
-          <p>Round {round.turnNumber}</p>
-          <h2>{isMyTurn ? 'You explain' : `${game.partner.displayName} explains`}</h2>
-        </div>
-        <div className="round-recap-statuses">
-          {round.explanationMethod ? (
-            <span className="round-method">
-              {round.explanationMethod === 'live' ? 'Live clue' : 'Recorded clue'}
-            </span>
-          ) : null}
-          <span className={`round-status round-status-${round.status}`}>
-            {round.status === 'completed'
-              ? 'Complete'
-              : round.status === 'skipped'
-                ? 'Skipped'
-                : round.status === 'awaiting_guess'
-                  ? 'Guessing'
-                  : 'Explaining'}
-          </span>
+          <small>Round {round.turnNumber}</small>
+          <strong>{label}</strong>
         </div>
       </div>
-      {isFinished ? (
-        <div className="round-recap-result">
+      <div className="round-outcome-words">
+        <div>
+          <small>Word</small>
+          <strong>{round.secretWord}</strong>
+        </div>
+        <span className="round-outcome-arrow" aria-hidden="true">
+          →
+        </span>
+        <div>
+          <small>Answer</small>
+          <strong>{answer}</strong>
+        </div>
+      </div>
+      <div className="round-outcome-sparks" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
+    </section>
+  )
+}
+
+function GuessReviewCard({
+  disabled,
+  game,
+  onReview,
+  userId,
+}: {
+  disabled: boolean
+  game: WordGame
+  onReview: (approved: boolean) => Promise<boolean>
+  userId: string
+}) {
+  const round = game.round!
+  const isExplainer = round.explainerId === userId
+
+  return (
+    <section
+      className={`game-surface guess-review-card ${isExplainer ? 'is-explainer' : 'is-guesser'}`}
+      aria-live="polite"
+    >
+      <div className="guess-review-heading">
+        <h2>{isExplainer ? 'Does this answer count?' : 'Waiting for answer review'}</h2>
+      </div>
+      <div className="guess-review-comparison">
+        {isExplainer ? (
           <div>
-            <span>Word</span>
+            <span>Secret word</span>
             <strong>{round.secretWord}</strong>
           </div>
-          {round.status === 'skipped' ? (
-            <p className="round-recap-message">This word was skipped.</p>
-          ) : (
-            <>
-              <div>
-                <span>Guess</span>
-                <strong>{round.guess}</strong>
-              </div>
-              <p className={`round-recap-message ${round.isCorrect ? 'is-correct' : 'is-missed'}`}>
-                {round.isCorrect
-                  ? 'Correct — one point!'
-                  : !round.guess
-                    ? 'Time’s up — no point this round.'
-                    : game.mode === 'recorded' && round.usedForbiddenWord
-                      ? 'No point — the secret word was used.'
-                      : 'Not quite this time.'}
-              </p>
-            </>
-          )}
+        ) : null}
+        <div>
+          <span>{isExplainer ? `${game.partner.displayName} guessed` : 'Your guess'}</span>
+          <strong>{round.guess}</strong>
         </div>
-      ) : round.transcript ? (
-        <p className="round-transcript">{round.transcript}</p>
-      ) : round.explanationMethod === 'live' ? (
-        <p className="round-live-note">The clue was shared in your live call.</p>
-      ) : null}
-      {isMyTurn && round.coachScore !== null ? (
-        <details className="coaching-disclosure">
-          <summary>
-            <span>AI coaching · {round.coachScore}/100</span>
-            <span aria-hidden="true">+</span>
-          </summary>
-          <p>{round.coachFeedback}</p>
-        </details>
+      </div>
+      {isExplainer ? (
+        <div className="guess-review-actions">
+          <button
+            className="button button-primary"
+            disabled={disabled}
+            type="button"
+            onClick={() => void onReview(true)}
+          >
+            {disabled ? 'Saving…' : 'Approve answer'}
+          </button>
+          <button
+            className="button button-secondary"
+            disabled={disabled}
+            type="button"
+            onClick={() => void onReview(false)}
+          >
+            Keep as incorrect
+          </button>
+        </div>
       ) : null}
     </section>
   )
@@ -1962,17 +2083,43 @@ function GameModeBadge({ mode }: { mode: WordGameMode }) {
 
 function Scoreboard({ game }: { game: WordGame }) {
   return (
-    <div className="game-scoreboard" aria-label="Score">
+    <div className="game-scoreboard" aria-label="Score" aria-live="polite">
       <div className="is-you">
         <p>You</p>
-        <strong>{game.scores.you}</strong>
+        <strong key={`you-${game.scores.you}`}>{game.scores.you}</strong>
       </div>
       <span aria-hidden="true">:</span>
-      <div>
+      <div className="is-partner">
         <p>{game.partner.displayName}</p>
-        <strong>{game.scores.partner}</strong>
+        <strong key={`partner-${game.scores.partner}`}>{game.scores.partner}</strong>
       </div>
     </div>
+  )
+}
+
+function RoomControlIcon({ icon }: { icon: 'finish' | 'leave' | 'timer' }) {
+  if (icon === 'leave') {
+    return (
+      <svg className="room-control-icon" viewBox="0 0 28 28" aria-hidden="true">
+        <path className="room-lobby-home" d="M4 13 14 4l10 9v11H4Z" />
+        <path className="room-lobby-door" d="M11 24v-7h6v7" />
+      </svg>
+    )
+  }
+  if (icon === 'timer') {
+    return (
+      <svg className="room-control-icon" viewBox="0 0 28 28" aria-hidden="true">
+        <path d="M10 3h8M14 3v3M21.5 7.5l2 2" />
+        <circle cx="14" cy="16" r="9" />
+        <path className="room-timer-hand" d="M14 16V10m0 6 4 2" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="room-control-icon" viewBox="0 0 28 28" aria-hidden="true">
+      <circle cx="14" cy="14" r="10" />
+      <rect className="room-end-stop" x="10" y="10" width="8" height="8" rx="1" />
+    </svg>
   )
 }
 
