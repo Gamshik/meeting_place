@@ -122,7 +122,7 @@ export function GameWorkspace({
                       void onAction(friend, action).finally(() => setPendingFriend(null))
                     }}
                   >
-                    {action === 'invite' ? 'Start' : action === 'join' ? 'Join' : 'Continue'}
+                    Play
                   </button>
                 </article>
               )

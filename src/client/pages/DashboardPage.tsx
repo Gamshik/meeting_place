@@ -345,13 +345,6 @@ export function DashboardPage() {
             if (params.get('add') === '1') setParams({ view: 'friends' })
           }}
         >
-          <div className="invite-intro">
-            <span aria-hidden="true">@</span>
-            <div>
-              <strong>One username. No directory.</strong>
-              <p>We’ll send a private request so you can practise together.</p>
-            </div>
-          </div>
           <InvitePartnerForm
             disabled={isBusy}
             onInvite={async (username) => {
@@ -624,7 +617,9 @@ function InvitePartnerForm({
 
   return (
     <form className="invite-form" onSubmit={handleSubmit}>
-      <label htmlFor="partner-username">Friend’s username</label>
+      <label className="sr-only" htmlFor="partner-username">
+        Friend’s username
+      </label>
       <div className="invite-input">
         <span aria-hidden="true">@</span>
         <input
@@ -639,10 +634,14 @@ function InvitePartnerForm({
           pattern="[A-Za-z0-9_]+"
           required
         />
-        <button className="button button-primary" type="submit" disabled={isSubmitting || disabled}>
-          {isSubmitting ? 'Sending…' : 'Send invite'}
-        </button>
       </div>
+      <button
+        className="button button-primary invite-submit"
+        type="submit"
+        disabled={isSubmitting || disabled}
+      >
+        {isSubmitting ? 'Sending…' : 'Send invite'}
+      </button>
     </form>
   )
 }

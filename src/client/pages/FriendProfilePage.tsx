@@ -63,9 +63,6 @@ export function FriendProfilePage() {
         <header className="friend-profile-heading">
           <ProfileAvatar profile={friend} />
           <div className="friend-profile-identity">
-            <p className="friend-profile-kicker">
-              <span aria-hidden="true" /> Practice partner
-            </p>
             <h1>{friend?.displayName ?? 'Friend profile'}</h1>
             {friend ? <p>@{friend.username}</p> : <p>Loading profile details…</p>}
           </div>

@@ -38,53 +38,54 @@ export function ProfileEditor({
 
   return (
     <div className="account-profile-section">
-      <header className="account-profile-heading">
-        <div className="account-profile-avatar">
-          {profile.avatarUrl ? (
-            <img src={profile.avatarUrl} alt="" referrerPolicy="no-referrer" />
-          ) : (
-            <span>{profile.displayName.slice(0, 1).toUpperCase()}</span>
-          )}
-        </div>
-        <div className="account-profile-identity">
-          <p className="account-profile-kicker">
-            <span aria-hidden="true" /> Your profile
-          </p>
-          <h1>{profile.displayName}</h1>
-          <div className="account-profile-handle">
-            <span>@{profile.username}</span>
+      <div className="account-profile-heading-shell" data-collapsed={isEditing} inert={isEditing}>
+        <header className="account-profile-heading" aria-hidden={isEditing}>
+          <div className="account-profile-avatar">
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt="" referrerPolicy="no-referrer" />
+            ) : (
+              <span>{profile.displayName.slice(0, 1).toUpperCase()}</span>
+            )}
+          </div>
+          <div className="account-profile-identity">
+            <h1>{profile.displayName}</h1>
+            <div className="account-profile-handle">
+              <span>@{profile.username}</span>
+              <button
+                type="button"
+                className="text-action account-copy-handle"
+                aria-label="Copy username"
+                onClick={onCopy}
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+          <div className="account-profile-actions">
             <button
               type="button"
-              className="text-action account-copy-handle"
-              aria-label="Copy username"
-              onClick={onCopy}
+              className="button button-secondary account-profile-edit-btn"
+              onClick={onToggleEdit}
+              aria-expanded={isEditing}
             >
-              Copy
+              Profile settings
+            </button>
+            <button
+              type="button"
+              className="profile-signout"
+              disabled={disabled}
+              onClick={onSignOut}
+            >
+              Sign out
             </button>
           </div>
-        </div>
-        <div className="account-profile-actions">
-          <button
-            type="button"
-            className="button button-secondary account-profile-edit-btn"
-            onClick={onToggleEdit}
-            aria-expanded={isEditing}
-          >
-            {isEditing ? 'Close settings' : 'Profile settings'}
-          </button>
-          <button type="button" className="profile-signout" disabled={disabled} onClick={onSignOut}>
-            Sign out
-          </button>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {isEditing && (
         <section className="profile-editor-drawer" aria-labelledby="profile-settings-title">
           <div className="profile-editor-drawer-header">
-            <div>
-              <h2 id="profile-settings-title">Profile settings</h2>
-              <p>Manage the details your practice partners see.</p>
-            </div>
+            <h2 id="profile-settings-title">Profile settings</h2>
             <button
               type="button"
               className="icon-button"
@@ -147,9 +148,7 @@ export function ProfileEditor({
                 Sign out
               </button>
               <div className="profile-save-area">
-                <p aria-live="polite">
-                  {dirty ? 'You have unsaved changes' : 'Everything is saved'}
-                </p>
+                {dirty && <p aria-live="polite">You have unsaved changes</p>}
                 <div className="row-actions">
                   {dirty && (
                     <button

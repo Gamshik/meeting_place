@@ -75,12 +75,6 @@ export function ProfileActivityPanel({
           <h2 id="activity-heading">
             {owner ? 'Your practice activity' : `${firstName(displayName)}’s practice activity`}
           </h2>
-          <p>
-            Every square is one day. Stronger colour means more meaningful practice actions.
-            {activity
-              ? ` Days follow ${owner ? 'your' : `${firstName(displayName)}’s`} ${activity.timeZone} timezone.`
-              : ' Days follow the profile owner’s saved timezone.'}
-          </p>
         </div>
         <div className="activity-controls">
           <div className="activity-view-switch" aria-label="Calendar view">

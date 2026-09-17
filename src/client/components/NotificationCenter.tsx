@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useCommunity } from '../community/CommunityContext'
@@ -163,18 +164,32 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
               </article>
             ))}
             {incomingGames.map(({ item, partnership, game }) => (
-              <article className="notification-item" key={`${game.id}:${item.partnershipId}`}>
-                <p>
-                  <strong>{partnership.partner.displayName}</strong> invited you to play{' '}
-                  {game.title}.
-                </p>
-                <p className="notification-game-mode">{wordGameModeLabel(item.mode)}</p>
+              <article
+                className="notification-item notification-game-request"
+                key={`${game.id}:${item.partnershipId}`}
+              >
+                <div className="notification-game-request-heading">
+                  <span className="notification-game-avatar" aria-hidden="true">
+                    {partnership.partner.displayName.trim().charAt(0).toUpperCase() || '?'}
+                  </span>
+                  <div>
+                    <span className="notification-game-eyebrow">Game invitation</span>
+                    <p>
+                      <strong>{partnership.partner.displayName}</strong> invited you to play{' '}
+                      {game.title}.
+                    </p>
+                  </div>
+                </div>
+                <div className="notification-game-summary">
+                  <strong>{game.title}</strong>
+                  <span className="notification-game-mode">{wordGameModeLabel(item.mode)}</span>
+                </div>
                 {hasOngoingGame ? (
                   <p className="notification-restriction">
                     Finish your current game before accepting another invitation.
                   </p>
                 ) : null}
-                <div className="row-actions">
+                <div className="row-actions notification-game-actions">
                   <button
                     className="button button-primary"
                     disabled={pending !== null || hasOngoingGame}
@@ -207,34 +222,37 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
           </div>
         </section>
       )}
-      {gameRequest ? (
-        <GameRequestToast
-          acceptBlocked={hasOngoingGame}
-          gameTitle={gameRequest.game.title}
-          mode={wordGameModeLabel(gameRequest.item.mode)}
-          partnerName={gameRequest.partnership.partner.displayName}
-          pending={pending === gameRequest.item.partnershipId}
-          disabled={pending !== null}
-          onDismiss={() =>
-            setDismissedGameRequests((current) => [
-              ...current,
-              `${gameRequest.item.gameId}:${gameRequest.item.partnershipId}`,
-            ])
-          }
-          onJoin={() =>
-            void act(
-              gameRequest.item.partnershipId,
-              () => gameRequest.game.accept(gameRequest.item.partnershipId),
-              `${gameRequest.game.path}/${gameRequest.item.partnershipId}`,
-            )
-          }
-          onDecline={() =>
-            void act(gameRequest.item.partnershipId, () =>
-              gameRequest.game.decline(gameRequest.item.partnershipId),
-            )
-          }
-        />
-      ) : null}
+      {gameRequest
+        ? createPortal(
+            <GameRequestToast
+              acceptBlocked={hasOngoingGame}
+              gameTitle={gameRequest.game.title}
+              mode={wordGameModeLabel(gameRequest.item.mode)}
+              partnerName={gameRequest.partnership.partner.displayName}
+              pending={pending === gameRequest.item.partnershipId}
+              disabled={pending !== null}
+              onDismiss={() =>
+                setDismissedGameRequests((current) => [
+                  ...current,
+                  `${gameRequest.item.gameId}:${gameRequest.item.partnershipId}`,
+                ])
+              }
+              onJoin={() =>
+                void act(
+                  gameRequest.item.partnershipId,
+                  () => gameRequest.game.accept(gameRequest.item.partnershipId),
+                  `${gameRequest.game.path}/${gameRequest.item.partnershipId}`,
+                )
+              }
+              onDecline={() =>
+                void act(gameRequest.item.partnershipId, () =>
+                  gameRequest.game.decline(gameRequest.item.partnershipId),
+                )
+              }
+            />,
+            document.body,
+          )
+        : null}
     </div>
   )
 }

@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import type { Profile, WordGame, WordGameMode } from '../../shared/contracts'
@@ -284,7 +292,6 @@ export function ExplainWordGamePage() {
             <div>
               <h1>Explain the word</h1>
             </div>
-            {game && !showModeSelection ? <GameModeBadge mode={game.mode} /> : null}
           </div>
         </div>
         <div className="game-header-tools">
@@ -406,10 +413,7 @@ function GameBoard({
                 onCreate={(topic) => run(() => api.createWordRound(partnershipId, topic))}
               />
             ) : (
-              <WaitingCard
-                name={game.partner.displayName}
-                message="It is their turn to choose the next word."
-              />
+              <WaitingCard compact name={game.partner.displayName} title="Next word incoming" />
             )
           ) : game.mode === 'live_call' ? (
             <LiveCallRound
@@ -531,6 +535,8 @@ function GameTimeSettings({
   onSave: (seconds: number) => Promise<boolean>
 }) {
   const [value, setValue] = useState(game.explanationDurationSeconds)
+  const details = useRef<HTMLDetailsElement>(null)
+  const summary = useRef<HTMLElement>(null)
 
   if (!isCreator) {
     return (
@@ -542,16 +548,26 @@ function GameTimeSettings({
   }
 
   return (
-    <details className="game-time-settings">
-      <summary aria-label="Change explanation time">
+    <details className="game-time-settings" ref={details}>
+      <summary aria-label="Change explanation time" ref={summary}>
         <span>Explain</span>
         <strong>{formatDuration(game.explanationDurationSeconds)}</strong>
         <i aria-hidden="true">⌄</i>
       </summary>
       <div className="game-time-settings-popover">
-        <div>
-          <strong>Explanation time</strong>
-          <p>Changes apply from the next round for both players.</p>
+        <div className="game-time-settings-heading">
+          <strong className="game-time-settings-title">Explanation time</strong>
+          <button
+            type="button"
+            className="game-time-settings-close"
+            aria-label="Close explanation time"
+            onClick={() => {
+              if (details.current) details.current.open = false
+              summary.current?.focus()
+            }}
+          >
+            ×
+          </button>
         </div>
         <DurationPicker
           compact
@@ -560,14 +576,16 @@ function GameTimeSettings({
           value={value}
           onChange={setValue}
         />
-        <button
-          type="button"
-          className="button button-primary"
-          disabled={disabled || value === game.explanationDurationSeconds}
-          onClick={() => void onSave(value)}
-        >
-          {disabled ? 'Saving…' : 'Save for next round'}
-        </button>
+        {value !== game.explanationDurationSeconds ? (
+          <button
+            type="button"
+            className="button button-primary"
+            disabled={disabled}
+            onClick={() => void onSave(value)}
+          >
+            {disabled ? 'Saving…' : 'Save for next round'}
+          </button>
+        ) : null}
       </div>
     </details>
   )
@@ -598,7 +616,7 @@ function DurationPicker({
 
   return (
     <fieldset className={`duration-picker ${compact ? 'is-compact' : ''}`} disabled={disabled}>
-      <legend>{compact ? 'Quick choices' : 'Explanation time'}</legend>
+      <legend className={compact ? 'sr-only' : undefined}>Explanation time</legend>
       <div className="duration-presets" aria-label="Explanation time presets">
         {EXPLANATION_PRESETS.map((seconds) => (
           <button
@@ -674,49 +692,99 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
             ×
           </button>
         </div>
-        <p id="game-rules-description" className="rules-intro">
-          Take turns explaining and guessing. One clear clue can be enough.
+        <p id="game-rules-description" className="sr-only">
+          Choose a topic, explain the word, let your partner guess, then switch roles.
         </p>
         <ol className="rules-steps">
           <li>
-            <span>1</span>
-            <div>
-              <strong>Choose a topic</strong>
-              <p>You receive a private word that your partner cannot see.</p>
-            </div>
+            <span className="rules-step-number">1</span>
+            <span className="rules-step-icon" aria-hidden="true">
+              <RulesStepIcon step="topic" />
+            </span>
+            <strong>Choose a topic</strong>
+            <small>Get a word</small>
           </li>
           <li>
-            <span>2</span>
-            <div>
-              <strong>Explain naturally</strong>
-              <p>Speak for the game’s chosen time without saying the secret word.</p>
-            </div>
+            <span className="rules-step-number">2</span>
+            <span className="rules-step-icon" aria-hidden="true">
+              <RulesStepIcon step="explain" />
+            </span>
+            <strong>Explain naturally</strong>
+            <small>Don’t say it</small>
           </li>
           <li>
-            <span>3</span>
-            <div>
-              <strong>Your partner guesses</strong>
-              <p>They use the clue from your call, or play the recording in Recorded practice.</p>
-            </div>
+            <span className="rules-step-number">3</span>
+            <span className="rules-step-icon" aria-hidden="true">
+              <RulesStepIcon step="guess" />
+            </span>
+            <strong>Partner guesses</strong>
+            <small>+1 if correct</small>
           </li>
           <li>
-            <span>4</span>
-            <div>
-              <strong>Switch roles</strong>
-              <p>A correct guess earns the explainer one point, then the turn changes.</p>
-            </div>
+            <span className="rules-step-number">4</span>
+            <span className="rules-step-icon" aria-hidden="true">
+              <RulesStepIcon step="switch" />
+            </span>
+            <strong>Switch roles</strong>
+            <small>Next turn</small>
           </li>
         </ol>
-        <div className="rules-tip">
-          <span aria-hidden="true">!</span>
-          <p>
-            Recorded practice checks forbidden words automatically. Live call gives both players
-            five seconds to prepare, the creator’s chosen time for the clue, and 30 final seconds to
-            guess. In Recorded practice, the guesser gets 90 seconds after the recording arrives.
-          </p>
+        <div className="rules-modes">
+          <div>
+            <span aria-hidden="true">↗</span>
+            <strong>Live call</strong>
+            <small>5s prepare · 30s guess</small>
+          </div>
+          <div>
+            <span aria-hidden="true">●</span>
+            <strong>Recorded</strong>
+            <small>Word check · 90s guess</small>
+          </div>
         </div>
       </section>
     </div>
+  )
+}
+
+function RulesStepIcon({ step }: { step: 'topic' | 'explain' | 'guess' | 'switch' }) {
+  const paths = {
+    topic: (
+      <>
+        <rect x="5" y="5" width="9" height="9" rx="2" />
+        <rect x="18" y="5" width="9" height="9" rx="2" />
+        <rect x="5" y="18" width="9" height="9" rx="2" />
+        <rect x="18" y="18" width="9" height="9" rx="2" />
+        <path d="m20.5 22 2 2 3-4" />
+      </>
+    ),
+    explain: (
+      <>
+        <path d="M5 7h22v15H16l-6 5v-5H5V7Z" />
+        <circle cx="10" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="16" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+        <circle cx="22" cy="14.5" r="1.4" fill="currentColor" stroke="none" />
+      </>
+    ),
+    guess: (
+      <>
+        <circle cx="10" cy="10" r="5" />
+        <path d="M3 27c1-6 3.5-10 7-10s6 4 7 10" />
+        <path d="M19 10a5 5 0 1 1 7 4.6c-2 .9-3 2-3 4" />
+        <circle cx="23" cy="23" r="1.2" fill="currentColor" stroke="none" />
+      </>
+    ),
+    switch: (
+      <>
+        <path d="M5 10h19M19 5l5 5-5 5" />
+        <path d="M27 22H8M13 17l-5 5 5 5" />
+      </>
+    ),
+  }
+
+  return (
+    <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2">
+      {paths[step]}
+    </svg>
   )
 }
 
@@ -894,20 +962,20 @@ function SessionStatus({ game, userId }: { game: WordGame; userId: string }) {
         <i />
       </div>
       <div className="session-pause-copy">
-        <h2>Game paused</h2>
-        <p>
+        <span className="session-pause-status">Game paused</span>
+        <h2>
           {reconnectingSelf
-            ? 'Trying to bring you back. Your round and recording are safe.'
+            ? 'Reconnecting you'
             : partnerLeft
-              ? `Waiting for ${game.partner.displayName}. Your round is safe.`
-              : 'Reconnecting players. Your round is safe.'}
-        </p>
+              ? `Waiting for ${game.partner.displayName}`
+              : 'Reconnecting the game'}
+        </h2>
       </div>
       <div
         className="session-pause-timer"
         aria-label={`${formatCountdown(seconds)} remaining to reconnect`}
       >
-        <span>Reconnect window</span>
+        <span>Time left</span>
         <strong>{formatCountdown(seconds)}</strong>
       </div>
     </section>
@@ -934,27 +1002,23 @@ function GameInvitation({
   const isRequester = game.requestedById === userId
   const partnerInitial = game.partner.displayName.trim().charAt(0).toUpperCase() || '?'
   return (
-    <section className={`game-invitation-card ${isRequester ? 'is-sent' : 'is-received'}`}>
+    <section
+      className={`game-invitation-card ${isRequester ? 'is-sent' : 'is-received'}`}
+      role={isRequester ? 'status' : undefined}
+    >
       <div className="game-invitation-avatar" aria-hidden="true">
         <span>{partnerInitial}</span>
         <i>{isRequester ? '…' : '!'}</i>
       </div>
       <div className="game-invitation-copy">
-        <GameModeBadge mode={game.mode} />
+        {!isRequester ? <GameModeBadge mode={game.mode} /> : null}
         <h2>
           {isRequester
             ? `Waiting for ${game.partner.displayName}`
             : `${game.partner.displayName} invited you`}
         </h2>
-        <p>
-          {isRequester
-            ? 'You are all set. The game will open automatically as soon as they accept.'
-            : 'Join the shared game now. The player who sent the invitation will explain first.'}
-        </p>
-        {isRequester ? (
-          <p className="game-invitation-live" role="status">
-            <span aria-hidden="true" /> Waiting for a response
-          </p>
+        {!isRequester ? (
+          <p>Join the shared game now. The player who sent the invitation will explain first.</p>
         ) : null}
         {!isRequester && acceptBlocked ? (
           <p className="game-lobby-blocked" role="status">
@@ -970,7 +1034,7 @@ function GameInvitation({
             disabled={disabled}
             onClick={() => void onCancel()}
           >
-            Cancel invitation
+            Cancel
           </button>
         ) : (
           <>
@@ -1023,7 +1087,10 @@ function NewRoundCard({
               checked={topic === option}
               onChange={(event) => setTopic(event.target.value)}
             />
-            <span>{option}</span>
+            <span>
+              <TopicIcon topic={option} />
+              <strong>{option}</strong>
+            </span>
           </label>
         ))}
       </fieldset>
@@ -1036,6 +1103,86 @@ function NewRoundCard({
         {disabled ? 'Creating…' : 'Give me a word'}
       </button>
     </section>
+  )
+}
+
+function TopicIcon({ topic }: { topic: string }) {
+  const paths = (() => {
+    switch (topic) {
+      case 'Everyday life':
+        return (
+          <g className="topic-icon-art topic-home-art">
+            <path d="M5 14.5 16 5l11 9.5" />
+            <path d="M8 13v13h16V13" />
+            <path className="topic-home-door" d="M13 26v-8h6v8" />
+          </g>
+        )
+      case 'Food':
+        return (
+          <>
+            <path d="M5 25h22M8 22h16" />
+            <g className="topic-food-cover">
+              <path d="M10 22a6 6 0 0 1 12 0M16 13v3" />
+              <circle cx="16" cy="10" r="2" />
+            </g>
+          </>
+        )
+      case 'Travel':
+        return (
+          <g className="topic-icon-art topic-travel-case">
+            <rect x="7" y="10" width="18" height="15" rx="2" />
+            <path className="topic-travel-handle" d="M12 10V7h8v3" />
+            <path d="M7 17h18M11 15v4M21 15v4" />
+          </g>
+        )
+      case 'Nature':
+        return (
+          <g className="topic-icon-art topic-nature-leaf">
+            <path d="M26 6C15 6 7 11 7 19c0 4 3 7 7 7 8 0 12-8 12-20Z" />
+            <path d="M6 27c4-7 9-11 16-15M13 20h6M12 21v-6" />
+          </g>
+        )
+      case 'Work and study':
+        return (
+          <>
+            <g className="topic-book-page topic-book-page-left">
+              <path d="M5 8.5c4-1 7 0 11 2.5v16c-4-2.5-7-3.5-11-2.5v-16Z" />
+              <path d="M9 14h3M9 18h3" />
+            </g>
+            <g className="topic-book-page topic-book-page-right">
+              <path d="M27 8.5c-4-1-7 0-11 2.5v16c4-2.5 7-3.5 11-2.5v-16Z" />
+              <path d="M20 14h3M20 18h3" />
+            </g>
+          </>
+        )
+      case 'Technology':
+        return (
+          <>
+            <rect x="6" y="7" width="20" height="15" rx="2" />
+            <path d="M3.5 26h25M12 26l1-4h6l1 4" />
+            <path className="topic-code-left" d="m13 12-3 2.5 3 2.5" />
+            <path className="topic-code-right" d="m19 12 3 2.5-3 2.5" />
+            <path className="topic-code-cursor" d="M16 12v5" />
+          </>
+        )
+      default:
+        return <circle cx="16" cy="16" r="10" />
+    }
+  })()
+
+  return (
+    <svg
+      className={`topic-icon topic-icon--${topic.toLowerCase().replaceAll(' ', '-')}`}
+      viewBox="0 0 32 32"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths}
+    </svg>
   )
 }
 
@@ -1265,9 +1412,11 @@ function LiveCallRound({
         remainingMs={targetTime - now}
         title={
           isPreparing
-            ? 'Prepare the clue'
+            ? 'Get ready'
             : isExplaining
-              ? 'Explain and guess'
+              ? isExplainer
+                ? 'Explain now'
+                : 'Guess now'
               : isExpired
                 ? 'Time’s up'
                 : 'Final guess'
@@ -1336,7 +1485,7 @@ function RoundClock({
     >
       <div>
         <p>{title}</p>
-        <span className={compact ? 'sr-only' : undefined}>{description}</span>
+        <span className="sr-only">{description}</span>
       </div>
       <strong role="timer">{formatCountdown(secondsRemaining)}</strong>
     </section>
@@ -1356,20 +1505,27 @@ function PhaseNotice({ description, title }: { description: string; title: strin
 }
 
 function SecretWordBrief({ round }: { round: NonNullable<WordGame['round']> }) {
+  const secretWord = round.secretWord?.trim().toLocaleLowerCase()
+  const visibleForbiddenWords = round.forbiddenWords?.filter(
+    (word) => word.trim().toLocaleLowerCase() !== secretWord,
+  )
+
   return (
     <div className="explain-brief">
       <div className="secret-word-block">
         <span>Your secret word</span>
         <h2>{round.secretWord}</h2>
       </div>
-      <div className="forbidden-words-block">
-        <p>Don’t say</p>
-        <div>
-          {round.forbiddenWords?.map((word) => (
-            <span key={word}>{word}</span>
-          ))}
+      {visibleForbiddenWords?.length ? (
+        <div className="forbidden-words-block">
+          <p>Don’t say</p>
+          <div>
+            {visibleForbiddenWords.map((word) => (
+              <span key={word}>{word}</span>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
     </div>
   )
 }
@@ -1628,20 +1784,12 @@ function GuessCard({
   return (
     <section className="game-surface">
       <h2 className="mt-3 font-serif text-3xl font-semibold">What word did they describe?</h2>
-      {liveCall ? (
-        <div className="live-guess-note">
-          <span aria-hidden="true">↗</span>
-          <div>
-            <strong>Use the clue from your call</strong>
-            <p>Type the word while your partner explains it through the meeting.</p>
-          </div>
-        </div>
-      ) : audioUrl ? (
+      {!liveCall && audioUrl ? (
         <div className="mt-6 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200">
           <p className="mb-2 text-sm font-medium text-stone-700">Listen to their explanation</p>
           <AudioPlayer src={audioUrl} label="Partner’s recorded explanation" />
         </div>
-      ) : audioAvailable && !audioError ? (
+      ) : !liveCall && audioAvailable && !audioError ? (
         <p role="status" className="mt-5 text-sm text-stone-500">
           Loading the recording…
         </p>
@@ -1754,7 +1902,39 @@ function RoundSummary({ game, userId }: { game: WordGame; userId: string }) {
   )
 }
 
-function WaitingCard({ name, message }: { name: string; message: string }) {
+function WaitingCard({
+  compact = false,
+  name,
+  message,
+  title,
+}: {
+  compact?: boolean
+  name: string
+  message?: string
+  title?: ReactNode
+}) {
+  if (compact) {
+    return (
+      <section className="game-surface game-waiting is-compact" aria-live="polite">
+        <div className="waiting-compact-copy">
+          <span className="waiting-turn-label">{name} is choosing</span>
+          <h2>{title ?? `Waiting for ${name}`}</h2>
+          {message ? <p>{message}</p> : null}
+          <span className="waiting-compact-progress" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </div>
+        <span className="waiting-word-deck" aria-hidden="true">
+          <i>?</i>
+          <i>?</i>
+          <i>?</i>
+        </span>
+      </section>
+    )
+  }
+
   return (
     <section className="game-surface game-waiting" aria-live="polite">
       <div className="waiting-presence" aria-hidden="true">
@@ -1765,8 +1945,8 @@ function WaitingCard({ name, message }: { name: string; message: string }) {
           <i />
         </span>
       </div>
-      <h2>Waiting for {name}</h2>
-      <p>{message}</p>
+      <h2>{title ?? `Waiting for ${name}`}</h2>
+      {message ? <p>{message}</p> : null}
     </section>
   )
 }
