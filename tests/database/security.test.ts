@@ -261,6 +261,85 @@ describe('database authorization and lifecycle', () => {
     await expect(rows('select * from public.word_game_rounds')).rejects.toThrow(/permission denied/)
   })
 
+  it('pauses an inexact guess for a decision by the explainer only', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+    await asUser(alice)
+    const created = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [gameId, 'Travel', 'passport', ['passport', 'passports'], ['passport', 'passports']],
+    )
+    const roundId = created.rows[0]!.result.round.id
+    await rows('select public.start_word_game_recording($1)', [roundId])
+    await rows('select public.finish_word_game_recording($1)', [roundId])
+    await rows('select public.submit_word_game_transcript($1,$2,$3,$4,$5)', [
+      roundId,
+      'You need this document to cross a border.',
+      [],
+      88,
+      'Clear and concise.',
+    ])
+
+    await asUser(bob)
+    const guessed = await db.query<{
+      result: {
+        currentPlayerId: string
+        round: { status: string; guess: string; isCorrect: boolean | null; score: number | null }
+      }
+    }>('select public.guess_word_game_round($1,$2) result', [roundId, 'travel document'])
+    expect(guessed.rows[0]!.result).toMatchObject({
+      currentPlayerId: alice,
+      round: {
+        status: 'awaiting_guess',
+        guess: 'travel document',
+        isCorrect: null,
+        score: null,
+      },
+    })
+
+    await db.exec('savepoint guesser_review_forbidden')
+    await expect(rows('select public.review_word_game_guess($1,true)', [roundId])).rejects.toThrow(
+      'word_game_guess_review_not_available',
+    )
+    await db.exec('rollback to savepoint guesser_review_forbidden; reset role')
+    await asUser(eve)
+    await db.exec('savepoint outsider_review_forbidden')
+    await expect(rows('select public.review_word_game_guess($1,true)', [roundId])).rejects.toThrow(
+      'word_game_guess_review_not_available',
+    )
+    await db.exec('rollback to savepoint outsider_review_forbidden; reset role')
+
+    await asUser(alice)
+    const reviewed = await db.query<{
+      result: {
+        currentPlayerId: string
+        scores: { you: number }
+        round: { status: string; isCorrect: boolean; score: number }
+      }
+    }>('select public.review_word_game_guess($1,true) result', [roundId])
+    expect(reviewed.rows[0]!.result).toMatchObject({
+      currentPlayerId: bob,
+      scores: { you: 1 },
+      round: { status: 'completed', isCorrect: true, score: 1 },
+    })
+
+    await db.exec('savepoint duplicate_review_forbidden')
+    await expect(rows('select public.review_word_game_guess($1,false)', [roundId])).rejects.toThrow(
+      'word_game_guess_review_not_available',
+    )
+    await db.exec('rollback to savepoint duplicate_review_forbidden')
+  })
+
   it('enforces preparation, guessing, and timeout windows in live-call games', async () => {
     await asUser(alice)
     const invitation = await invite('bob')
@@ -353,6 +432,41 @@ describe('database authorization and lifecycle', () => {
     expect(expired.rows[0]!.result).toMatchObject({
       currentPlayerId: alice,
       round: { isCorrect: false, score: 0, status: 'completed' },
+    })
+  })
+
+  it('lets the explainer skip a live-call round', async () => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      "select public.start_word_game($1,'live_call') result",
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+
+    await asUser(alice)
+    const created = await db.query<{
+      result: { round: { id: string; status: string } }
+    }>('select public.create_word_game_round($1,$2,$3,$4,$5) result', [
+      gameId,
+      'Travel',
+      'passport',
+      ['passport'],
+      ['passport'],
+    ])
+    expect(created.rows[0]!.result.round.status).toBe('awaiting_guess')
+
+    const skipped = await db.query<{
+      result: { currentPlayerId: string; round: { status: string; score: number } }
+    }>('select public.skip_word_game_round($1) result', [created.rows[0]!.result.round.id])
+    expect(skipped.rows[0]!.result).toMatchObject({
+      currentPlayerId: bob,
+      round: { status: 'skipped', score: 0 },
     })
   })
 

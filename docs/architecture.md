@@ -129,8 +129,11 @@ rounds persist the moments microphone capture starts and stops so the listening 
 the one-minute recording timer and then see when audio processing begins. Moving the round to
 `awaiting_guess` persists the explanation timestamp and starts a
 90-second playback and guessing window. The database rejects guesses outside each mode's window and
-allows either participant to atomically close an expired round. Live-call scoring
-depends on the normalized guess and uses the players' honor system for forbidden words.
+allows either participant to atomically close an expired round. An exact accepted answer completes
+the round immediately. An inexact answer pauses progression and remains hidden-word-safe while the
+explainer manually approves it as an equivalent answer or keeps it incorrect; only that explainer
+can make the atomic decision, and no AI or similarity algorithm participates in it. Live-call
+scoring depends on normalized exact answers and uses the players' honor system for forbidden words.
 
 A profile can participate in only one active or paused game at a time across all partnerships. Game
 request creation and acceptance lock both participant profile rows in stable order, then check for
@@ -160,8 +163,10 @@ the `pending` state and becomes active only when the other participant accepts. 
 recordings to mono WAV, and the Worker stores them in a private Supabase Storage bucket before
 transcription. Storage policies limit uploads to the current explainer and playback to the two active
 participants. The recording-start and explanation timestamps, transcript, word timestamps,
-recording path, and private coaching are stored on the round. The partner's normalized answer and deterministic forbidden-word detection decide the
-shared point; AI coaching never changes the official score.
+recording path, and private coaching are stored on the round. The partner's normalized answer and
+deterministic forbidden-word detection provide the automatic result. For an inexact answer, the
+explainer's stored manual review decides the shared point; AI coaching never changes the official
+score.
 
 The dashboard and game page poll the canonical game state while waiting for invitations, acceptance,
 recordings, or guesses. The game page also subscribes to participant-authorized `word_games`

@@ -84,6 +84,8 @@ export type Database = {
           guess: string | null
           id: string
           is_correct: boolean | null
+          manual_reviewed_at: string | null
+          manually_approved: boolean | null
           recording_finished_at: string | null
           recording_started_at: string | null
           score: number | null
@@ -113,6 +115,8 @@ export type Database = {
           guess?: string | null
           id?: string
           is_correct?: boolean | null
+          manual_reviewed_at?: string | null
+          manually_approved?: boolean | null
           recording_finished_at?: string | null
           recording_started_at?: string | null
           score?: number | null
@@ -346,6 +350,10 @@ export type Database = {
       }
       guess_word_game_round: {
         Args: { p_guess: string; p_round_id: string }
+        Returns: Json
+      }
+      review_word_game_guess: {
+        Args: { p_approved: boolean; p_round_id: string }
         Returns: Json
       }
       skip_word_game_round: {

@@ -365,6 +365,67 @@ describe('explain-word game API', () => {
     })
   })
 
+  it('lets the explainer manually approve an inexact answer', async () => {
+    const reviewedGame = game({
+      currentPlayerId: partnerId,
+      scores: { you: 1, partner: 0 },
+      round: round({
+        status: 'completed',
+        guess: 'travel document',
+        isCorrect: true,
+        score: 1,
+        completedAt: '2026-09-11T12:02:00+00:00',
+      }),
+    })
+    mocks.rpc.mockResolvedValueOnce({ data: reviewedGame, error: null })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/review`,
+      'POST',
+      { approved: true },
+    )
+
+    expect(response.status).toBe(200)
+    expect(mocks.rpc).toHaveBeenCalledWith('review_word_game_guess', {
+      p_round_id: roundId,
+      p_approved: true,
+    })
+    await expect(response.json()).resolves.toMatchObject({
+      data: { round: { guess: 'travel document', isCorrect: true, score: 1 } },
+    })
+  })
+
+  it('validates a manual answer review before calling the database', async () => {
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/review`,
+      'POST',
+      { approved: 'yes' },
+    )
+
+    expect(response.status).toBe(400)
+    expect(mocks.rpc).not.toHaveBeenCalled()
+  })
+
+  it('returns a skip-specific message when a word can no longer be skipped', async () => {
+    mocks.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'P0001', message: 'word_game_skip_not_available' },
+    })
+
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/skip`,
+      'POST',
+    )
+
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: 'word_game_skip_not_available',
+        message: 'This word can no longer be skipped.',
+      },
+    })
+  })
+
   it('treats a second timeout request for the completed round as successful', async () => {
     const completedGame = game({
       mode: 'live_call',

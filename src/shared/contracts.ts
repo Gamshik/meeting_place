@@ -86,6 +86,10 @@ export const guessWordRoundSchema = z.object({
   guess: z.string().trim().min(1).max(80),
 })
 
+export const reviewWordGuessSchema = z.object({
+  approved: z.boolean(),
+})
+
 export const wordTranscriptSchema = z.object({
   word: z.string().min(1).max(80),
   start: z.number().nonnegative(),

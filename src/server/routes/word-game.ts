@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import {
   createWordRoundSchema,
   guessWordRoundSchema,
+  reviewWordGuessSchema,
   startWordGameSchema,
   updateWordGameSettingsSchema,
   wordGameActionSchema,
@@ -459,6 +460,27 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/guess', async (context) => 
   return gameResponse(context, data)
 })
 
+wordGameRoutes.post('/:partnershipId/rounds/:roundId/review', async (context) => {
+  const partnershipId = parsePartnershipId(context.req.param('partnershipId'))
+  const roundId = parseUuid(context.req.param('roundId'))
+  const body: unknown = await context.req.json().catch(() => null)
+  const parsed = reviewWordGuessSchema.safeParse(body)
+  if (!partnershipId || !roundId || !parsed.success) {
+    return errorResponse(
+      context,
+      400,
+      'invalid_guess_review',
+      'Choose whether to approve the answer.',
+    )
+  }
+  const { data, error } = await context.get('supabase').rpc('review_word_game_guess', {
+    p_round_id: roundId,
+    p_approved: parsed.data.approved,
+  })
+  if (error) return gameDatabaseError(context, error)
+  return gameResponse(context, data)
+})
+
 wordGameRoutes.post('/:partnershipId/rounds/:roundId/skip', async (context) => {
   const partnershipId = parsePartnershipId(context.req.param('partnershipId'))
   const roundId = parseUuid(context.req.param('roundId'))
@@ -558,9 +580,11 @@ function gameDatabaseError(
     word_game_turn_not_available: [409, 'It is not your turn.'],
     word_game_round_in_progress: [409, 'Finish the current round first.'],
     word_game_round_not_available: [409, 'This explanation cannot be submitted.'],
+    word_game_skip_not_available: [409, 'This word can no longer be skipped.'],
     word_game_live_round_not_available: [409, 'This live round cannot be ended.'],
     word_game_round_not_expired: [409, 'This round still has time remaining.'],
     word_game_guess_not_available: [409, 'This round is not waiting for your guess.'],
+    word_game_guess_review_not_available: [409, 'This answer is no longer available for review.'],
     word_game_finished: [409, 'This game has finished.'],
     word_game_end_not_available: [409, 'This game cannot be ended now.'],
     word_game_settings_not_available: [409, 'Only the game creator can change its settings.'],
