@@ -1,4 +1,3 @@
-import { WordArtwork } from '../components/GameCatalog'
 import { useState } from 'react'
 import { Navigate } from 'react-router-dom'
 
@@ -53,7 +52,6 @@ export function LoginPage() {
             <br />
             you overthink.
           </h1>
-          <p>A tiny game, a trusted friend, and a real reason to use your English.</p>
           <button
             className="button button-primary google-button"
             type="button"
@@ -61,12 +59,18 @@ export function LoginPage() {
             disabled={isSigningIn}
           >
             <GoogleMark />
-            {isSigningIn ? 'Opening Google…' : 'Start practising with Google'}
+            {isSigningIn ? 'Opening Google…' : 'Start practicing with Google'}
           </button>
           <div className="login-promises" aria-label="What to expect">
-            <span>2 players</span>
-            <span>5–10 minutes</span>
-            <span>No awkward setup</span>
+            <span>
+              <i aria-hidden="true">↔</i>2 players
+            </span>
+            <span>
+              <i aria-hidden="true">◷</i>5–10 minutes
+            </span>
+            <span>
+              <i aria-hidden="true">✓</i>No setup
+            </span>
           </div>
           {error || authError ? (
             <p role="alert" className="login-error">
@@ -75,10 +79,39 @@ export function LoginPage() {
           ) : null}
         </div>
         <div className="login-art">
-          <WordArtwork />
+          <LoginPracticeArtwork />
         </div>
       </section>
     </main>
+  )
+}
+
+function LoginPracticeArtwork() {
+  return (
+    <div className="login-practice-art" aria-hidden="true">
+      <div className="login-orbit-ring" />
+      <div className="login-person login-person-left">
+        <span>A</span>
+        <i />
+      </div>
+      <div className="login-person login-person-right">
+        <span>B</span>
+        <i />
+      </div>
+      <div className="login-practice-core">
+        <small>Practice English</small>
+        <strong>Together</strong>
+        <div className="login-waveform">
+          {[18, 34, 52, 30, 64, 44, 24].map((height, index) => (
+            <i key={index} style={{ height }} />
+          ))}
+        </div>
+      </div>
+      <span className="login-speak-bubble">Speak</span>
+      <span className="login-listen-bubble">Listen</span>
+      <span className="login-orbit-arrow login-orbit-arrow-top">↗</span>
+      <span className="login-orbit-arrow login-orbit-arrow-bottom">↙</span>
+    </div>
   )
 }
 
