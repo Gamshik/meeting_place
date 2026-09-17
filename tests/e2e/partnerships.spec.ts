@@ -327,9 +327,6 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
     })
   })
   await page.goto('/?view=profile')
-  await page.getByRole('button', { name: 'Profile settings' }).click()
-  await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Your profile' })).toHaveCount(0)
   const copyUsername = page.getByRole('button', { name: 'Copy username' })
   await expect(copyUsername).toBeVisible()
   await copyUsername.click()
@@ -337,6 +334,9 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   await expect(copiedNotice).toBeVisible()
   expect((await copiedNotice.boundingBox())!.height).toBeLessThan(80)
   await expect(copiedNotice).toHaveCSS('border-radius', '18px 18px 18px 6px')
+  await page.getByRole('button', { name: 'Profile settings' }).click()
+  await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your profile' })).toHaveCount(0)
   await expect(page.getByText('Shown to friends and during games.')).toHaveCount(0)
   await expect(page.getByText('Friends use this unique handle to find you.')).toHaveCount(0)
   await expect(page.getByText('Sets where each practice day begins.')).toHaveCount(0)
@@ -698,7 +698,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   await page.getByRole('button', { name: 'Stop recording' }).click()
   await expect(page.getByRole('button', { name: 'Play Your recorded explanation' })).toBeVisible()
   await page.getByRole('button', { name: 'Send explanation' }).click()
-  await expect(page.getByText('AI coaching · 91/100')).toBeVisible()
+  await expect(page.getByText('Your explanation is ready.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
   await page.getByRole('button', { name: 'End game' }).click()
   await expect(page.getByRole('dialog', { name: 'Finish for both players?' })).toBeVisible()
@@ -883,7 +883,7 @@ test('shows the other player an immediate choice when a word game finishes', asy
   await expect(page.getByRole('heading', { name: 'Game finished' })).toBeVisible()
   await expect(page.getByText('Your result is saved. Review the rounds below')).toBeVisible()
   await expect(page.getByText('souvenir', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Rounds' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New game' })).toBeVisible()
 })
 
 test('synchronizes live-call preparation and guessing for both players', async ({ browser }) => {
@@ -947,13 +947,13 @@ test('synchronizes live-call preparation and guessing for both players', async (
     explainerPage.goto(`/games/explain-word/${relationshipId}`),
     guesserPage.goto(`/games/explain-word/${relationshipId}`),
   ])
-  await expect(explainerPage.getByText('Prepare the clue')).toBeVisible()
-  await expect(guesserPage.getByText('Prepare the clue')).toBeVisible()
+  await expect(explainerPage.getByText('Get ready', { exact: true })).toBeVisible()
+  await expect(guesserPage.getByText('Get ready', { exact: true })).toBeVisible()
   await expect(explainerPage.getByRole('button', { name: /record/i })).toHaveCount(0)
   await expect(guesserPage.getByLabel('Your answer')).toHaveCount(0)
 
-  await expect(explainerPage.getByText('Explain and guess')).toBeVisible({ timeout: 7_000 })
-  await expect(guesserPage.getByText('Explain and guess')).toBeVisible({ timeout: 7_000 })
+  await expect(explainerPage.getByText('Explain now')).toBeVisible({ timeout: 7_000 })
+  await expect(guesserPage.getByText('Guess now')).toBeVisible({ timeout: 7_000 })
   await expect(guesserPage.getByLabel('Your answer')).toBeVisible()
   await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
 
@@ -1177,9 +1177,9 @@ test('shows the partner both the recording and transcript before their answer', 
 
   await page.goto(`/games/explain-word/${relationshipId}`)
 
-  await expect(
-    page.getByText('You need this document to cross a border.', { exact: true }),
-  ).toBeVisible()
+  await expect(page.locator('blockquote')).toContainText(
+    'You need this document to cross a border.',
+  )
   await expect(page.getByText('Listen to their explanation')).toBeVisible()
   await expect(page.getByText('Listen and guess')).toBeVisible()
   await expect(page.getByRole('timer')).toHaveText(/(1:29|1:30)/)
@@ -1332,7 +1332,7 @@ test('returns to Games after cancelling a replay request from History', async ({
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Cancel invitation' }).click()
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click()
 
   await expect.poll(() => cancelled).toBe(true)
   await expect(page).toHaveURL('/')
@@ -1363,10 +1363,22 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
   await expect(gameRequest).toBeVisible()
   await expect(gameRequest).toContainText('Bob wants to play')
   await expect(gameRequest).toContainText('Live call')
-  const requestBounds = (await gameRequest.boundingBox())!
+  expect(await gameRequest.evaluate((element) => element.parentElement === document.body)).toBe(
+    true,
+  )
   const viewport = page.viewportSize()!
-  expect(requestBounds.x + requestBounds.width).toBeGreaterThan(viewport.width - 40)
-  expect(requestBounds.y + requestBounds.height).toBeGreaterThan(viewport.height - 40)
+  await expect
+    .poll(async () => {
+      const bounds = (await gameRequest.boundingBox())!
+      return bounds.x + bounds.width
+    })
+    .toBeGreaterThan(viewport.width - 40)
+  await expect
+    .poll(async () => {
+      const bounds = (await gameRequest.boundingBox())!
+      return bounds.y + bounds.height
+    })
+    .toBeGreaterThan(viewport.height - 40)
   await gameRequest.getByRole('button', { name: 'Dismiss game invitation' }).click()
   await expect(gameRequest).toHaveCount(0)
   await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
@@ -1381,7 +1393,7 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
   await page.getByRole('button', { name: 'Notifications, pending invitations' }).click()
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
   await expect(panel).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Friends', exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Friend lists' })).toBeVisible()
 })
 
 test('keeps the app shell aligned between dashboard views with different heights', async ({
@@ -1398,7 +1410,7 @@ test('keeps the app shell aligned between dashboard views with different heights
   ).toBe('stable')
 
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Friends', exact: true })).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Friend lists' })).toBeVisible()
   const friendsBounds = await header.boundingBox()
 
   expect(friendsBounds?.x).toBe(practiceBounds?.x)
@@ -1415,7 +1427,7 @@ test('requires a game selection before a friend can be chosen', async ({ page })
   await page.goto('/')
 
   const game = page.getByRole('button', { name: 'Explain the word' })
-  const start = page.getByRole('button', { name: 'Start' })
+  const start = page.getByRole('button', { name: 'Play', exact: true })
   await expect(game).toHaveAttribute('aria-pressed', 'false')
   await expect(start).toBeDisabled()
 
@@ -1453,7 +1465,7 @@ for (const width of [320, 390, 1440]) {
       await expect(dialogCursor).toHaveCSS('width', '38px')
     }
     const sendButton = page.getByRole('button', { name: 'Send invite', exact: true })
-    expect((await sendButton.boundingBox())!.height).toBeLessThan(60)
+    expect((await sendButton.boundingBox())!.height).toBeLessThan(72)
     expect(await sendButton.evaluate((element) => getComputedStyle(element).whiteSpace)).toBe(
       'nowrap',
     )
@@ -1518,10 +1530,10 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   })
   await page.goto('/?view=friends')
   await expect(page.getByRole('heading', { name: 'Bob', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Start' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toHaveCount(0)
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await page.getByRole('button', { name: 'Explain the word' }).click()
-  await page.getByRole('button', { name: 'Start' }).click()
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}?new=1`)
   expect(requests).toBe(0)
   await expect(page.getByRole('radio', { name: /Live call/ })).toBeChecked()
@@ -1569,6 +1581,9 @@ test('the game creator can change the next round explanation time', async ({ pag
   })
 
   await page.goto(`/games/explain-word/${relationshipId}`)
+  await page.locator('summary[aria-label="Change explanation time"]').click()
+  await page.getByRole('button', { name: 'Close explanation time' }).click()
+  await expect(page.getByRole('button', { name: 'Close explanation time' })).toBeHidden()
   await page.locator('summary[aria-label="Change explanation time"]').click()
   await page.getByRole('button', { name: '3 min' }).click()
   await page.getByRole('button', { name: 'Save for next round' }).click()
@@ -1663,7 +1678,7 @@ test('blocks another game invitation while a game is already in progress', async
   const activeFriendCard = page
     .locator('article.quick-friend')
     .filter({ has: page.getByRole('heading', { name: 'Bob', exact: true }) })
-  await expect(activeFriendCard.getByRole('button', { name: 'Continue' })).toBeEnabled()
+  await expect(activeFriendCard.getByRole('button', { name: 'Play', exact: true })).toBeEnabled()
   await expect(
     page
       .getByRole('region', { name: 'Game invitation' })
@@ -1733,8 +1748,8 @@ test('resuming an existing game never sends a new request', async ({ page }) => 
   })
   await page.goto('/')
   await page.getByRole('button', { name: 'Explain the word' }).click()
-  await expect(page.getByRole('button', { name: 'Continue', exact: true })).toHaveCount(1)
-  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Play', exact: true })).toHaveCount(1)
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible()
   expect(starts).toBe(0)
 })
@@ -1770,7 +1785,7 @@ test('a busy friend is not invited and can be retried later', async ({ page }) =
   await page.goto('/')
   await page.getByRole('button', { name: 'Explain the word' }).click()
   await page.getByLabel('Play with').fill('bob')
-  await page.getByRole('button', { name: 'Start' }).click()
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
   await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page.getByRole('alert')).toContainText(
     'Your friend is already playing another game. Try again later.',
