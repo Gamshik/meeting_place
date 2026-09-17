@@ -364,7 +364,7 @@ function ActivityDayDetails({ day }: { day: ProfileActivityDay }) {
           ))}
       </dl>
       {day.topics.length ? (
-        <div className="activity-topics" aria-label="Topics practised">
+        <div className="activity-topics" aria-label="Topics practiced">
           {day.topics.map((topic) => (
             <span key={topic}>{topic}</span>
           ))}

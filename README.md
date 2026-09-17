@@ -1,6 +1,6 @@
 # Meeting Place
 
-Meeting Place helps people practise English together. A user can connect with any number of
+Meeting Place helps people practice English together. A user can connect with any number of
 learning partners; every partnership is private and contains exactly two people.
 
 This repository contains the first vertical slice:
@@ -8,14 +8,15 @@ This repository contains the first vertical slice:
 - Google sign-up and sign-in through Supabase Auth
 - automatic user profiles with editable display names and usernames
 - invitations by exact username, without exposing a searchable user directory
-- accepting, declining, cancelling, and ending partnerships
+- accepting, declining, canceling, and ending partnerships
 - real-time invitation and partnership updates across signed-in browsers
 - invitation attempt limits and a cooldown after a relationship closes
 - paginated partner lists and accessible feedback while changes are saved
 - friend-only profiles with yearly and monthly practice activity calendars
 - a turn-based “explain the word” game with Live call and Recorded practice modes, AI-generated
   cards, creator-controlled 30–300 second explanation rounds, speech transcription, and private
-  coaching
+  coaching; when automatic matching rejects a synonym, the explainer makes the final scoring
+  decision without AI review
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
 

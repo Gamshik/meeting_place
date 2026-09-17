@@ -28,6 +28,7 @@ partnerships, but every partnership contains exactly two users.
 - Return API errors as `{ "error": { "code", "message", "details?" } }`.
 - Prefer small feature-focused components over large generic abstractions.
 - Use accessible labels, native controls, visible focus states, and plain English interface copy.
+- Use American English spelling and vocabulary in all user-facing copy and project documentation.
 - Treat Neubrutalism as the core visual language. New and updated interface elements must use flat
   high-contrast fills, strong dark outlines, hard offset shadows, bold typography, and deliberately
   compact corner radii. Avoid soft drop shadows, glass effects, and decorative gradients unless an
