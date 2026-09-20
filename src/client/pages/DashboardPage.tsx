@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Partnership, Profile } from '../../shared/contracts'
 import { useAuth } from '../auth/AuthContext'
@@ -16,10 +16,14 @@ import { api } from '../lib/api'
 import { browserTimeZone } from '../lib/time-zone'
 import { wordGameModeLabel } from '../lib/word-game-mode'
 
+const dashboardScrollPositions = new Map<string, number>()
+
 export function DashboardPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const view = params.get('view') ?? 'games'
+  useDashboardScrollPosition(view)
+  const highlightedHistoryId = params.get('highlight')
   const selectedGame = games.find((game) => game.id === params.get('game'))
   const workspaceGame = selectedGame ?? games[0]!
   const invitationView = params.get('section') === 'invitations'
@@ -66,6 +70,9 @@ export function DashboardPage() {
       active = false
     }
   }, [loadProfile])
+  useEffect(() => {
+    if (view === 'history' && highlightedHistoryId) void refresh()
+  }, [highlightedHistoryId, refresh, view])
   const friends = partnerships.filter((item) => item.status === 'active')
   const incoming = partnerships.filter(
     (item) => item.status === 'pending' && item.direction === 'incoming',
@@ -180,6 +187,7 @@ export function DashboardPage() {
         <HistoryView
           history={history}
           friends={friends}
+          highlightedId={highlightedHistoryId}
           disabled={isBusy}
           onPlayAgain={(item) => {
             const friend = friends.find((candidate) => candidate.id === item.partnershipId)
@@ -381,23 +389,61 @@ export function DashboardPage() {
     </AppShell>
   )
 }
+
+function useDashboardScrollPosition(view: string) {
+  useLayoutEffect(() => {
+    const savedPosition = dashboardScrollPositions.get(view) ?? 0
+    window.scrollTo({ top: savedPosition, left: 0, behavior: 'auto' })
+
+    // Restore once more after layout settles so a taller view can return to its
+    // previous position without inheriting the page that was just left.
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo({ top: savedPosition, left: 0, behavior: 'auto' })
+    })
+    const rememberPosition = () => dashboardScrollPositions.set(view, window.scrollY)
+    window.addEventListener('scroll', rememberPosition, { passive: true })
+
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', rememberPosition)
+      dashboardScrollPositions.set(view, window.scrollY)
+    }
+  }, [view])
+}
+
 function HistoryView({
   history,
   friends,
+  highlightedId,
   disabled,
   onPlayAgain,
 }: {
   history: GameHistoryItem[]
   friends: Partnership[]
+  highlightedId: string | null
   disabled: boolean
   onPlayAgain: (item: GameHistoryItem) => void
 }) {
   const pageSize = 5
   const pageCount = Math.max(1, Math.ceil(history.length / pageSize))
-  const [page, setPage] = useState(1)
-  const currentPage = Math.min(page, pageCount)
+  const [manualPage, setManualPage] = useState<number | null>(null)
+  const highlightedCard = useRef<HTMLElement | null>(null)
+  const highlightedIndex = highlightedId
+    ? history.findIndex((item) => item.id === highlightedId)
+    : -1
+  const highlightedPage = highlightedIndex >= 0 ? Math.floor(highlightedIndex / pageSize) + 1 : null
+  const currentPage = Math.min(manualPage ?? highlightedPage ?? 1, pageCount)
   const pageStart = (currentPage - 1) * pageSize
   const visibleHistory = history.slice(pageStart, pageStart + pageSize)
+
+  useEffect(() => {
+    if (!highlightedCard.current) return
+    const frame = requestAnimationFrame(() => {
+      highlightedCard.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      highlightedCard.current?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [currentPage, highlightedId, visibleHistory.length])
 
   return (
     <section className="history-page">
@@ -418,25 +464,31 @@ function HistoryView({
       {history.length ? (
         <>
           <div className="history-list">
-            {visibleHistory.map((item, index) => {
+            {visibleHistory.map((item) => {
+              const isHighlighted = item.id === highlightedId
               const game = games.find((candidate) => candidate.id === item.gameId)
               const canPlayAgain = friends.some((friend) => friend.id === item.partnershipId)
-              const result =
+              const resultState =
                 item.scores.you === item.scores.partner
-                  ? 'Draw'
+                  ? 'draw'
                   : item.scores.you > item.scores.partner
-                    ? 'You won'
-                    : `${item.partner.displayName} won`
+                    ? 'win'
+                    : 'loss'
+              const result =
+                resultState === 'win' ? 'Win' : resultState === 'loss' ? 'Loss' : 'Draw'
               return (
-                <article className="history-card" key={`${item.gameId}:${item.id}`}>
-                  <div className="history-index" aria-hidden="true">
-                    {String(pageStart + index + 1).padStart(2, '0')}
-                  </div>
+                <article
+                  ref={isHighlighted ? highlightedCard : undefined}
+                  className={`history-card is-${resultState}${isHighlighted ? ' is-highlighted' : ''}`}
+                  data-highlighted={isHighlighted || undefined}
+                  tabIndex={isHighlighted ? -1 : undefined}
+                  key={`${item.gameId}:${item.id}`}
+                >
                   <div className="history-main">
                     <div className="history-title-row">
                       <div>
                         <p>{game?.title ?? 'English game'}</p>
-                        <h2>With {item.partner.displayName}</h2>
+                        <h2>{item.partner.displayName}</h2>
                       </div>
                       <time dateTime={item.finishedAt}>
                         <span>{formatFinishedDate(item.finishedAt)}</span>
@@ -444,18 +496,25 @@ function HistoryView({
                       </time>
                     </div>
                     <div className="history-meta">
-                      <span>{result}</span>
                       <span>{wordGameModeLabel(item.mode)}</span>
-                      <span>{item.roundCount === 1 ? '1 round' : `${item.roundCount} rounds`}</span>
                     </div>
                   </div>
                   <div
                     className="history-score"
-                    aria-label={`Score ${item.scores.you} to ${item.scores.partner}`}
+                    aria-label={`${result}. Score ${item.scores.you} to ${item.scores.partner}`}
                   >
-                    <strong>{item.scores.you}</strong>
-                    <span>—</span>
-                    <strong>{item.scores.partner}</strong>
+                    <span className="history-outcome">{result}</span>
+                    <div aria-hidden="true">
+                      <b>
+                        <small>You</small>
+                        <strong>{item.scores.you}</strong>
+                      </b>
+                      <i>:</i>
+                      <b>
+                        <small>Them</small>
+                        <strong>{item.scores.partner}</strong>
+                      </b>
+                    </div>
                   </div>
                   {canPlayAgain ? (
                     <button
@@ -464,13 +523,14 @@ function HistoryView({
                       disabled={disabled}
                       onClick={() => onPlayAgain(item)}
                     >
-                      Play again <span aria-hidden="true">↗</span>
+                      Play again
                     </button>
                   ) : null}
-                  <details className="history-rounds">
+                  <details className="history-rounds" open={isHighlighted || undefined}>
                     <summary>
-                      <span>Round details</span>
-                      <span>{item.roundCount}</span>
+                      <span>
+                        View {item.roundCount} {item.roundCount === 1 ? 'round' : 'rounds'}
+                      </span>
                     </summary>
                     <RoundsTable
                       rounds={item.rounds}
@@ -489,7 +549,7 @@ function HistoryView({
               firstItem={pageStart + 1}
               lastItem={Math.min(pageStart + pageSize, history.length)}
               totalItems={history.length}
-              onChange={setPage}
+              onChange={setManualPage}
             />
           ) : null}
         </>

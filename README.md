@@ -356,7 +356,8 @@ If either player leaves an active game, the session pauses and shows a five-minu
 Returning in time resumes the same round; otherwise the game finishes and all actions stay locked.
 Either participant can also use **End game** to finish the session immediately. The player who ends
 it returns to Games; the other player receives the final score and can choose **Go home** or **View
-results**.
+results**. The game screen remains in place until they choose; **View results** opens History,
+highlights the completed game, and expands its saved round details.
 Active and paused sessions appear under **Continue playing**. Every completed session appears in the
 separate **History** tab, with its score and saved round-by-round results. Incoming requests appear in
 Notifications. Starting again creates a fresh game request without deleting the previous game or its
