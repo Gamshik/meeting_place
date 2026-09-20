@@ -111,6 +111,7 @@ export function GameWorkspace({
                   <button
                     type="button"
                     className={`button ${action === 'join' ? 'button-accent' : 'button-primary'} quick-play-button`}
+                    aria-label="Play"
                     disabled={
                       !gameSelected ||
                       disabled ||
@@ -122,7 +123,10 @@ export function GameWorkspace({
                       void onAction(friend, action).finally(() => setPendingFriend(null))
                     }}
                   >
-                    Play
+                    <span className="quick-play-label">Play</span>
+                    <svg className="quick-play-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M8 5.5v13l10-6.5-10-6.5Z" />
+                    </svg>
                   </button>
                 </article>
               )

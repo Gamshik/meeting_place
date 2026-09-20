@@ -59,8 +59,16 @@ export function AppShell({ children, profile, onNavigate, variant = 'default' }:
               </Link>
             </nav>
             <div className="header-actions">
-              <button className="header-invite" type="button" onClick={() => setInviteOpen(true)}>
-                <span aria-hidden="true">＋</span> Invite
+              <button
+                className="header-invite"
+                type="button"
+                aria-label="Invite a friend"
+                onClick={() => setInviteOpen(true)}
+              >
+                <span className="header-invite-icon" aria-hidden="true">
+                  ＋
+                </span>
+                <span className="header-invite-label">Invite</span>
               </button>
               <NotificationCenter onNavigate={onNavigate} />
               <Link

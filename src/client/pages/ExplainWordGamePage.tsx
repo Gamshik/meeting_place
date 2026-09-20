@@ -14,7 +14,6 @@ import { useAuth } from '../auth/AuthContext'
 import { useCommunity } from '../community/CommunityContext'
 import { AppShell } from '../components/AppShell'
 import { AudioPlayer } from '../components/AudioPlayer'
-import { RoundsTable } from '../components/RoundsTable'
 import { Notice } from '../components/Panel'
 import { api, ApiError } from '../lib/api'
 import { supabase } from '../lib/supabase'
@@ -35,34 +34,65 @@ export function ExplainWordGamePage() {
   const { sessions } = useCommunity()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [game, setGame] = useState<WordGame | null>(null)
+  const [finishedGame, setFinishedGame] = useState<WordGame | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isBusy, setIsBusy] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [showEndConfirmation, setShowEndConfirmation] = useState(false)
-  const [showFinishedChoice, setShowFinishedChoice] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null)
-  const joinedActiveSession = useRef(false)
-  const pendingRequestSeen = useRef(false)
+  const pendingGame = useRef<{ partnershipId: string; id: string } | null>(null)
   const lastGameSetting = useRef<{ gameId: string; seconds: number } | null>(null)
+
+  const receiveGame = useCallback(
+    (nextGame: WordGame | null) => {
+      const pendingId =
+        pendingGame.current?.partnershipId === partnershipId ? pendingGame.current.id : null
+
+      if (pendingId && (!nextGame || nextGame.id !== pendingId)) {
+        pendingGame.current = null
+        setFinishedGame(null)
+        setGame(null)
+        navigate('/', { replace: true })
+        return
+      }
+
+      if (nextGame?.status === 'pending') {
+        pendingGame.current = { partnershipId, id: nextGame.id }
+      } else if (pendingId && nextGame?.id === pendingId) {
+        pendingGame.current = null
+      }
+
+      if (nextGame?.status === 'finished') {
+        setFinishedGame(nextGame)
+        setGame((current) =>
+          current?.id === nextGame.id && current.status !== 'finished' ? current : nextGame,
+        )
+        return
+      }
+      setFinishedGame(null)
+      setGame(nextGame)
+    },
+    [navigate, partnershipId],
+  )
 
   const loadGame = useCallback(
     async (quiet = false) => {
       if (!partnershipId) return
       try {
         const response = await api.getWordGame(partnershipId)
-        setGame(response.data)
+        receiveGame(response.data)
         if (!quiet) setError(null)
       } catch (loadError) {
         if (loadError instanceof ApiError && loadError.code === 'word_game_not_found') {
-          setGame(null)
+          receiveGame(null)
           if (!quiet) setError(null)
         } else if (!quiet) {
           setError(messageFromError(loadError))
         }
       }
     },
-    [partnershipId],
+    [partnershipId, receiveGame],
   )
 
   useEffect(() => {
@@ -75,7 +105,7 @@ export function ExplainWordGamePage() {
       .then(([profileResponse, gameResponse]) => {
         if (!active) return
         setProfile(profileResponse.data)
-        setGame(gameResponse?.data ?? null)
+        receiveGame(gameResponse?.data ?? null)
         setError(null)
       })
       .catch((loadError) => {
@@ -87,10 +117,11 @@ export function ExplainWordGamePage() {
     return () => {
       active = false
     }
-  }, [partnershipId])
+  }, [partnershipId, receiveGame])
 
-  const sessionGameId = game?.id
-  const sessionStatus = game?.status
+  const completedGame = finishedGame ?? (game?.status === 'finished' ? game : null)
+  const sessionGameId = completedGame?.id ?? game?.id
+  const sessionStatus = completedGame?.status ?? game?.status
   const hasOtherOngoingGame = sessions.some(
     (item) =>
       (item.status === 'active' || item.status === 'paused') &&
@@ -121,7 +152,7 @@ export function ExplainWordGamePage() {
       void api
         .heartbeatWordGame(partnershipId)
         .then((response) => {
-          if (active) setGame(response.data)
+          if (active) receiveGame(response.data)
         })
         .catch(() => undefined)
     }
@@ -136,7 +167,7 @@ export function ExplainWordGamePage() {
       clearInterval(timer)
       window.removeEventListener('pagehide', leave)
     }
-  }, [partnershipId, sessionGameId, sessionStatus])
+  }, [partnershipId, receiveGame, sessionGameId, sessionStatus])
 
   useEffect(() => {
     if (!sessionGameId || (sessionStatus !== 'active' && sessionStatus !== 'paused')) return
@@ -164,23 +195,6 @@ export function ExplainWordGamePage() {
   }, [loadGame, sessionGameId, sessionStatus])
 
   useEffect(() => {
-    if (sessionStatus === 'active' || sessionStatus === 'paused') {
-      joinedActiveSession.current = true
-    } else if (sessionStatus === 'finished' && joinedActiveSession.current) {
-      joinedActiveSession.current = false
-      setShowFinishedChoice(true)
-    }
-  }, [sessionStatus])
-
-  useEffect(() => {
-    if (sessionStatus === 'pending') {
-      pendingRequestSeen.current = true
-    } else if (!game && pendingRequestSeen.current) {
-      navigate('/', { replace: true })
-    }
-  }, [game, navigate, sessionStatus])
-
-  useEffect(() => {
     if (!game) {
       lastGameSetting.current = null
       return
@@ -200,7 +214,7 @@ export function ExplainWordGamePage() {
     setError(null)
     try {
       const response = await action()
-      setGame(response?.data ?? null)
+      receiveGame(response?.data ?? null)
       return true
     } catch (actionError) {
       setError(messageFromError(actionError))
@@ -292,11 +306,15 @@ export function ExplainWordGamePage() {
           >
             <RoomControlIcon icon="leave" />
           </Link>
-          <div className="game-title-row">
-            <div>
-              <h1>Explain the word</h1>
+          {isRoom ? (
+            <h1 className="sr-only">Explain the word</h1>
+          ) : (
+            <div className="game-title-row">
+              <div>
+                <h1>Explain the word</h1>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         <div className="game-header-tools">
           {game && game.status !== 'pending' && !showModeSelection ? (
@@ -367,6 +385,7 @@ export function ExplainWordGamePage() {
           userId={session.user.id}
           partnershipId={partnershipId}
           isBusy={isBusy}
+          completionPending={Boolean(completedGame)}
           run={run}
         />
       )}
@@ -378,11 +397,15 @@ export function ExplainWordGamePage() {
           onConfirm={() => void endGame()}
         />
       ) : null}
-      {showFinishedChoice && game?.status === 'finished' ? (
+      {completedGame && !showModeSelection ? (
         <GameFinishedDialog
-          game={game}
+          game={completedGame}
           onHome={() => navigate('/', { replace: true })}
-          onViewResults={() => setShowFinishedChoice(false)}
+          onViewResults={() =>
+            navigate(`/?view=history&highlight=${encodeURIComponent(completedGame.id)}`, {
+              replace: true,
+            })
+          }
         />
       ) : null}
     </AppShell>
@@ -394,22 +417,24 @@ function GameBoard({
   userId,
   partnershipId,
   isBusy,
+  completionPending,
   run,
 }: {
   game: WordGame
   userId: string
   partnershipId: string
   isBusy: boolean
+  completionPending: boolean
   run: (action: () => Promise<{ data: WordGame } | void>) => Promise<boolean>
 }) {
   const round = game.round
   const openRound = round?.status === 'explaining' || round?.status === 'awaiting_guess'
   const needsGuessReview = round?.status === 'awaiting_guess' && round.guess !== null
-  const sessionLocked = game.status !== 'active'
+  const sessionLocked = game.status !== 'active' || completionPending
 
   return (
     <div className="game-board">
-      {sessionLocked ? <SessionStatus game={game} userId={userId} /> : null}
+      {sessionLocked && !completionPending ? <SessionStatus game={game} userId={userId} /> : null}
       {game.status !== 'finished' ? (
         <div className="game-play-area">
           {!round || !openRound ? (
@@ -434,6 +459,7 @@ function GameBoard({
             <LiveCallRound
               key={round.id}
               disabled={isBusy || sessionLocked}
+              frozen={completionPending}
               game={game}
               userId={userId}
               onExpire={() => run(() => api.expireWordRound(partnershipId, round.id))}
@@ -444,6 +470,7 @@ function GameBoard({
             <RecordedRound
               key={round.id}
               disabled={isBusy || sessionLocked}
+              forceStop={completionPending}
               game={game}
               userId={userId}
               onExpire={() => run(() => api.expireWordRound(partnershipId, round.id))}
@@ -458,21 +485,6 @@ function GameBoard({
           )}
           {round && !openRound ? <RoundOutcome key={round.id} round={round} /> : null}
         </div>
-      ) : null}
-      {game.status === 'finished' && (game.rounds?.length ?? 0) > 0 ? (
-        <section className="rounds-section" aria-labelledby="game-rounds-title">
-          <div className="rounds-section-heading">
-            <div>
-              <h2 id="game-rounds-title">Rounds</h2>
-            </div>
-            <span>{game.rounds?.length ?? 0}</span>
-          </div>
-          <RoundsTable
-            rounds={game.rounds ?? []}
-            partnerId={game.partner.id}
-            partnerName={game.partner.displayName}
-          />
-        </section>
       ) : null}
     </div>
   )
@@ -711,54 +723,56 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
             ×
           </button>
         </div>
-        <p id="game-rules-description" className="sr-only">
-          Choose a topic, explain the word, let your partner guess, review synonyms, then switch
-          roles.
-        </p>
-        <ol className="rules-steps">
-          <li>
-            <span className="rules-step-number">1</span>
-            <span className="rules-step-icon" aria-hidden="true">
-              <RulesStepIcon step="topic" />
-            </span>
-            <strong>Choose a topic</strong>
-            <small>Get a word</small>
-          </li>
-          <li>
-            <span className="rules-step-number">2</span>
-            <span className="rules-step-icon" aria-hidden="true">
-              <RulesStepIcon step="explain" />
-            </span>
-            <strong>Explain naturally</strong>
-            <small>Don’t say it</small>
-          </li>
-          <li>
-            <span className="rules-step-number">3</span>
-            <span className="rules-step-icon" aria-hidden="true">
-              <RulesStepIcon step="guess" />
-            </span>
-            <strong>Partner guesses</strong>
-            <small>Review synonyms</small>
-          </li>
-          <li>
-            <span className="rules-step-number">4</span>
-            <span className="rules-step-icon" aria-hidden="true">
-              <RulesStepIcon step="switch" />
-            </span>
-            <strong>Switch roles</strong>
-            <small>Next turn</small>
-          </li>
-        </ol>
-        <div className="rules-modes">
-          <div>
-            <span aria-hidden="true">↗</span>
-            <strong>Live call</strong>
-            <small>Talk together</small>
-          </div>
-          <div>
-            <span aria-hidden="true">●</span>
-            <strong>Recorded</strong>
-            <small>Reply later</small>
+        <div className="rules-dialog-scroll">
+          <p id="game-rules-description" className="sr-only">
+            Choose a topic, explain the word, let your partner guess, review synonyms, then switch
+            roles.
+          </p>
+          <ol className="rules-steps">
+            <li>
+              <span className="rules-step-number">1</span>
+              <span className="rules-step-icon" aria-hidden="true">
+                <RulesStepIcon step="topic" />
+              </span>
+              <strong>Choose a topic</strong>
+              <small>Get a word</small>
+            </li>
+            <li>
+              <span className="rules-step-number">2</span>
+              <span className="rules-step-icon" aria-hidden="true">
+                <RulesStepIcon step="explain" />
+              </span>
+              <strong>Explain naturally</strong>
+              <small>Don’t say it</small>
+            </li>
+            <li>
+              <span className="rules-step-number">3</span>
+              <span className="rules-step-icon" aria-hidden="true">
+                <RulesStepIcon step="guess" />
+              </span>
+              <strong>Partner guesses</strong>
+              <small>Review synonyms</small>
+            </li>
+            <li>
+              <span className="rules-step-number">4</span>
+              <span className="rules-step-icon" aria-hidden="true">
+                <RulesStepIcon step="switch" />
+              </span>
+              <strong>Switch roles</strong>
+              <small>Next turn</small>
+            </li>
+          </ol>
+          <div className="rules-modes">
+            <div>
+              <span aria-hidden="true">↗</span>
+              <strong>Live call</strong>
+              <small>Talk together</small>
+            </div>
+            <div>
+              <span aria-hidden="true">●</span>
+              <strong>Recorded</strong>
+              <small>Reply later</small>
+            </div>
           </div>
         </div>
       </section>
@@ -898,15 +912,16 @@ function GameFinishedDialog({
   onViewResults: () => void
 }) {
   const resultsButton = useRef<HTMLButtonElement | null>(null)
+  const resultLabel =
+    game.scores.you === game.scores.partner
+      ? "It's a tie!"
+      : game.scores.you > game.scores.partner
+        ? 'You won!'
+        : `${game.partner.displayName} won`
 
   useEffect(() => {
     resultsButton.current?.focus()
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onViewResults()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onViewResults])
+  }, [])
 
   return (
     <div className="game-dialog-backdrop">
@@ -914,16 +929,20 @@ function GameFinishedDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="finished-game-title"
-        aria-describedby="finished-game-description"
         className="game-dialog finished-game-dialog"
       >
-        <span className="finished-game-symbol" aria-hidden="true">
-          ✓
-        </span>
-        <h2 id="finished-game-title">The game has finished</h2>
-        <p id="finished-game-description">
-          Your final score is saved. You can review every round now or return home.
-        </p>
+        <h2 id="finished-game-title" className="sr-only">
+          The game has finished
+        </h2>
+        <div className="finished-game-celebration" aria-hidden="true">
+          <i className="finished-game-confetti is-one" />
+          <i className="finished-game-confetti is-two" />
+          <i className="finished-game-confetti is-three" />
+          <span className="finished-game-trophy">
+            <i>★</i>
+          </span>
+        </div>
+        <p className="finished-game-outcome">{resultLabel}</p>
         <div className="finished-game-score" aria-label="Final score">
           <div>
             <span>You</span>
@@ -961,25 +980,6 @@ function SessionStatus({ game, userId }: { game: WordGame; userId: string }) {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [game.status])
-
-  if (game.status === 'finished') {
-    const expiredWhilePaused = Boolean(game.reconnectDeadline)
-    return (
-      <section className="session-finished-card" role="status">
-        <span className="session-finished-icon" aria-hidden="true">
-          ✓
-        </span>
-        <div>
-          <h2>{expiredWhilePaused ? 'Reconnect window ended' : 'Game finished'}</h2>
-          <p>
-            {expiredWhilePaused
-              ? `${game.partner.displayName} did not return. Your result is saved below.`
-              : 'Your result is saved. Review the rounds below or start a new game.'}
-          </p>
-        </div>
-      </section>
-    )
-  }
 
   const seconds = game.reconnectDeadline
     ? Math.min(
@@ -1252,6 +1252,7 @@ function TopicIcon({ topic }: { topic: string }) {
 
 function ExplainCard({
   disabled,
+  forceStop,
   game,
   onRecordingStart,
   onRecordingStop,
@@ -1259,6 +1260,7 @@ function ExplainCard({
   onSubmit,
 }: {
   disabled: boolean
+  forceStop: boolean
   game: WordGame
   onRecordingStart: () => Promise<boolean>
   onRecordingStop: () => Promise<boolean>
@@ -1282,6 +1284,7 @@ function ExplainCard({
       <SecretWordBrief round={round} />
       <AudioRecorder
         disabled={disabled}
+        forceStop={forceStop}
         durationSeconds={round.explanationDurationSeconds}
         recordingStartedAt={round.recordingStartedAt}
         serverTime={game.serverTime}
@@ -1295,6 +1298,7 @@ function ExplainCard({
 
 function RecordedRound({
   disabled,
+  forceStop,
   game,
   onExpire,
   onGuess,
@@ -1305,6 +1309,7 @@ function RecordedRound({
   userId,
 }: {
   disabled: boolean
+  forceStop: boolean
   game: WordGame
   onExpire: () => Promise<boolean>
   onGuess: (guess: string) => Promise<boolean>
@@ -1315,7 +1320,7 @@ function RecordedRound({
   userId: string
 }) {
   const round = game.round!
-  const now = useServerNow(game.serverTime)
+  const now = useServerNow(game.serverTime, forceStop)
   const expirationAttempted = useRef(false)
   const isExplainer = round.explainerId === userId
   const recordingStartedAt = parseTimestamp(round.recordingStartedAt)
@@ -1357,6 +1362,7 @@ function RecordedRound({
         {isExplainer ? (
           <ExplainCard
             disabled={disabled}
+            forceStop={forceStop}
             game={game}
             onRecordingStart={onRecordingStart}
             onRecordingStop={onRecordingStop}
@@ -1422,6 +1428,7 @@ function RecordedRound({
 
 function LiveCallRound({
   disabled,
+  frozen,
   game,
   onExpire,
   onGuess,
@@ -1429,6 +1436,7 @@ function LiveCallRound({
   userId,
 }: {
   disabled: boolean
+  frozen: boolean
   game: WordGame
   onExpire: () => Promise<boolean>
   onGuess: (guess: string) => Promise<boolean>
@@ -1439,7 +1447,7 @@ function LiveCallRound({
   const preparationEndsAt = Date.parse(round.createdAt) + LIVE_PREPARATION_MS
   const explanationEndsAt = preparationEndsAt + round.explanationDurationSeconds * 1000
   const roundEndsAt = explanationEndsAt + LIVE_FINAL_GUESS_MS
-  const now = useServerNow(game.serverTime)
+  const now = useServerNow(game.serverTime, frozen)
   const expirationAttempted = useRef(false)
   const isPreparing = now < preparationEndsAt
   const isExplaining = !isPreparing && now < explanationEndsAt
@@ -1525,11 +1533,9 @@ function LiveCallRound({
             <strong>Listen</strong>
           </div>
         </section>
-      ) : isExpired ? (
-        <WaitingCard name="the next round" message="No guess was submitted before time ran out." />
       ) : (
         <GuessCard
-          disabled={disabled}
+          disabled={disabled || isExpired}
           audioAvailable={false}
           liveCall
           visualMode={isExplaining ? 'listening' : 'recall'}
@@ -1615,6 +1621,7 @@ function SecretWordBrief({ round }: { round: NonNullable<WordGame['round']> }) {
 
 function AudioRecorder({
   disabled,
+  forceStop,
   durationSeconds,
   onStart,
   onStop,
@@ -1623,6 +1630,7 @@ function AudioRecorder({
   serverTime,
 }: {
   disabled: boolean
+  forceStop: boolean
   durationSeconds: number
   onStart: () => Promise<boolean>
   onStop: () => Promise<boolean>
@@ -1658,6 +1666,21 @@ function AudioRecorder({
   )
 
   useEffect(() => () => (audioUrl ? URL.revokeObjectURL(audioUrl) : undefined), [audioUrl])
+
+  useEffect(() => {
+    if (!forceStop) return
+    recordingBlocked.current = true
+    discardOnStop.current = true
+    if (stopTimer.current) clearTimeout(stopTimer.current)
+    if (countdownTimer.current) clearInterval(countdownTimer.current)
+    if (recorder.current && recorder.current.state !== 'inactive') recorder.current.stop()
+    stream.current?.getTracks().forEach((track) => track.stop())
+    const timer = window.setTimeout(() => {
+      setIsRecording(false)
+      setIsPreparing(false)
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [forceStop])
 
   async function startRecording() {
     recordingBlocked.current = false
@@ -2140,12 +2163,12 @@ function GuessReviewCard({
       </div>
       <div className="guess-review-comparison">
         {isExplainer ? (
-          <div>
+          <div className="is-secret-word">
             <span>Secret word</span>
             <strong>{round.secretWord}</strong>
           </div>
         ) : null}
-        <div>
+        <div className="is-submitted-guess">
           <span>{isExplainer ? `${game.partner.displayName} guessed` : 'Your guess'}</span>
           <strong>{round.guess}</strong>
         </div>
@@ -2297,16 +2320,17 @@ function parseTimestamp(value?: string | null) {
   return Number.isFinite(timestamp) ? timestamp : 0
 }
 
-function useServerNow(serverTime?: string) {
+function useServerNow(serverTime?: string, frozen = false) {
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
+    if (frozen) return
     const observedAt = Date.now()
     const parsedServerTime = serverTime ? Date.parse(serverTime) : Number.NaN
     const serverOffset = Number.isFinite(parsedServerTime) ? parsedServerTime - observedAt : 0
     const timer = setInterval(() => setNow(Date.now() + serverOffset), 250)
     return () => clearInterval(timer)
-  }, [serverTime])
+  }, [frozen, serverTime])
 
   return now
 }

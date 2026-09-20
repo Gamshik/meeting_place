@@ -679,6 +679,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   await page.getByRole('button', { name: 'Close rules' }).click()
   await page.getByRole('radio', { name: /Recorded practice/ }).check()
   await page.getByRole('button', { name: 'Invite to play' }).click()
+  await expect(page.getByRole('heading', { name: 'Explain the word' })).toHaveClass(/sr-only/)
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Choose a topic' })).toBeVisible({
     timeout: 5000,
@@ -796,6 +797,29 @@ test('shows the other player an immediate choice when a word game finishes', asy
   }
   let sendGameFinished: (() => void) | undefined
 
+  await page.unroute('**/api/games/explain-word/history')
+  await page.route('**/api/games/explain-word/history', (route) =>
+    route.fulfill({
+      json: {
+        data:
+          game.status === 'finished'
+            ? [
+                {
+                  id: gameId,
+                  partnershipId: relationshipId,
+                  mode: 'recorded',
+                  finishedAt: game.finishedAt,
+                  partner: game.partner,
+                  scores: game.scores,
+                  roundCount: 0,
+                  rounds: [],
+                },
+              ]
+            : [],
+      },
+    }),
+  )
+
   await page.routeWebSocket('wss://browser-test.supabase.co/realtime/v1/**', (socket) => {
     socket.onMessage((message) => {
       const [joinReference, reference, topic, event, payload] = JSON.parse(message.toString())
@@ -880,6 +904,16 @@ test('shows the other player an immediate choice when a word game finishes', asy
 
   const dialog = page.getByRole('dialog', { name: 'The game has finished' })
   await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.finished-game-celebration')).toBeVisible()
+  await expect(dialog.locator('.finished-game-trophy')).toHaveCSS(
+    'animation-name',
+    'finished-trophy-bounce',
+  )
+  await expect(dialog.locator('#finished-game-title')).toHaveClass(/sr-only/)
+  await expect(dialog.locator('p')).toHaveCount(1)
+  await expect(page.getByText('Record your explanation', { exact: true })).toBeVisible()
+  await expect(page.locator('.session-finished-card')).toHaveCount(0)
+  await expect(page.locator('.rounds-section')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Stop recording' })).toHaveCount(0)
   await expect
     .poll(() =>
@@ -892,10 +926,16 @@ test('shows the other player an immediate choice when a word game finishes', asy
   await expect(dialog.getByRole('button', { name: 'Go home' })).toBeVisible()
   await dialog.getByRole('button', { name: 'View results' }).click()
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Game finished' })).toBeVisible()
-  await expect(page.getByText('Your result is saved. Review the rounds below')).toBeVisible()
-  await expect(page.getByText('souvenir', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'New game' })).toBeVisible()
+  await expect(page).toHaveURL(`/?view=history&highlight=${gameId}`)
+  const highlightedGame = page.locator('.history-card.is-highlighted')
+  await expect(highlightedGame).toBeVisible()
+  await expect(highlightedGame).toHaveAttribute('data-highlighted', 'true')
+  await expect(highlightedGame.locator('.history-rounds')).toHaveAttribute('open', '')
+
+  await page.goto(`/games/explain-word/${relationshipId}?new=1`)
+  await expect(page.getByRole('dialog', { name: 'The game has finished' })).toHaveCount(0)
+  await expect(page.getByText('Mode', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Invite to play' })).toBeVisible()
 })
 
 test('synchronizes live-call preparation and guessing for both players', async ({ browser }) => {
@@ -1066,6 +1106,11 @@ test('lets the explainer approve an inexact guess without automatic checking', a
   ).toBeLessThanOrEqual(240)
   await expect(page.getByText('travel document', { exact: true })).toBeVisible()
   await expect(page.getByText('passport', { exact: true })).toBeVisible()
+  const comparisonColors = await page
+    .locator('.guess-review-comparison > div')
+    .evaluateAll((elements) => elements.map((element) => getComputedStyle(element).backgroundColor))
+  expect(comparisonColors).toHaveLength(2)
+  expect(comparisonColors[0]).not.toBe(comparisonColors[1])
   await page.getByRole('button', { name: 'Approve answer' }).click()
 
   expect(submittedReview).toEqual({ approved: true })
@@ -1614,6 +1659,48 @@ const activeGame: WordGame = {
   round: null,
 }
 
+test('keeps the mobile game setup heading aligned', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
+  await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          ...activeGame,
+          status: 'finished',
+          finishedAt: '2026-09-10T12:00:00Z',
+        },
+      },
+    }),
+  )
+
+  await page.goto(`/games/explain-word/${relationshipId}?new=1`)
+  const home = page.getByRole('link', { name: 'Lobby' })
+  const title = page.getByRole('heading', { name: 'Explain the word' })
+  const info = page.getByRole('button', { name: 'How to play' })
+  const [homeBox, titleBox, infoBox] = await Promise.all([
+    home.boundingBox(),
+    title.boundingBox(),
+    info.boundingBox(),
+  ])
+
+  expect(homeBox).not.toBeNull()
+  expect(titleBox).not.toBeNull()
+  expect(infoBox).not.toBeNull()
+  expect(
+    Math.abs(homeBox!.y + homeBox!.height / 2 - (titleBox!.y + titleBox!.height / 2)),
+  ).toBeLessThan(3)
+  expect(
+    Math.abs(infoBox!.y + infoBox!.height / 2 - (titleBox!.y + titleBox!.height / 2)),
+  ).toBeLessThan(3)
+  expect(infoBox!.x).toBeGreaterThan(titleBox!.x + titleBox!.width)
+  await expect(home).toHaveCSS('width', '48px')
+  await expect(title).toHaveCSS('white-space', 'nowrap')
+})
+
 test('dashboard opens mode selection before sending one invitation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await signIn(page)
@@ -1664,6 +1751,10 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
       `mode selection should fit a ${width}px viewport`,
     ).toBe(true)
   }
+  await expect(page.locator('.game-lobby-ready')).toHaveCSS('box-shadow', 'none')
+  await expect(page.locator('.game-lobby-ready')).toHaveCSS('border-top-width', '0px')
+  await expect(page.locator('.game-mode-picker')).toHaveCSS('box-shadow', 'none')
+  await expect(page.locator('.game-mode-picker')).toHaveCSS('border-top-width', '0px')
   await page.getByRole('button', { name: 'Invite to play' }).dblclick()
   expect(requests).toBe(1)
   expect(requestedDuration).toBe(180)
