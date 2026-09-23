@@ -175,8 +175,7 @@ export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) 
                   <div>
                     <span className="notification-game-eyebrow">Game invitation</span>
                     <p>
-                      <strong>{partnership.partner.displayName}</strong> invited you to play{' '}
-                      {game.title}.
+                      <strong>{partnership.partner.displayName}</strong> invited you to play.
                     </p>
                   </div>
                 </div>

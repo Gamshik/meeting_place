@@ -11,7 +11,7 @@ export const WORD_GAME_MODES = [
   },
   {
     value: 'recorded',
-    label: 'Recorded practice',
+    label: 'Recorded',
     symbol: '●',
     description: 'Record a clue, then give your partner 90 seconds to listen and answer.',
     previewTitle: 'Your recording carries the clue',

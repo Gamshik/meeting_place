@@ -739,36 +739,28 @@ function RulesDialog({ onClose }: { onClose: () => void }) {
           </p>
           <ol className="rules-steps">
             <li>
-              <span className="rules-step-number">1</span>
               <span className="rules-step-icon" aria-hidden="true">
                 <RulesStepIcon step="topic" />
               </span>
               <strong>Choose a topic</strong>
-              <small>Get a word</small>
             </li>
             <li>
-              <span className="rules-step-number">2</span>
               <span className="rules-step-icon" aria-hidden="true">
                 <RulesStepIcon step="explain" />
               </span>
               <strong>Explain naturally</strong>
-              <small>Don’t say it</small>
             </li>
             <li>
-              <span className="rules-step-number">3</span>
               <span className="rules-step-icon" aria-hidden="true">
                 <RulesStepIcon step="guess" />
               </span>
               <strong>Partner guesses</strong>
-              <small>Review synonyms</small>
             </li>
             <li>
-              <span className="rules-step-number">4</span>
               <span className="rules-step-icon" aria-hidden="true">
                 <RulesStepIcon step="switch" />
               </span>
               <strong>Switch roles</strong>
-              <small>Next turn</small>
             </li>
           </ol>
           <div className="rules-modes">
@@ -1280,7 +1272,6 @@ function ExplainCard({
   return (
     <section className="game-surface secret-surface explain-card">
       <div className="explain-card-topbar">
-        <p>{round.topic}</p>
         <button
           type="button"
           className="explain-skip-control"
@@ -1508,7 +1499,6 @@ function LiveCallRound({
       {isExplainer ? (
         <section className="game-surface secret-surface explain-card live-explain-card">
           <div className="explain-card-topbar">
-            <p>{round.topic}</p>
             <button
               type="button"
               className="explain-skip-control"
@@ -2062,10 +2052,29 @@ function GuessCard({
             “{transcript}”
           </blockquote>
         ) : null}
-        <form className="guess-card-form" autoComplete="off" onSubmit={submit}>
+        <form
+          className="guess-card-form"
+          autoComplete="off"
+          data-visual-mode={visualMode}
+          onSubmit={submit}
+        >
           <label className="sr-only" htmlFor={guessInputId}>
             Your answer
           </label>
+          <div className="guess-mobile-cue" aria-hidden="true">
+            <span className="guess-mobile-person">
+              <svg viewBox="0 0 32 32">
+                <circle cx="16" cy="11" r="5" />
+                <path d="M7 27c1-7 5-10 9-10s8 3 9 10" />
+              </svg>
+            </span>
+            <span className="guess-mobile-clues">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="guess-mobile-word">?</span>
+          </div>
           <div className="guess-card-controls">
             <input
               id={guessInputId}
