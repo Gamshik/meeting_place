@@ -43,6 +43,8 @@ export function ExplainWordGamePage() {
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null)
   const pendingGame = useRef<{ partnershipId: string; id: string } | null>(null)
   const lastGameSetting = useRef<{ gameId: string; seconds: number } | null>(null)
+  const gameLoadVersion = useRef(0)
+  const gameMutationInFlight = useRef(false)
 
   const receiveGame = useCallback(
     (nextGame: WordGame | null) => {
@@ -78,12 +80,15 @@ export function ExplainWordGamePage() {
 
   const loadGame = useCallback(
     async (quiet = false) => {
-      if (!partnershipId) return
+      if (!partnershipId || gameMutationInFlight.current) return
+      const loadVersion = ++gameLoadVersion.current
       try {
         const response = await api.getWordGame(partnershipId)
+        if (loadVersion !== gameLoadVersion.current) return
         receiveGame(response.data)
         if (!quiet) setError(null)
       } catch (loadError) {
+        if (loadVersion !== gameLoadVersion.current) return
         if (loadError instanceof ApiError && loadError.code === 'word_game_not_found') {
           receiveGame(null)
           if (!quiet) setError(null)
@@ -119,7 +124,8 @@ export function ExplainWordGamePage() {
     }
   }, [partnershipId, receiveGame])
 
-  const completedGame = finishedGame ?? (game?.status === 'finished' ? game : null)
+  const completedGame =
+    finishedGame?.id === game?.id ? finishedGame : game?.status === 'finished' ? game : null
   const sessionGameId = completedGame?.id ?? game?.id
   const sessionStatus = completedGame?.status ?? game?.status
   const hasOtherOngoingGame = sessions.some(
@@ -210,6 +216,8 @@ export function ExplainWordGamePage() {
 
   async function run(action: () => Promise<{ data: WordGame } | void>) {
     if (isBusy) return false
+    gameMutationInFlight.current = true
+    gameLoadVersion.current += 1
     setIsBusy(true)
     setError(null)
     try {
@@ -220,6 +228,7 @@ export function ExplainWordGamePage() {
       setError(messageFromError(actionError))
       return false
     } finally {
+      gameMutationInFlight.current = false
       setIsBusy(false)
     }
   }
