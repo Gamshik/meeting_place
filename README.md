@@ -277,22 +277,23 @@ returns to Supabase's `/auth/v1/callback`, and Supabase returns to this applicat
 
 ## Commands
 
-| Command                       | Purpose                                      |
-| ----------------------------- | -------------------------------------------- |
-| `npm run dev`                 | Run React and the Worker locally             |
-| `npm run build`               | Type-check and create a production bundle    |
-| `npm run lint`                | Run ESLint                                   |
-| `npm run typecheck`           | Check TypeScript                             |
-| `npm test`                    | Run unit tests once                          |
-| `npm run test:e2e`            | Run browser regression tests                 |
-| `npm run test:db:concurrency` | Test concurrent requests on local Supabase   |
-| `npm run format`              | Format source files                          |
-| `npm run format:check`        | Check formatting without changing files      |
-| `npm run check`               | Run all repository checks                    |
-| `npm run deploy`              | Build and deploy to Cloudflare Workers       |
-| `npm run supabase:start`      | Start local Supabase using Docker            |
-| `npm run db:reset`            | Rebuild the local database from migrations   |
-| `npm run db:push`             | Apply local migrations to the linked project |
+| Command                       | Purpose                                        |
+| ----------------------------- | ---------------------------------------------- |
+| `npm run dev`                 | Run React and the Worker locally               |
+| `npm run dev:tunnel`          | Run locally behind an HTTPS development tunnel |
+| `npm run build`               | Type-check and create a production bundle      |
+| `npm run lint`                | Run ESLint                                     |
+| `npm run typecheck`           | Check TypeScript                               |
+| `npm test`                    | Run unit tests once                            |
+| `npm run test:e2e`            | Run browser regression tests                   |
+| `npm run test:db:concurrency` | Test concurrent requests on local Supabase     |
+| `npm run format`              | Format source files                            |
+| `npm run format:check`        | Check formatting without changing files        |
+| `npm run check`               | Run all repository checks                      |
+| `npm run deploy`              | Build and deploy to Cloudflare Workers         |
+| `npm run supabase:start`      | Start local Supabase using Docker              |
+| `npm run db:reset`            | Rebuild the local database from migrations     |
+| `npm run db:push`             | Apply local migrations to the linked project   |
 
 ## Security notes
 
