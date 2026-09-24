@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 
 import type { Profile, ProfileActivity } from '@contracts/contracts'
 import { useCommunity } from '@features/community/model/CommunityContext'
@@ -58,7 +59,7 @@ export function FriendProfilePage() {
     <AppShell profile={viewer}>
       <section className="friend-profile-page">
         <Link className="profile-back-link" to="/?view=friends">
-          ← Back to friends
+          <ArrowIcon direction="left" /> Back to friends
         </Link>
         <header className="friend-profile-heading">
           <ProfileAvatar profile={friend} />
@@ -72,7 +73,9 @@ export function FriendProfilePage() {
               to={`/games/explain-word/${partnership.id}`}
             >
               Practice with {friend.displayName.split(/\s+/)[0]}
-              <span aria-hidden="true">↗</span>
+              <span aria-hidden="true">
+                <ArrowIcon direction="up-right" />
+              </span>
             </Link>
           ) : null}
         </header>

@@ -1,5 +1,6 @@
 /** @jsxImportSource react */
 import type { GameDefinition } from '@features/games/catalog/model/games'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 export function GameCatalog({
   onPlay,
   items,
@@ -61,7 +62,9 @@ export function WordArtwork() {
     <div className="word-art" aria-hidden="true">
       <div className="playing-card card-back">
         <span>meeting place</span>
-        <div className="card-symbol">↗</div>
+        <div className="card-symbol">
+          <ArrowIcon direction="up-right" />
+        </div>
       </div>
       <div className="playing-card card-front">
         <span>Explain the word</span>

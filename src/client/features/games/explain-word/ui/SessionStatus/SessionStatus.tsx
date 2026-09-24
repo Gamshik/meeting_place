@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 
 import type { WordGame } from '@contracts/contracts'
 import { formatCountdown } from '@features/games/explain-word/lib/game-time'
@@ -23,7 +24,13 @@ export function SessionStatus({ game, userId }: { game: WordGame; userId: string
   return (
     <section className="session-pause-card" role="status">
       <div className="session-pause-signal" aria-hidden="true">
-        <span>{partnerLeft ? game.partner.displayName.trim().charAt(0).toUpperCase() : '↻'}</span>
+        <span>
+          {partnerLeft ? (
+            game.partner.displayName.trim().charAt(0).toUpperCase()
+          ) : (
+            <ArrowIcon direction="refresh" />
+          )}
+        </span>
         <i />
       </div>
       <div className="session-pause-copy">

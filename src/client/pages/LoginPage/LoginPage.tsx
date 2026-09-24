@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 import { Navigate } from 'react-router-dom'
 
 import { useAuth } from '@features/auth/model/AuthContext'
@@ -63,7 +64,10 @@ export function LoginPage() {
           </button>
           <div className="login-promises" aria-label="What to expect">
             <span>
-              <i aria-hidden="true">↔</i>2 players
+              <i aria-hidden="true">
+                <ArrowIcon direction="horizontal" />
+              </i>
+              2 players
             </span>
             <span>
               <i aria-hidden="true">◷</i>5–10 minutes
@@ -109,8 +113,12 @@ function LoginPracticeArtwork() {
       </div>
       <span className="login-speak-bubble">Speak</span>
       <span className="login-listen-bubble">Listen</span>
-      <span className="login-orbit-arrow login-orbit-arrow-top">↗</span>
-      <span className="login-orbit-arrow login-orbit-arrow-bottom">↙</span>
+      <span className="login-orbit-arrow login-orbit-arrow-top">
+        <ArrowIcon direction="up-right" />
+      </span>
+      <span className="login-orbit-arrow login-orbit-arrow-bottom">
+        <ArrowIcon direction="down-left" />
+      </span>
     </div>
   )
 }

@@ -9,6 +9,54 @@ test('desktop login fits without page scrolling', async ({ page }) => {
   ).toBe(true)
 })
 
+test('login badge icons fit their backgrounds on mobile', async ({ page }, testInfo) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/login')
+  for (const width of [320, 375, 480, 658]) {
+    await page.setViewportSize({ width, height: 740 })
+    await expect(page.locator('.login-orbit-arrow svg')).toHaveCount(2)
+    for (const arrow of await page.locator('.login-orbit-arrow svg').all()) {
+      await expect(arrow).toHaveCSS('stroke', 'rgb(255, 109, 85)')
+      await expect(arrow).toHaveAttribute('aria-hidden', 'true')
+    }
+    if (width === 375) {
+      await page
+        .locator('.login-art')
+        .screenshot({ path: testInfo.outputPath('login-svg-arrows.png') })
+    }
+    const badges = page.locator('.login-promises')
+    const bounds = await badges.locator('i').evaluateAll((icons) =>
+      icons.map((icon) => {
+        const range = document.createRange()
+        range.selectNodeContents(icon)
+        const text = range.getBoundingClientRect()
+        const box = icon.getBoundingClientRect()
+        const badge = icon.parentElement!.getBoundingClientRect()
+        return {
+          textFits:
+            text.top >= box.top &&
+            text.bottom <= box.bottom &&
+            text.left >= box.left &&
+            text.right <= box.right,
+          iconFits:
+            box.top >= badge.top &&
+            box.bottom <= badge.bottom &&
+            box.left >= badge.left &&
+            box.right <= badge.right,
+          width: box.width,
+        }
+      }),
+    )
+    for (const icon of bounds) {
+      expect(icon.textFits).toBe(true)
+      expect(icon.iconFits).toBe(true)
+      expect(icon.width).toBe(24)
+    }
+    await badges.screenshot({ path: testInfo.outputPath(`login-badges-${width}.png`) })
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
+
 test('custom cursor stays subtle and responds to interactive controls', async ({ page }) => {
   await page.goto('/login')
   await page.mouse.move(80, 120)
@@ -77,13 +125,13 @@ test('custom cursor overrides component and disabled cursors across control type
     const target = controls.locator(selector)
     await target.hover()
     await expect(page.locator('html')).toHaveClass(/custom-cursor-visible/)
-    await target.toHaveCSS('cursor', 'none')
+    await expect(target).toHaveCSS('cursor', 'none')
   }
   for (const selector of ['input[type="text"]', 'textarea', '[contenteditable] span', 'select']) {
     const target = controls.locator(selector)
     await target.hover()
     await expect(page.locator('html')).toHaveClass(/custom-cursor-over-text/)
-    await target.toHaveCSS('cursor', selector === 'select' ? 'default' : 'text')
+    await expect(target).toHaveCSS('cursor', selector === 'select' ? 'default' : 'text')
     await expect(page.locator('.custom-cursor').first()).toHaveCSS('opacity', '0')
   }
   await page.emulateMedia({ reducedMotion: 'reduce' })

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 
 export function RulesDialog({ onClose }: { onClose: () => void }) {
   const closeButton = useRef<HTMLButtonElement | null>(null)
@@ -71,7 +72,9 @@ export function RulesDialog({ onClose }: { onClose: () => void }) {
           </ol>
           <div className="rules-modes">
             <div>
-              <span aria-hidden="true">↗</span>
+              <span aria-hidden="true">
+                <ArrowIcon direction="up-right" />
+              </span>
               <strong>Live call</strong>
               <small>Talk together</small>
             </div>

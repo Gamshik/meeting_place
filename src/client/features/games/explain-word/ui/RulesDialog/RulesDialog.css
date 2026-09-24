@@ -84,7 +84,7 @@
 }
 
 .rules-steps li::after {
-  content: '→';
+  content: '';
   position: absolute;
   z-index: 5;
   top: 50%;
@@ -96,6 +96,10 @@
   border: 2px solid var(--mp-ink);
   border-radius: 9px 9px 9px 3px;
   background: var(--mp-acid);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317151d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14m-6-6 6 6-6 6'/%3E%3C/svg%3E");
+  background-size: 18px 18px;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: 3px 3px 0 var(--mp-coral);
   color: var(--mp-ink);
   font-size: 20px;
@@ -331,7 +335,7 @@
   }
 
   .rules-steps li::after {
-    content: '↓';
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317151d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14m-6-6 6 6 6-6'/%3E%3C/svg%3E");
     top: auto;
     right: auto;
     bottom: -17px;

@@ -1,4 +1,5 @@
 import type { WordGame } from '@contracts/contracts'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 
 export function RoundOutcome({ round }: { round: NonNullable<WordGame['round']> }) {
   const outcome = round.status === 'skipped' ? 'skipped' : round.isCorrect ? 'success' : 'missed'
@@ -15,7 +16,13 @@ export function RoundOutcome({ round }: { round: NonNullable<WordGame['round']> 
     >
       <div className="round-outcome-verdict">
         <span className="round-outcome-mark" aria-hidden="true">
-          {outcome === 'success' ? '✓' : outcome === 'skipped' ? '↷' : '×'}
+          {outcome === 'success' ? (
+            '✓'
+          ) : outcome === 'skipped' ? (
+            <ArrowIcon direction="turn" />
+          ) : (
+            '×'
+          )}
         </span>
         <div>
           <small>Round {round.turnNumber}</small>
@@ -28,7 +35,7 @@ export function RoundOutcome({ round }: { round: NonNullable<WordGame['round']> 
           <strong>{round.secretWord}</strong>
         </div>
         <span className="round-outcome-arrow" aria-hidden="true">
-          →
+          <ArrowIcon />
         </span>
         <div>
           <small>Answer</small>
