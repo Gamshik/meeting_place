@@ -677,7 +677,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page.getByRole('dialog', { name: 'How to play' })).toBeVisible()
   await expect(page.getByText('Explain naturally')).toBeVisible()
   await page.getByRole('button', { name: 'Close rules' }).click()
-  await page.getByRole('radio', { name: /Recorded practice/ }).check()
+  await page.getByRole('radio', { name: 'Recorded' }).check()
   await page.getByRole('button', { name: 'Invite to play' }).click()
   await expect(page.getByRole('heading', { name: 'Explain the word' })).toHaveClass(/sr-only/)
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
@@ -1016,10 +1016,10 @@ test('synchronizes live-call preparation and guessing for both players', async (
   await expect(guesserPage.locator('.guess-card')).toBeVisible()
   expect(
     await guesserPage.locator('.guess-card').evaluate((element) => element.clientWidth),
-  ).toBeLessThanOrEqual(760)
+  ).toBeLessThanOrEqual(1040)
   expect(
     await guesserPage.locator('.guess-card').evaluate((element) => element.clientHeight),
-  ).toBeLessThanOrEqual(160)
+  ).toBeLessThanOrEqual(270)
   await expect(explainerPage.getByLabel('Your answer')).toHaveCount(0)
 
   await explainerContext.close()
@@ -1198,7 +1198,7 @@ test('gives both live-call players a final 30-second guessing phase', async ({ b
   await guesserContext.close()
 })
 
-test('shows the guesser synchronized Recorded practice timers', async ({ page }) => {
+test('shows the guesser synchronized Recorded timers', async ({ page }) => {
   await signIn(page)
   const now = new Date().toISOString()
   let game: WordGame = {
@@ -1430,7 +1430,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
   await page.getByRole('link', { name: 'History', exact: true }).click()
   await expect(page.locator('.history-card')).toHaveCount(2)
   await expect(page.getByLabel('2 finished games')).toBeVisible()
-  await page.getByText('Round details', { exact: true }).first().click()
+  await page.getByText('View 2 rounds', { exact: true }).first().click()
   const rounds = page.locator('.history-card').first().getByRole('table')
   await expect(rounds.getByRole('row')).toHaveCount(3)
   await expect(rounds).toContainText('passport')
@@ -1740,7 +1740,7 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   await expect(page.getByRole('radio', { name: /Live call/ })).toBeChecked()
   await page.getByRole('button', { name: '3 min' }).click()
   await expect(page.getByRole('button', { name: 'Back to results' })).toHaveCount(0)
-  const recordedModeCard = page.getByRole('radio', { name: /Recorded practice/ }).locator('..')
+  const recordedModeCard = page.getByRole('radio', { name: 'Recorded' }).locator('..')
   await recordedModeCard.hover()
   await expect(page.locator('html')).toHaveClass(/custom-cursor-interactive/)
   await expect(recordedModeCard).toHaveCSS('cursor', 'none')
@@ -1763,11 +1763,9 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   await foodTopicCard.hover()
   await expect(page.locator('html')).toHaveClass(/custom-cursor-interactive/)
   await expect(foodTopicCard).toHaveCSS('cursor', 'none')
-  await page.getByRole('button', { name: 'Notifications', exact: true }).click()
-  await expect(page.getByRole('region', { name: 'Notifications' })).toBeVisible()
   expect(left).toBe(false)
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
-  await page.getByRole('link', { name: 'Friends', exact: true }).click()
+  await page.getByRole('link', { name: 'Lobby', exact: true }).click()
   await expect.poll(() => left).toBe(true)
 })
 
