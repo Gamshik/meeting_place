@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { GameCatalog } from '../../src/client/components/GameCatalog'
+import { GameCatalog } from '../../src/client/features/games/catalog/ui/GameCatalog/GameCatalog'
 
 for (const width of [320, 1440]) {
   test(`catalog accommodates six future entries at ${width}px`, async ({ page }) => {
