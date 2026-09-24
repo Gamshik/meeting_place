@@ -1,0 +1,414 @@
+.archive-page {
+  max-width: 1320px;
+  margin: 0 auto;
+}
+.archive-count {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  width: fit-content;
+  margin: 8px 0 24px 12px;
+  color: var(--mp-muted);
+  font-size: 20px;
+  font-weight: 700;
+}
+.archive-count-number {
+  position: relative;
+}
+.archive-count-number strong {
+  display: grid;
+  place-items: center;
+  min-width: 54px;
+  height: 54px;
+  padding: 6px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 10px 10px 10px 4px;
+  background: var(--mp-acid);
+  color: var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+  font-size: 30px;
+  line-height: 1;
+}
+.archive-count-orbit {
+  position: absolute;
+  inset: -9px;
+  border: 1px solid transparent;
+  border-left-color: var(--mp-muted);
+  border-right-color: var(--mp-muted);
+  border-radius: 50%;
+  animation: archive-orbit 12s linear infinite;
+  pointer-events: none;
+}
+.archive-count-orbit i,
+.archive-count-orbit b {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--mp-ink);
+}
+.archive-count-orbit i {
+  top: 3px;
+  left: 6px;
+  background: var(--mp-lilac);
+}
+.archive-count-orbit b {
+  bottom: 3px;
+  right: 6px;
+  border-radius: 50%;
+  background: var(--mp-coral);
+}
+@keyframes archive-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.archive-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 0.85fr) minmax(0, 1.15fr);
+  gap: 18px;
+  align-items: start;
+}
+.archive-browser,
+.archive-results,
+.archive-empty {
+  min-width: 0;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 5px;
+  background: var(--mp-card);
+  box-shadow: 5px 5px 0 var(--mp-ink);
+}
+.archive-browser {
+  overflow: hidden;
+}
+.archive-match {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 84px;
+  padding: 16px;
+  border: 0;
+  border-bottom: 1px solid var(--mp-line);
+  background: transparent;
+  color: var(--mp-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    box-shadow 160ms,
+    transform 160ms;
+}
+.archive-match:last-child {
+  border-bottom: 0;
+}
+.archive-match[aria-pressed='true'] {
+  background: #e3d9ff;
+}
+.archive-match[aria-pressed='true']::before {
+  content: '';
+  position: absolute;
+  inset: 10px auto 10px 0;
+  width: 5px;
+  border-radius: 0 4px 4px 0;
+  background: var(--mp-ink);
+}
+.archive-match:hover {
+  box-shadow: inset -3px -3px 0 var(--mp-ink);
+}
+.archive-match:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+.archive-game-icon {
+  width: 36px;
+  height: 36px;
+  stroke: var(--mp-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.archive-partner {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.archive-partner strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 17px;
+  font-weight: 850;
+}
+.archive-partner time {
+  color: var(--mp-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.archive-outcome {
+  min-width: 55px;
+  padding: 5px 7px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 7px 7px 7px 3px;
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  text-align: center;
+  transition: box-shadow 160ms;
+}
+.archive-match:hover .archive-outcome,
+.archive-match:active .archive-outcome {
+  box-shadow: none;
+}
+.archive-outcome.is-win {
+  background: var(--mp-acid);
+}
+.archive-outcome.is-draw {
+  background: var(--mp-lilac);
+}
+.archive-outcome.is-loss {
+  background: var(--mp-coral);
+}
+.archive-score {
+  white-space: nowrap;
+  font-size: 19px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+}
+.archive-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-top: 1px solid var(--mp-line);
+  font-weight: 700;
+}
+.archive-pagination button {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 7px 7px 7px 3px;
+  background: var(--mp-lilac);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    box-shadow 160ms,
+    transform 160ms;
+}
+.archive-pagination button:hover:not(:disabled),
+.archive-pagination button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+.archive-pagination button:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+  background: transparent;
+  cursor: default;
+}
+.archive-results {
+  padding: 22px;
+  scroll-margin-top: 20px;
+}
+.archive-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 20px;
+}
+.archive-result-header h2 {
+  min-width: 0;
+  font-size: clamp(22px, 2.1vw, 30px);
+  font-weight: 850;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+.archive-result-header .button {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+.archive-rounds-scroll {
+  max-height: min(420px, 48dvh);
+  padding-right: 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mp-lilac) var(--mp-card);
+}
+.archive-rounds-scroll:focus-visible {
+  outline: 2px solid var(--mp-ink);
+  outline-offset: 3px;
+}
+.archive-rounds {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+.archive-rounds th,
+.archive-rounds td {
+  padding: 17px 8px;
+  border-top: 1px solid var(--mp-line);
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+.archive-rounds th:first-child,
+.archive-rounds td:first-child {
+  padding-left: 0;
+}
+.archive-rounds th:last-child,
+.archive-rounds td:last-child {
+  padding-right: 0;
+  text-align: right;
+}
+.archive-rounds thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--mp-card);
+  box-shadow: 0 1px 0 var(--mp-line);
+}
+.archive-rounds thead th {
+  border-top: 0;
+  background: var(--mp-card);
+  font-size: 14px;
+  color: var(--mp-muted);
+  font-weight: 650;
+}
+.archive-rounds tbody th,
+.archive-rounds tbody td:last-child {
+  font-weight: 800;
+}
+.archive-rounds tbody {
+  font-size: 16px;
+}
+.archive-incorrect {
+  color: #b42318;
+}
+.archive-result-earned {
+  color: #287137;
+}
+.archive-result-paused {
+  color: #65509a;
+}
+.archive-result-neutral {
+  color: #68616d;
+}
+.archive-empty {
+  padding: 24px;
+}
+.archive-empty h2 {
+  font-size: 22px;
+  font-weight: 800;
+}
+.archive-empty p,
+.archive-no-rounds {
+  color: var(--mp-muted);
+  margin-top: 8px;
+}
+.archive-match:focus-visible {
+  outline: 3px solid var(--mp-ink);
+  outline-offset: -5px;
+}
+.archive-results:focus-visible,
+.archive-pagination button:focus-visible {
+  outline: 3px solid var(--mp-ink);
+  outline-offset: 5px;
+}
+@media (max-width: 1000px) {
+  .archive-layout {
+    grid-template-columns: minmax(300px, 0.9fr) minmax(0, 1.1fr);
+  }
+  .archive-match {
+    gap: 9px;
+    padding: 14px 10px;
+  }
+  .archive-result-header {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 760px) {
+  .archive-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .archive-results {
+    padding: 16px;
+  }
+  .archive-match {
+    min-height: 72px;
+    padding: 12px;
+  }
+  .archive-result-header h2 {
+    font-size: 23px;
+  }
+  .archive-rounds th,
+  .archive-rounds td {
+    padding-block: 14px;
+  }
+}
+@media (max-width: 380px) {
+  .archive-match {
+    grid-template-columns: 28px minmax(0, 1fr) auto auto;
+    gap: 7px;
+    padding-inline: 8px;
+  }
+  .archive-game-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .archive-partner strong {
+    font-size: 15px;
+  }
+  .archive-partner time {
+    font-size: 12px;
+  }
+  .archive-score {
+    font-size: 16px;
+  }
+  .archive-outcome {
+    min-width: 43px;
+    padding: 4px;
+    font-size: 10px;
+  }
+  .archive-rounds tbody {
+    font-size: 14px;
+  }
+  .archive-rounds th,
+  .archive-rounds td {
+    padding-inline: 4px;
+  }
+  .archive-rounds thead th {
+    white-space: nowrap;
+  }
+  .archive-rounds th:first-child {
+    width: 35%;
+  }
+  .archive-rounds th:nth-child(2) {
+    width: 25%;
+  }
+  .archive-rounds th:last-child {
+    width: 40%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .archive-count-orbit {
+    animation: none;
+  }
+  .archive-match,
+  .archive-outcome,
+  .archive-pagination button {
+    transition: none;
+  }
+}

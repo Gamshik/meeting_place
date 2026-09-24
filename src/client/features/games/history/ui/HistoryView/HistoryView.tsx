@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { Partnership } from '@contracts/contracts'
+import type { Partnership, WordGameRoundSummary } from '@contracts/contracts'
 import type { GameHistoryItem } from '@features/community/model/CommunityContext'
 import { games } from '@features/games/catalog/model/games'
-import { wordGameModeLabel } from '@features/games/explain-word/model/word-game-mode'
-import { RoundsTable } from '@features/games/explain-word/ui/RoundsTable/RoundsTable'
 
 export function HistoryView({
   history,
@@ -19,216 +17,220 @@ export function HistoryView({
   disabled: boolean
   onPlayAgain: (item: GameHistoryItem) => void
 }) {
-  const pageSize = 5
+  const pageSize = 6
+  const [navigation, setNavigation] = useState<{
+    highlight: string | null
+    page: number
+    selected: string | null
+  } | null>(null)
+  const resultPanel = useRef<HTMLElement>(null)
+  const highlightedIndex = history.findIndex((item) => item.id === highlightedId)
   const pageCount = Math.max(1, Math.ceil(history.length / pageSize))
-  const [manualPage, setManualPage] = useState<number | null>(null)
-  const highlightedCard = useRef<HTMLElement | null>(null)
-  const highlightedIndex = highlightedId
-    ? history.findIndex((item) => item.id === highlightedId)
-    : -1
-  const highlightedPage = highlightedIndex >= 0 ? Math.floor(highlightedIndex / pageSize) + 1 : null
-  const currentPage = Math.min(manualPage ?? highlightedPage ?? 1, pageCount)
-  const pageStart = (currentPage - 1) * pageSize
-  const visibleHistory = history.slice(pageStart, pageStart + pageSize)
+  const manual = navigation?.highlight === highlightedId ? navigation : null
+  const page = Math.min(
+    manual?.page ?? (highlightedIndex >= 0 ? Math.floor(highlightedIndex / pageSize) + 1 : 1),
+    pageCount,
+  )
+  const visibleHistory = history.slice((page - 1) * pageSize, page * pageSize)
+  const selected =
+    visibleHistory.find((item) => item.id === (manual ? manual.selected : highlightedId)) ??
+    visibleHistory[0]
 
   useEffect(() => {
-    if (!highlightedCard.current) return
+    if (!highlightedId || selected?.id !== highlightedId) return
     const frame = requestAnimationFrame(() => {
-      highlightedCard.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      highlightedCard.current?.focus({ preventScroll: true })
+      resultPanel.current?.focus({ preventScroll: true })
+      resultPanel.current?.scrollIntoView({ block: 'nearest', behavior: 'instant' })
     })
     return () => cancelAnimationFrame(frame)
-  }, [currentPage, highlightedId, visibleHistory.length])
+  }, [highlightedId, selected?.id])
 
   return (
-    <section className="history-page">
-      <div className="history-tally" aria-label={`${history.length} finished games`}>
-        <strong>{String(history.length).padStart(2, '0')}</strong>
-        <span>
-          <small>Practice archive</small>
-          finished games
-        </span>
-        <i aria-hidden="true">
-          <b />
-          <b />
-          <b />
-          <b />
-        </i>
+    <section className="archive-page" aria-label="Game history">
+      <div className="archive-count" aria-label={`${history.length} finished games`}>
+        <div className="archive-count-number">
+          <strong>{history.length}</strong>
+          <span className="archive-count-orbit" aria-hidden="true">
+            <i />
+            <b />
+          </span>
+        </div>
+        <span>{history.length === 1 ? 'game' : 'games'}</span>
       </div>
-
-      {history.length ? (
-        <>
-          <div className="history-list">
-            {visibleHistory.map((item) => {
-              const isHighlighted = item.id === highlightedId
-              const game = games.find((candidate) => candidate.id === item.gameId)
-              const canPlayAgain = friends.some((friend) => friend.id === item.partnershipId)
-              const resultState =
-                item.scores.you === item.scores.partner
-                  ? 'draw'
-                  : item.scores.you > item.scores.partner
-                    ? 'win'
-                    : 'loss'
-              const result =
-                resultState === 'win' ? 'Win' : resultState === 'loss' ? 'Loss' : 'Draw'
-              return (
-                <article
-                  ref={isHighlighted ? highlightedCard : undefined}
-                  className={`history-card is-${resultState}${isHighlighted ? ' is-highlighted' : ''}`}
-                  data-highlighted={isHighlighted || undefined}
-                  tabIndex={isHighlighted ? -1 : undefined}
-                  key={`${item.gameId}:${item.id}`}
-                >
-                  <div className="history-main">
-                    <div className="history-title-row">
-                      <div>
-                        <p>{game?.title ?? 'English game'}</p>
-                        <h2>{item.partner.displayName}</h2>
-                      </div>
-                      <time dateTime={item.finishedAt}>
-                        <span>{formatFinishedDate(item.finishedAt)}</span>
-                        <strong>{formatFinishedTime(item.finishedAt)}</strong>
-                      </time>
-                    </div>
-                    <div className="history-meta">
-                      <span>{wordGameModeLabel(item.mode)}</span>
-                    </div>
-                  </div>
-                  <div
-                    className="history-score"
-                    aria-label={`${result}. Score ${item.scores.you} to ${item.scores.partner}`}
+      {selected ? (
+        <div className="archive-layout">
+          <div className="archive-browser">
+            <div className="archive-matches" aria-label="Finished games">
+              {visibleHistory.map((item) => {
+                const game = games.find((candidate) => candidate.id === item.gameId)
+                const outcome =
+                  item.scores.you === item.scores.partner
+                    ? 'draw'
+                    : item.scores.you > item.scores.partner
+                      ? 'win'
+                      : 'loss'
+                return (
+                  <button
+                    key={`${item.gameId}:${item.id}`}
+                    type="button"
+                    className="archive-match"
+                    aria-pressed={selected.id === item.id}
+                    aria-controls="archive-results"
+                    aria-label={`${game?.title ?? 'English game'} with ${item.partner.displayName}, ${formatDate(item.finishedAt)}, ${outcome}, you ${item.scores.you}, partner ${item.scores.partner}`}
+                    onClick={() =>
+                      setNavigation({ highlight: highlightedId, page, selected: item.id })
+                    }
                   >
-                    <span className="history-outcome">{result}</span>
-                    <div aria-hidden="true">
-                      <b>
-                        <small>You</small>
-                        <strong>{item.scores.you}</strong>
-                      </b>
-                      <i>:</i>
-                      <b>
-                        <small>Them</small>
-                        <strong>{item.scores.partner}</strong>
-                      </b>
-                    </div>
-                  </div>
-                  {canPlayAgain ? (
-                    <button
-                      type="button"
-                      className="button button-primary"
-                      disabled={disabled}
-                      onClick={() => onPlayAgain(item)}
-                    >
-                      Play again
-                    </button>
-                  ) : null}
-                  <details className="history-rounds" open={isHighlighted || undefined}>
-                    <summary>
-                      <span>
-                        View {item.roundCount} {item.roundCount === 1 ? 'round' : 'rounds'}
-                      </span>
-                    </summary>
-                    <RoundsTable
-                      rounds={item.rounds}
-                      partnerId={item.partner.id}
-                      partnerName={item.partner.displayName}
-                    />
-                  </details>
-                </article>
-              )
-            })}
+                    <svg className="archive-game-icon" viewBox="0 0 48 48" aria-hidden="true">
+                      <path
+                        fill="var(--mp-lilac)"
+                        d="M24 17h14a6 6 0 0 1 6 6v9a6 6 0 0 1-6 6v7l-9-7h-5a6 6 0 0 1-6-6v-9a6 6 0 0 1 6-6Z"
+                      />
+                      <path
+                        fill="var(--mp-acid)"
+                        d="M9 4h19a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6h-9L9 37v-9a6 6 0 0 1-6-6V10a6 6 0 0 1 6-6Z"
+                      />
+                    </svg>
+                    <span className="archive-partner">
+                      <strong>{item.partner.displayName}</strong>
+                      <time dateTime={item.finishedAt}>{formatDate(item.finishedAt)}</time>
+                    </span>
+                    <span className={`archive-outcome is-${outcome}`}>{outcome}</span>
+                    <span className="archive-score" aria-hidden="true">
+                      {item.scores.you} − {item.scores.partner}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            {pageCount > 1 && (
+              <nav className="archive-pagination" aria-label="History pages">
+                <button
+                  type="button"
+                  disabled={page === 1}
+                  onClick={() =>
+                    setNavigation({ highlight: highlightedId, page: page - 1, selected: null })
+                  }
+                >
+                  Previous
+                </button>
+                <span aria-live="polite">
+                  {page} / {pageCount}
+                </span>
+                <button
+                  type="button"
+                  disabled={page === pageCount}
+                  onClick={() =>
+                    setNavigation({ highlight: highlightedId, page: page + 1, selected: null })
+                  }
+                >
+                  Next
+                </button>
+              </nav>
+            )}
           </div>
-          {pageCount > 1 ? (
-            <HistoryPagination
-              page={currentPage}
-              pageCount={pageCount}
-              firstItem={pageStart + 1}
-              lastItem={Math.min(pageStart + pageSize, history.length)}
-              totalItems={history.length}
-              onChange={setManualPage}
-            />
-          ) : null}
-        </>
+          <section
+            id="archive-results"
+            className="archive-results"
+            ref={resultPanel}
+            tabIndex={-1}
+            aria-labelledby="archive-result-title"
+            data-game-id={selected.id}
+          >
+            <header className="archive-result-header">
+              <h2 id="archive-result-title">
+                You {selected.scores.you} − {selected.scores.partner} {selected.partner.displayName}
+              </h2>
+              {friends.some((friend) => friend.id === selected.partnershipId) && (
+                <button
+                  type="button"
+                  className="button button-primary"
+                  disabled={disabled}
+                  onClick={() => onPlayAgain(selected)}
+                >
+                  Play again
+                </button>
+              )}
+            </header>
+            {selected.rounds.length ? (
+              <div
+                key={selected.id}
+                className="archive-rounds-scroll"
+                role="region"
+                aria-label="Scrollable round results"
+                tabIndex={0}
+              >
+                <table className="archive-rounds">
+                  <caption className="sr-only">
+                    Round results with {selected.partner.displayName}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Word</th>
+                      <th scope="col">Answer</th>
+                      <th scope="col">Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selected.rounds.map((round) => (
+                      <tr key={round.id}>
+                        <th scope="row">
+                          {round.turnNumber}. {round.word ?? 'Hidden'}
+                        </th>
+                        <td>{round.guess ?? '—'}</td>
+                        <td>
+                          <HistoryRoundResult
+                            round={round}
+                            partnerId={selected.partner.id}
+                            partnerName={selected.partner.displayName}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="archive-no-rounds">No rounds were played.</p>
+            )}
+          </section>
+        </div>
       ) : (
-        <div className="history-empty">
-          <span aria-hidden="true">00</span>
+        <div className="archive-empty">
           <h2>Your finished games will live here</h2>
-          <p>Complete a game and its score, partner, rounds, and date will be saved.</p>
+          <p>Complete a game to see its score and answers.</p>
         </div>
       )}
     </section>
   )
 }
 
-function HistoryPagination({
-  page,
-  pageCount,
-  firstItem,
-  lastItem,
-  totalItems,
-  onChange,
+function HistoryRoundResult({
+  round,
+  partnerId,
+  partnerName,
 }: {
-  page: number
-  pageCount: number
-  firstItem: number
-  lastItem: number
-  totalItems: number
-  onChange: (page: number) => void
+  round: WordGameRoundSummary
+  partnerId: string
+  partnerName: string
 }) {
-  const visiblePages = Array.from(
-    new Set(
-      [1, page - 1, page, page + 1, pageCount].filter((item) => item > 0 && item <= pageCount),
-    ),
-  ).sort((left, right) => left - right)
-
-  return (
-    <nav className="history-pagination" aria-label="History pages">
-      <div className="history-pagination-status" aria-live="polite">
-        <span>
-          Showing <strong>{firstItem}</strong>–<strong>{lastItem}</strong> of {totalItems}
-        </span>
-        <div aria-hidden="true">
-          <i style={{ width: `${(lastItem / totalItems) * 100}%` }} />
-        </div>
-      </div>
-      <div className="history-pagination-controls">
-        <button type="button" disabled={page === 1} onClick={() => onChange(page - 1)}>
-          <span aria-hidden="true">←</span> Previous
-        </button>
-        <div className="history-page-numbers">
-          {visiblePages.map((pageNumber, index) => (
-            <span key={pageNumber}>
-              {index > 0 && pageNumber - visiblePages[index - 1]! > 1 ? (
-                <i aria-hidden="true">…</i>
-              ) : null}
-              <button
-                type="button"
-                aria-label={`Page ${pageNumber}`}
-                aria-current={pageNumber === page ? 'page' : undefined}
-                onClick={() => onChange(pageNumber)}
-              >
-                {pageNumber}
-              </button>
-            </span>
-          ))}
-        </div>
-        <button type="button" disabled={page === pageCount} onClick={() => onChange(page + 1)}>
-          Next <span aria-hidden="true">→</span>
-        </button>
-      </div>
-    </nav>
-  )
+  if (round.status === 'skipped') return <span className="archive-result-paused">Skipped</span>
+  if (round.status !== 'completed') return <span className="archive-result-paused">Unfinished</span>
+  if (round.score === 1)
+    return (
+      <span className="archive-result-earned">
+        {round.explainerId === partnerId ? partnerName : 'You'} +1
+      </span>
+    )
+  if (round.isCorrect === false && round.guess)
+    return <span className="archive-incorrect">Incorrect</span>
+  return <span className="archive-result-neutral">{round.guess ? 'No point' : 'No answer'}</span>
 }
 
-function formatFinishedDate(value: string) {
+function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
-    day: 'numeric',
     month: 'short',
-    year: 'numeric',
-  }).format(new Date(value))
-}
-
-function formatFinishedTime(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value))

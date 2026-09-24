@@ -26,11 +26,13 @@ Practice is the home screen. It is deliberately partner-first: the current activ
 automatically, and people with a game to join or resume rise to the top. One action opens the game
 room, whether the user is starting, joining, or returning to a session. The UI makes the resulting
 state explicit as **Start a round**, **Join now**, **Waiting room**, or **Jump back in**. Finished
-games remain behind an expandable history section. Each entry in
+games appear in the History tab. Each entry in
 `src/client/features/games/catalog/model/games.ts` provides its route and session operations; adding
-a game requires implementing its route and backend as well as registering it. History shows five
-finished games per page with their result, mode, round count, score, completion time, and expandable
-round details.
+a game requires implementing its route and backend as well as registering it. History shows six
+finished games per page in a compact list with game icons, outcomes, scores, and completion times.
+Selecting a game opens its Word, Answer, and Result panel beside the list (below it on mobile).
+Long round lists scroll within the results panel, keeping the score and column headings visible.
+The game counter has a subtle orbit animation that respects reduced-motion preferences.
 
 Friends manages connections only. **Invite** is also available from the global header and Practice
 screen, so a missing partner never becomes a navigation dead end. The compact form uses exact
@@ -359,7 +361,7 @@ Returning in time resumes the same round; otherwise the game finishes and all ac
 Either participant can also use **End game** to finish the session immediately. The player who ends
 it returns to Games; the other player receives the final score and can choose **Go home** or **View
 results**. The game screen remains in place until they choose; **View results** opens History,
-highlights the completed game, and expands its saved round details.
+selects the completed game, and focuses its saved round results.
 Active and paused sessions appear under **Continue playing**. Every completed session appears in the
 separate **History** tab, with its score and saved round-by-round results. Incoming requests appear in
 Notifications. Starting again creates a fresh game request without deleting the previous game or its

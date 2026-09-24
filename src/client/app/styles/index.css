@@ -35,3 +35,4 @@
 @import '../../features/games/explain-word/ui/GuessCard/GuessCard.css';
 @import '../../features/games/explain-word/ui/EndGameDialog/EndGameDialog.css';
 @import './responsive.css';
+@import '../../features/games/history/ui/HistoryView/HistoryLayout.css';

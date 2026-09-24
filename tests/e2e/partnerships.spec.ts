@@ -927,10 +927,10 @@ test('shows the other player an immediate choice when a word game finishes', asy
   await dialog.getByRole('button', { name: 'View results' }).click()
   await expect(dialog).toHaveCount(0)
   await expect(page).toHaveURL(`/?view=history&highlight=${gameId}`)
-  const highlightedGame = page.locator('.history-card.is-highlighted')
+  const highlightedGame = page.locator('.archive-results')
   await expect(highlightedGame).toBeVisible()
-  await expect(highlightedGame).toHaveAttribute('data-highlighted', 'true')
-  await expect(highlightedGame.locator('.history-rounds')).toHaveAttribute('open', '')
+  await expect(highlightedGame).toHaveAttribute('data-game-id', gameId)
+  await expect(highlightedGame).toBeFocused()
 
   await page.goto(`/games/explain-word/${relationshipId}?new=1`)
   await expect(page.getByRole('dialog', { name: 'The game has finished' })).toHaveCount(0)
@@ -1428,13 +1428,16 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
 
   await page.goto('/')
   await page.getByRole('link', { name: 'History', exact: true }).click()
-  await expect(page.locator('.history-card')).toHaveCount(2)
+  await expect(page.locator('.archive-match')).toHaveCount(2)
   await expect(page.getByLabel('2 finished games')).toBeVisible()
-  await page.getByText('View 2 rounds', { exact: true }).first().click()
-  const rounds = page.locator('.history-card').first().getByRole('table')
+  await expect(page.locator('.archive-match').first()).toHaveAttribute('aria-pressed', 'true')
+  const rounds = page.locator('.archive-results').getByRole('table')
   await expect(rounds.getByRole('row')).toHaveCount(3)
   await expect(rounds).toContainText('passport')
-  await expect(rounds).toContainText('+1 correct')
+  await expect(rounds).toContainText('You +1')
+  await page.locator('.archive-match').nth(1).click()
+  await expect(page.getByText('No rounds were played.', { exact: true })).toBeVisible()
+  await expect(page.locator('.archive-match').nth(1)).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('returns to Games after cancelling a replay request from History', async ({ page }) => {
@@ -1998,3 +2001,147 @@ test('a busy friend is not invited and can be retried later', async ({ page }) =
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
   expect(attempts).toBe(2)
 })
+
+for (const width of [320, 1440]) {
+  test(`history selection, pagination, and answers fit ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await signIn(page)
+    await page.route('**/api/partnerships**', (route) =>
+      route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+    )
+    const entries = Array.from({ length: 8 }, (_, index) => ({
+      id: `44444444-4444-4444-8444-${String(index).padStart(12, '0')}`,
+      partnershipId: relationshipId,
+      mode: 'live_call',
+      finishedAt: '2026-09-24T12:10:00Z',
+      partner: {
+        id: partnerId,
+        username: 'bob',
+        displayName: index === 7 ? 'A partner with a very long display name' : 'Bob',
+        avatarUrl: null,
+      },
+      scores: { you: 0, partner: 1 },
+      roundCount: 4,
+      rounds: [
+        {
+          id: '55555555-5555-4555-8555-555555555555',
+          turnNumber: 1,
+          explainerId: partnerId,
+          topic: 'Nature',
+          status: 'completed',
+          word: 'meadow',
+          guess: 'forest',
+          isCorrect: false,
+          score: 0,
+          explanationMethod: 'live',
+          coachScore: null,
+          completedAt: '2026-09-24T12:05:00Z',
+        },
+        {
+          id: '66666666-6666-4666-8666-666666666666',
+          turnNumber: 2,
+          explainerId: partnerId,
+          topic: 'Travel',
+          status: 'completed',
+          word: 'harbor',
+          guess: 'harbor',
+          isCorrect: true,
+          score: 1,
+          explanationMethod: 'live',
+          coachScore: null,
+          completedAt: '2026-09-24T12:06:00Z',
+        },
+        {
+          id: '77777777-7777-4777-8777-777777777777',
+          turnNumber: 3,
+          explainerId: userId,
+          topic: 'Nature',
+          status: 'awaiting_guess',
+          word: 'glacier',
+          guess: null,
+          isCorrect: null,
+          score: null,
+          explanationMethod: 'live',
+          coachScore: null,
+          completedAt: null,
+        },
+        {
+          id: '88888888-8888-4888-8888-888888888888',
+          turnNumber: 4,
+          explainerId: userId,
+          topic: 'Nature',
+          status: 'completed',
+          word: 'tree',
+          guess: 'tree',
+          isCorrect: true,
+          score: 0,
+          explanationMethod: 'recorded',
+          coachScore: null,
+          completedAt: '2026-09-24T12:07:00Z',
+        },
+      ],
+    }))
+    await page.unroute('**/api/games/explain-word/history')
+    await page.route('**/api/games/explain-word/history', (route) =>
+      route.fulfill({ json: { data: entries } }),
+    )
+    entries[0]!.rounds = Array.from({ length: 30 }, (_, index) => ({
+      ...entries[0]!.rounds[index % 4]!,
+      id: `99999999-9999-4999-8999-${String(index).padStart(12, '0')}`,
+      turnNumber: index + 1,
+    }))
+    entries[0]!.roundCount = 30
+    await page.goto(`/?view=history&highlight=${entries[7]!.id}`)
+    const results = page.locator('.archive-results')
+    await expect(results).toHaveAttribute('data-game-id', entries[7]!.id)
+    await expect(results).toBeFocused()
+    await expect(page.locator('.archive-match')).toHaveCount(2)
+    await expect(results.getByRole('columnheader')).toHaveText(['Word', 'Answer', 'Result'])
+    await expect(results.getByRole('row').nth(1)).toContainText('forest')
+    await expect(results.getByRole('row').nth(1)).toContainText('Incorrect')
+    await expect(results.getByRole('row').nth(2)).toContainText(
+      'A partner with a very long display name +1',
+    )
+    await expect(results).toContainText('Unfinished')
+    await expect(results.getByRole('row').nth(4)).toContainText('No point')
+    await expect(page.locator('.archive-count-orbit')).toHaveCSS('animation-name', 'none')
+    await expect(page.getByRole('heading', { name: 'History', exact: true })).toHaveCount(0)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true)
+    await page.getByRole('button', { name: 'Previous', exact: true }).click()
+    await expect(page.locator('.archive-match')).toHaveCount(6)
+    await expect(results).toHaveAttribute('data-game-id', entries[0]!.id)
+    const scrollableRounds = page.getByRole('region', { name: 'Scrollable round results' })
+    await scrollableRounds.focus()
+    expect(
+      await scrollableRounds.evaluate((element) => element.scrollHeight > element.clientHeight),
+    ).toBe(true)
+    const headingTop = (await results.getByRole('columnheader').first().boundingBox())!.y
+    const documentTop = await page.evaluate(() => window.scrollY)
+    await page.keyboard.press('End')
+    await expect
+      .poll(() => scrollableRounds.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0)
+    await expect(results.getByRole('row').last()).toBeInViewport()
+    expect(
+      Math.abs((await results.getByRole('columnheader').first().boundingBox())!.y - headingTop),
+    ).toBeLessThanOrEqual(1)
+    expect(await page.evaluate(() => window.scrollY)).toBe(documentTop)
+    const scrollBounds = (await scrollableRounds.boundingBox())!
+    const tableBounds = (await results.getByRole('table').boundingBox())!
+    expect(scrollBounds.height).toBeLessThanOrEqual(420)
+    expect(
+      scrollBounds.x + scrollBounds.width - tableBounds.x - tableBounds.width,
+    ).toBeGreaterThanOrEqual(14)
+    await page.screenshot({ path: `test-results/history-scrolled-${width}.png`, fullPage: true })
+    await page.locator('.archive-match').nth(2).focus()
+    await page.keyboard.press('Enter')
+    await expect(results).toHaveAttribute('data-game-id', entries[2]!.id)
+    await expect.poll(() => scrollableRounds.evaluate((element) => element.scrollTop)).toBe(0)
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
+    await expect(results).toHaveAttribute('data-game-id', entries[6]!.id)
+    await page.screenshot({ path: `test-results/history-${width}.png`, fullPage: true })
+  })
+}
