@@ -192,8 +192,11 @@ Active game pages also send a short authenticated presence heartbeat. Once both 
 an explicit departure or a missing heartbeat pauses the session and locks server-side mutations. A
 returning player resumes the same round when both participants are present again. The reconnect
 window is five minutes; its deadline and terminal state live in PostgreSQL, so refreshing the browser
-cannot bypass them. A recorder already running remains mounted and can finish locally while paused,
-but its result cannot be submitted unless the session resumes before expiry.
+cannot bypass them. Synchronized round countdowns freeze while the session is paused; when both
+players return, PostgreSQL shifts the open round's timing anchors by the disconnected duration so
+neither the browser nor a direct RPC can consume or bypass that preserved time. A recorder already
+running remains mounted and can finish locally while paused, but its result cannot be submitted
+unless the session resumes before expiry.
 Either participant may also finish an active or paused session immediately. This transition is
 authorization-checked in PostgreSQL. The player who ends it returns home, while the other player
 receives the final score immediately and chooses whether to go home or review the saved result.

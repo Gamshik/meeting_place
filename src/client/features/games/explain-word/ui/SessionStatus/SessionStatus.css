@@ -100,12 +100,20 @@
 
   .session-pause-timer {
     grid-column: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
     width: fit-content;
     min-width: 140px;
     margin-top: 2px;
     padding: 10px 14px;
     border-top: 2px solid var(--mp-ink);
     text-align: center;
+  }
+
+  .session-pause-timer strong {
+    margin-top: 0;
   }
 }
 

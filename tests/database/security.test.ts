@@ -814,6 +814,12 @@ describe('database authorization and lifecycle', () => {
     await rows('select public.respond_to_word_game($1,true)', [gameId])
 
     await asUser(alice)
+    const createdRound = await db.query<{ result: { round: { createdAt: string } } }>(
+      'select public.create_word_game_round($1,$2,$3,$4,$5) result',
+      [gameId, 'Travel', 'passport', ['passport'], ['visa']],
+    )
+    const roundCreatedAt = new Date(createdRound.rows[0]!.result.round.createdAt).getTime()
+
     await rows('select public.heartbeat_word_game($1)', [invitation.partnershipId])
     await asUser(bob)
     await rows('select public.heartbeat_word_game($1)', [invitation.partnershipId])
@@ -829,12 +835,20 @@ describe('database authorization and lifecycle', () => {
     })
     expect(new Date(paused.rows[0]!.result.reconnectDeadline).getTime()).toBeGreaterThan(Date.now())
 
+    await db.exec('reset role')
+    await db.query(
+      "update public.word_games set paused_at = paused_at - interval '1 minute' where id=$1",
+      [gameId],
+    )
     await asUser(bob)
-    const resumed = await db.query<{ result: { status: string } }>(
+    const resumed = await db.query<{ result: { status: string; round: { createdAt: string } } }>(
       'select public.heartbeat_word_game($1) result',
       [invitation.partnershipId],
     )
     expect(resumed.rows[0]!.result.status).toBe('active')
+    expect(
+      new Date(resumed.rows[0]!.result.round.createdAt).getTime() - roundCreatedAt,
+    ).toBeGreaterThan(59_000)
 
     await rows('select public.leave_word_game($1)', [invitation.partnershipId])
     await db.exec('reset role')

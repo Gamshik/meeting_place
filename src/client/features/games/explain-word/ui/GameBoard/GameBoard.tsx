@@ -55,7 +55,7 @@ export function GameBoard({
             <LiveCallRound
               key={round.id}
               disabled={isBusy || sessionLocked}
-              frozen={completionPending}
+              frozen={sessionLocked}
               game={game}
               userId={userId}
               onExpire={() => run(() => api.expireWordRound(partnershipId, round.id))}
@@ -67,6 +67,7 @@ export function GameBoard({
               key={round.id}
               disabled={isBusy || sessionLocked}
               forceStop={completionPending}
+              frozen={sessionLocked}
               game={game}
               userId={userId}
               onExpire={() => run(() => api.expireWordRound(partnershipId, round.id))}

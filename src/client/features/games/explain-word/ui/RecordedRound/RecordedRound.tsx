@@ -14,6 +14,7 @@ import {
 export function RecordedRound({
   disabled,
   forceStop,
+  frozen,
   game,
   onExpire,
   onGuess,
@@ -25,6 +26,7 @@ export function RecordedRound({
 }: {
   disabled: boolean
   forceStop: boolean
+  frozen: boolean
   game: WordGame
   onExpire: () => Promise<boolean>
   onGuess: (guess: string) => Promise<boolean>
@@ -35,7 +37,7 @@ export function RecordedRound({
   userId: string
 }) {
   const round = game.round!
-  const now = useServerNow(game.serverTime, forceStop)
+  const now = useServerNow(game.serverTime, frozen)
   const expirationAttempted = useRef(false)
   const isExplainer = round.explainerId === userId
   const recordingStartedAt = parseTimestamp(round.recordingStartedAt)
