@@ -1101,11 +1101,6 @@
     transform: none !important;
   }
 
-  html.touch-input .is-touch-pressed {
-    transform: translate(2px, 2px) !important;
-    transition: transform 120ms ease !important;
-  }
-
   .custom-cursor {
     display: none !important;
   }

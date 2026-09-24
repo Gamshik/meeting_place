@@ -1,0 +1,4 @@
+/* Pointer focus should not leave a selection ring; keyboard focus stays visible. */
+:focus:not(:focus-visible) {
+  outline: none;
+}

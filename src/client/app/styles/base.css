@@ -64,15 +64,12 @@ summary:focus-visible {
 }
 
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  html.custom-cursor-enabled body,
-  html.custom-cursor-enabled a,
-  html.custom-cursor-enabled button,
-  html.custom-cursor-enabled summary,
-  html.custom-cursor-enabled label[for],
-  html.custom-cursor-enabled [role='button'],
-  html.custom-cursor-enabled [role='link'],
-  html.custom-cursor-enabled [data-cursor='interactive'] {
-    cursor: none;
+  /* Component and disabled-state cursors must not appear beside the custom cursor. */
+  html.custom-cursor-enabled,
+  html.custom-cursor-enabled *,
+  html.custom-cursor-enabled *::before,
+  html.custom-cursor-enabled *::after {
+    cursor: none !important;
   }
 
   html.custom-cursor-enabled input:not([type]),
@@ -84,16 +81,14 @@ summary:focus-visible {
   html.custom-cursor-enabled input[type='tel'],
   html.custom-cursor-enabled input[type='number'],
   html.custom-cursor-enabled textarea,
-  html.custom-cursor-enabled [contenteditable='true'] {
-    cursor: text;
+  html.custom-cursor-enabled [contenteditable='true'],
+  html.custom-cursor-enabled [contenteditable='true'] * {
+    cursor: text !important;
   }
 
-  html.custom-cursor-enabled input[type='range'] {
-    cursor: none;
-  }
-
-  html.custom-cursor-enabled select {
-    cursor: default;
+  html.custom-cursor-enabled select,
+  html.custom-cursor-enabled select * {
+    cursor: default !important;
   }
 
   .custom-cursor {
@@ -603,14 +598,14 @@ h1 {
   display: flex;
   align-items: center;
   gap: 12px;
-  width: min(340px, calc(100% - 48px));
+  width: min(360px, calc(100% - 48px));
   min-height: 64px;
-  padding: 11px 12px;
-  border: 1px solid var(--mp-line, #d8d6cf);
-  border-radius: 18px 18px 18px 6px;
+  padding: 10px 12px;
+  border: 2px solid var(--mp-ink, #17151d);
+  border-radius: 10px 10px 10px 3px;
   background: var(--mp-card, #fffdf8);
   color: var(--mp-ink, #242422);
-  box-shadow: 0 18px 50px #211b2726;
+  box-shadow: 5px 5px 0 var(--mp-ink, #17151d);
   animation: toast-enter 180ms ease-out;
 }
 .toast-icon {
@@ -619,7 +614,8 @@ h1 {
   height: 38px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 12px 12px 12px 4px;
+  border: 2px solid var(--mp-ink, #17151d);
+  border-radius: 6px 6px 6px 2px;
   background: var(--mp-acid, #d7ff63);
   font-size: 17px;
   font-weight: 850;
@@ -627,29 +623,37 @@ h1 {
 .toast-message {
   min-width: 0;
   flex: 1;
-  font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
   line-height: 1.35;
 }
 .toast button {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   flex: 0 0 auto;
   padding: 0;
   place-items: center;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--mp-muted, #706e68);
+  border: 2px solid var(--mp-ink, #17151d);
+  border-radius: 6px 6px 6px 2px;
+  background: var(--mp-card, #fffdf8);
+  color: var(--mp-ink, #17151d);
+  box-shadow: 2px 2px 0 var(--mp-ink, #17151d);
   font-size: 21px;
   line-height: 1;
 }
 .toast button:hover {
-  background: #eee9df;
+  background: var(--mp-lilac, #b6a4ff);
+  box-shadow: 1px 1px 0 var(--mp-ink, #17151d);
+  transform: translate(1px, 1px);
+}
+.toast button:active {
+  box-shadow: none;
+  transform: translate(2px, 2px);
 }
 .toast-error {
-  border-color: #edc5ba;
-  background: #fff7f3;
+  box-shadow: 5px 5px 0 var(--mp-coral, #ff6d55);
 }
 .toast-error .toast-icon {
   background: var(--mp-coral, #ff6d55);
@@ -660,12 +664,18 @@ h1 {
     transform: translateY(10px);
   }
 }
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .toast {
     right: 16px;
-    bottom: max(16px, env(safe-area-inset-bottom));
+    bottom: calc(var(--mobile-nav-height, 68px) + 28px + env(safe-area-inset-bottom));
     left: 16px;
     width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
   }
 }
 
@@ -851,97 +861,95 @@ h1 {
 
 /* Touch devices can retain :hover after a tap. App.tsx marks coarse-pointer
    sessions so hover-only visuals resolve to each control's resting state. */
-html.touch-input .button:not(.is-touch-pressed):hover:not(:disabled) {
+html.touch-input .button:hover:not(:disabled) {
   box-shadow: 4px 4px 0 var(--mp-ink);
   transform: none;
 }
 
-html.touch-input .button-primary:not(.is-touch-pressed):hover:not(:disabled) {
+html.touch-input .button-primary:hover:not(:disabled) {
   background: var(--mp-ink);
   box-shadow: 4px 4px 0 var(--mp-coral);
 }
 
-html.touch-input .button-secondary:not(.is-touch-pressed):hover:not(:disabled) {
+html.touch-input .button-secondary:hover:not(:disabled) {
   background: #eee9df;
   box-shadow: 4px 4px 0 var(--mp-lilac);
 }
 
-html.touch-input .button-accent:not(.is-touch-pressed):hover:not(:disabled) {
+html.touch-input .button-accent:hover:not(:disabled) {
   background: var(--mp-coral);
   box-shadow: 4px 4px 0 var(--mp-ink);
 }
 
-html.touch-input .button-danger:not(.is-touch-pressed):hover:not(:disabled) {
+html.touch-input .button-danger:hover:not(:disabled) {
   background: #f7e9e4;
   box-shadow: 4px 4px 0 #982719;
 }
 
-html.touch-input .header-invite:not(.is-touch-pressed):hover,
-html.touch-input .profile-link:not(.is-touch-pressed):hover {
+html.touch-input .header-invite:hover,
+html.touch-input .profile-link:hover {
   box-shadow: 3px 3px 0 var(--mp-coral);
   transform: none;
 }
 
-html.touch-input .header-invite:not(.is-touch-pressed):hover {
+html.touch-input .header-invite:hover {
   background: var(--mp-ink);
 }
 
-html.touch-input .profile-link:not(.is-touch-pressed):hover {
+html.touch-input .profile-link:hover {
   background: var(--mp-lilac);
 }
 
-html.touch-input .icon-button:not(.is-touch-pressed):hover:not(:disabled),
-html.touch-input .game-icon-button:not(.is-touch-pressed):hover:not(:disabled),
-html.touch-input .game-dialog-close:not(.is-touch-pressed):hover:not(:disabled),
-html.touch-input .activity-year-control:not(.is-touch-pressed):hover:not(:disabled) {
+html.touch-input .icon-button:hover:not(:disabled),
+html.touch-input .game-icon-button:hover:not(:disabled),
+html.touch-input .game-dialog-close:hover:not(:disabled),
+html.touch-input .activity-year-control:hover:not(:disabled) {
   background: var(--mp-card);
   box-shadow: 3px 3px 0 var(--mp-ink);
   transform: none;
 }
 
-html.touch-input .quick-friend:not(.is-touch-pressed):hover {
+html.touch-input .quick-friend:hover {
   box-shadow: 4px 4px 0 var(--mp-lilac);
   transform: none;
 }
 
-html.touch-input .game-choice:not(.is-touch-pressed):hover {
+html.touch-input .game-choice:hover {
   background: var(--mp-card);
   box-shadow: 7px 7px 0 var(--mp-lilac);
   transform: none;
 }
 
-html.touch-input .game-choice[aria-pressed='true']:not(.is-touch-pressed):hover {
+html.touch-input .game-choice[aria-pressed='true']:hover {
   background: var(--mp-acid);
 }
 
-html.touch-input .game-choice:not(.is-touch-pressed):hover .game-choice-art {
+html.touch-input .game-choice:hover .game-choice-art {
   transform: rotate(-3deg);
 }
 
-html.touch-input .game-choice:not(.is-touch-pressed):hover .game-choice-bubble-back {
+html.touch-input .game-choice:hover .game-choice-bubble-back {
   fill: var(--mp-lilac);
   transform: none;
 }
 
-html.touch-input .game-choice:not(.is-touch-pressed):hover .game-choice-ray {
+html.touch-input .game-choice:hover .game-choice-ray {
   stroke: var(--mp-ink);
   transform: none;
 }
 
-html.touch-input .game-choice:not(.is-touch-pressed):hover .game-choice-copy strong {
+html.touch-input .game-choice:hover .game-choice-copy strong {
   transform: none;
 }
 
-html.touch-input
-  .game-choice:not(.is-touch-pressed):not([aria-pressed='true']):hover
-  .game-choice-state {
+html.touch-input .game-choice:not([aria-pressed='true']):hover .game-choice-state {
   border-color: #a8a49c;
   background: transparent;
   box-shadow: none;
   color: transparent;
 }
 
-html.touch-input .future-game:not(.is-touch-pressed):hover {
+html.touch-input .future-game:hover {
   border-color: #aaa6ad;
   background: #f8f5ef;
   box-shadow: none;
@@ -949,159 +957,35 @@ html.touch-input .future-game:not(.is-touch-pressed):hover {
   transform: none;
 }
 
-html.touch-input .future-game:not(.is-touch-pressed):hover::before {
+html.touch-input .future-game:hover::before {
   opacity: 0;
   transform: scale(0.45);
 }
 
-html.touch-input .future-game:not(.is-touch-pressed):hover::after {
+html.touch-input .future-game:hover::after {
   opacity: 0;
   transform: translateY(-12px) rotate(-3deg);
 }
 
-html.touch-input .future-game:not(.is-touch-pressed):hover svg,
-html.touch-input .future-game:not(.is-touch-pressed):hover strong {
+html.touch-input .future-game:hover svg,
+html.touch-input .future-game:hover strong {
   transform: none;
 }
 
-html.touch-input .future-game:not(.is-touch-pressed):hover svg path:first-child {
+html.touch-input .future-game:hover svg path:first-child {
   animation: none;
 }
 
-html.touch-input .rules-steps li:not(.is-touch-pressed):hover {
+html.touch-input .rules-steps li:hover {
   box-shadow: 4px 4px 0 var(--mp-lilac);
   transform: none;
 }
 
-html.touch-input .rules-steps li:not(.is-touch-pressed):hover .rules-step-icon svg {
+html.touch-input .rules-steps li:hover .rules-step-icon svg {
   animation: none;
   transform: none;
 }
 
-html.touch-input .is-touch-pressed.button:not(:disabled) {
-  box-shadow: 2px 2px 0 var(--mp-ink);
-  transform: translate(2px, 2px);
-}
-
-html.touch-input .is-touch-pressed.button-primary:not(:disabled) {
-  background: #3b3250;
-  box-shadow: 2px 2px 0 var(--mp-coral);
-}
-
-html.touch-input .is-touch-pressed.button-secondary:not(:disabled) {
-  background: #dedbd4;
-  box-shadow: 2px 2px 0 var(--mp-lilac);
-}
-
-html.touch-input .is-touch-pressed.button-accent:not(:disabled) {
-  background: #ff8a73;
-  box-shadow: 2px 2px 0 var(--mp-ink);
-}
-
-html.touch-input .is-touch-pressed.header-invite,
-html.touch-input .is-touch-pressed.profile-link {
-  box-shadow: 1px 1px 0 var(--mp-coral);
-  transform: translate(2px, 2px);
-}
-
-html.touch-input .is-touch-pressed.icon-button:not(:disabled),
-html.touch-input .is-touch-pressed.game-icon-button:not(:disabled),
-html.touch-input .is-touch-pressed.game-dialog-close:not(:disabled),
-html.touch-input .is-touch-pressed.activity-year-control:not(:disabled) {
-  box-shadow: 1px 1px 0 var(--mp-ink);
-  transform: translate(2px, 2px);
-}
-
-html.touch-input .is-touch-pressed.game-choice {
-  background: #f1eeff;
-  box-shadow: 3px 3px 0 var(--mp-coral);
-  transform: translate(4px, 4px);
-}
-
-html.touch-input .is-touch-pressed.game-choice[aria-pressed='true'] {
-  background: var(--mp-acid);
-  box-shadow: 3px 3px 0 var(--mp-lilac);
-}
-
-html.touch-input .is-touch-pressed.game-choice .game-choice-art {
-  transform: rotate(-1deg) translateY(-6px) scale(1.04);
-}
-
-html.touch-input .is-touch-pressed.game-choice .game-choice-bubble-back {
-  fill: var(--mp-coral);
-  transform: translate(5px, -3px);
-}
-
-html.touch-input .is-touch-pressed.game-choice .game-choice-ray {
-  stroke: var(--mp-coral);
-  transform: translateY(-3px) scale(1.08);
-}
-
-html.touch-input .is-touch-pressed.game-choice .game-choice-copy strong {
-  transform: translateX(4px);
-}
-
-html.touch-input .is-touch-pressed.game-choice:not([aria-pressed='true']) .game-choice-state {
-  border-color: var(--mp-ink);
-  background: var(--mp-lilac);
-  box-shadow: 2px 2px 0 var(--mp-ink);
-}
-
-html.touch-input .is-touch-pressed.quick-friend {
-  box-shadow: 2px 2px 0 var(--mp-lilac);
-  transform: translate(2px, 2px);
-}
-
-html.touch-input .is-touch-pressed.future-game {
-  border-color: var(--mp-ink);
-  background: #f1eeff;
-  box-shadow: 7px 7px 0 var(--mp-lilac);
-  color: var(--mp-ink);
-  transform: translate(-4px, -4px);
-}
-
-html.touch-input .is-touch-pressed.future-game::before {
-  opacity: 1;
-  transform: scale(1);
-}
-
-html.touch-input .is-touch-pressed.future-game::after {
-  opacity: 1;
-  transform: translateY(0) rotate(-3deg);
-}
-
-html.touch-input .is-touch-pressed.future-game svg {
-  transform: translateY(-7px) rotate(-6deg) scale(1.08);
-}
-
-html.touch-input .is-touch-pressed.future-game strong {
-  transform: translateY(-2px);
-}
-
-html.touch-input .is-touch-pressed.future-game svg path:first-child {
-  animation: future-game-signal 700ms ease-in-out infinite alternate;
-}
-
-html.touch-input .rules-steps li.is-touch-pressed {
-  box-shadow: 2px 2px 0 var(--mp-lilac);
-  transform: translate(2px, 2px);
-}
-
-html.touch-input .rules-steps li:nth-child(1).is-touch-pressed .rules-step-icon svg {
-  animation: rules-topic-check 520ms ease-in-out;
-}
-
-html.touch-input .rules-steps li:nth-child(2).is-touch-pressed .rules-step-icon svg {
-  animation: rules-speech-pop 480ms cubic-bezier(0.2, 0.85, 0.3, 1.25);
-}
-
-html.touch-input .rules-steps li:nth-child(3).is-touch-pressed .rules-step-icon svg {
-  animation: rules-guess-nod 560ms ease-in-out;
-}
-
-html.touch-input .rules-steps li:nth-child(4).is-touch-pressed .rules-step-icon svg {
-  transform: rotate(180deg);
-}
 .game-surface {
   background: #efede7;
   padding: 32px;

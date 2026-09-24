@@ -36,3 +36,4 @@
 @import '../../features/games/explain-word/ui/EndGameDialog/EndGameDialog.css';
 @import './responsive.css';
 @import '../../features/games/history/ui/HistoryView/HistoryLayout.css';
+@import './focus.css';
