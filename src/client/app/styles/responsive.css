@@ -82,6 +82,20 @@
   }
 }
 
+@media (min-width: 540px) and (max-width: 700px) {
+  .friends-page .friends-toolbar {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .friends-page .friends-toolbar .section-tabs,
+  .friends-page .friends-toolbar .friends-add {
+    width: auto;
+  }
+}
+
 @media (max-width: 700px) {
   :root {
     --mobile-nav-height: 68px;
@@ -380,6 +394,69 @@
     align-self: flex-end;
   }
 
+  .friends-page .friends-add {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .friends-page .friends-search {
+    max-width: none;
+    margin-top: 16px;
+  }
+
+  .friends-page .friends-search .input {
+    min-height: 48px;
+    margin-top: 6px;
+    padding: 10px 12px;
+  }
+
+  .friends-page .friend-list,
+  .friends-page .invitations-list {
+    margin-top: 16px;
+    padding: 0 12px;
+    border-radius: 12px 12px 12px 4px;
+    box-shadow: 4px 4px 0 var(--mp-ink);
+  }
+
+  .friends-page .friend-management {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .friends-page .friend-management > .friend-row {
+    flex-direction: row;
+    min-height: 80px;
+    padding: 12px 0;
+  }
+
+  .friends-page .friend-profile-link {
+    flex: 1 1 auto;
+    gap: 12px;
+    padding: 0;
+  }
+
+  .friends-page .friend-row img {
+    flex-shrink: 0;
+  }
+
+  .friends-page .friend-remove-trigger {
+    align-self: center;
+  }
+
+  .friends-page .invitations-list .friend-row {
+    gap: 12px;
+    padding: 14px 0;
+  }
+
+  .friends-page .invitations-list .friend-row > div {
+    flex: 0 1 auto;
+  }
+
   .history-list {
     gap: 14px;
   }
@@ -481,14 +558,19 @@
   }
 
   .activity-year-scroll {
-    margin-inline: -10px;
-    padding: 0 10px 10px;
+    min-width: 0;
+    max-width: 100%;
+    padding-bottom: 10px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 
   .activity-year-calendar {
-    min-width: 760px;
+    min-width: 1120px;
+  }
+
+  .activity-weekdays {
+    line-height: 1;
   }
 
   .activity-month-grid {
@@ -817,10 +899,6 @@
   .game-choice-art svg {
     width: 62px;
     height: 62px;
-  }
-
-  .activity-totals {
-    grid-template-columns: 1fr;
   }
 
   .history-card {

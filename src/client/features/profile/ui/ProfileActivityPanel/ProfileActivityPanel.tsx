@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 
 import type { ProfileActivity, ProfileActivityDay } from '@contracts/contracts'
 import { api } from '@shared/api/api'
@@ -96,7 +97,7 @@ export function ProfileActivityPanel({
               disabled={year <= minimumYear}
               onClick={() => setYear((value) => value - 1)}
             >
-              ←
+              <ArrowIcon direction="left" />
             </button>
             <strong>{isRollingYear ? 'Last 12 months' : year}</strong>
             <button
@@ -105,7 +106,7 @@ export function ProfileActivityPanel({
               disabled={year >= currentYear}
               onClick={() => setYear((value) => value + 1)}
             >
-              →
+              <ArrowIcon />
             </button>
           </div>
         </div>
@@ -200,7 +201,11 @@ function YearCalendar({
           aria-hidden="true"
         >
           {labels.map((label) => (
-            <span key={label.key} style={{ gridColumn: `${label.column} / span ${label.span}` }}>
+            <span
+              key={label.key}
+              className={label.span < 3 ? 'activity-month-label-short' : undefined}
+              style={{ gridColumn: `${label.column} / span ${label.span}` }}
+            >
               {label.name}
             </span>
           ))}
@@ -344,15 +349,16 @@ function ActivityDayDetails({ day }: { day: ProfileActivityDay }) {
   ] as const
   return (
     <article className="activity-day-details" aria-live="polite">
-      <div>
+      <header className="activity-day-summary">
+        <time dateTime={day.date}>{formatDate(day.date)}</time>
         <h3>
-          {formatDate(day.date)} · {day.interactionCount} practice actions
+          <strong>{day.interactionCount}</strong> <span>practice actions</span>
         </h3>
         <p>
           {day.gamesPlayed} {day.gamesPlayed === 1 ? 'game' : 'games'} ·{' '}
           {formatDuration(day.speakingDurationSeconds)} speaking
         </p>
-      </div>
+      </header>
       <dl>
         {details
           .filter(([, value]) => value > 0)

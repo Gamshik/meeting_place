@@ -102,15 +102,235 @@
 }
 
 .activity-totals span {
-  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+  font-size: 16px;
 }
 
 .activity-year-calendar {
   padding: 12px 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.activity-year-scroll {
+  border: 2px solid var(--mp-ink);
+  border-radius: 15px 15px 15px 5px;
+  background: var(--mp-card);
+}
+
+.activity-year-body {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.activity-month-labels {
+  margin-left: 62px;
+  font-size: 16px;
+}
+
+.activity-weekdays {
+  padding-inline: 10px 6px;
+  font-size: 16px;
+  line-height: 1;
+  background: var(--mp-card);
+  box-shadow: 8px 0 0 var(--mp-card);
 }
 
 .activity-legend {
   margin-top: 8px;
+}
+
+.activity-panel .activity-day-details {
+  grid-template-columns: minmax(220px, 0.7fr) minmax(0, 2fr);
+  gap: 0;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-ink);
+}
+
+.activity-day-summary {
+  padding: 20px;
+  border-right: 2px solid var(--mp-ink);
+  background: var(--mp-acid);
+}
+
+.activity-day-summary time {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.activity-day-summary h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 12px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.activity-day-summary h3 strong {
+  font-size: 36px;
+  letter-spacing: -0.04em;
+}
+
+.activity-day-summary p:last-child {
+  margin-top: 10px;
+  color: var(--mp-ink);
+  font-size: 16px;
+}
+
+.activity-day-details dl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px;
+}
+
+.activity-day-details dl > div {
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 12px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 6px;
+  background: var(--mp-paper);
+}
+
+.activity-day-details dt {
+  color: var(--mp-ink);
+  font-size: 16px;
+  line-height: 1.25;
+}
+
+.activity-day-details dd {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.activity-day-details .activity-topics {
+  grid-column: 1 / -1;
+  max-width: none;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 2px solid var(--mp-ink);
+}
+
+.activity-day-details .activity-topics span {
+  padding: 5px 10px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 4px;
+  background: var(--mp-lilac);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .activity-panel .activity-day-details {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .activity-day-summary {
+    padding: 14px;
+    border-right: 0;
+    border-bottom: 2px solid var(--mp-ink);
+  }
+
+  .activity-day-details dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .activity-day-details .activity-topics {
+    padding: 12px;
+  }
+}
+
+/* Settings belong to the profile page rather than a separate dialog card. */
+.account-profile-section .profile-editor-drawer {
+  width: 100%;
+  margin: 0;
+  padding: 8px 0 20px;
+  overflow: visible;
+  border: 0;
+  border-bottom: 2px solid var(--mp-ink);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  animation: none;
+}
+
+.profile-editor-drawer .profile-editor-drawer-header {
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 16px;
+  border: 0;
+  background: transparent;
+}
+
+.profile-editor-drawer-header h2 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 800;
+}
+
+.profile-editor-drawer form {
+  padding: 0;
+}
+
+.profile-editor-drawer .profile-fields-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.profile-editor-drawer .profile-fields-grid label {
+  font-size: 16px;
+}
+
+.profile-editor-drawer .profile-timezone-field {
+  grid-column: auto;
+}
+
+.profile-editor-drawer .input {
+  max-width: none;
+  height: 46px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px 8px 8px 3px;
+  background: var(--mp-card);
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+}
+
+.profile-editor-drawer .input:focus {
+  box-shadow: 1px 1px 0 var(--mp-lilac);
+  transform: translate(2px, 2px);
+}
+
+.profile-editor-drawer .profile-editor-footer {
+  margin-top: 16px;
+  padding-top: 0;
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .profile-editor-drawer .profile-fields-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .profile-editor-drawer-header h2 {
+    font-size: 26px;
+  }
+
+  .profile-editor-drawer .profile-editor-drawer-header {
+    padding-bottom: 12px;
+  }
 }
 
 @media (max-width: 900px) {
@@ -120,9 +340,42 @@
 }
 
 @media (max-width: 600px) {
+  .account-page,
+  .friend-profile-page {
+    width: 100%;
+  }
+
   .account-profile-heading,
   .friend-profile-heading {
     padding: 8px 0 14px;
+  }
+
+  .account-profile-heading h1,
+  .friend-profile-heading h1 {
+    overflow-wrap: anywhere;
+  }
+
+  .account-profile-handle {
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .account-profile-heading h1,
+  .friend-profile-heading h1,
+  .activity-heading h2 {
+    font-weight: 800;
+  }
+
+  .account-profile-heading .account-profile-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .friend-profile-heading .friend-profile-practice {
+    flex-direction: row;
+    align-items: center;
   }
 
   .activity-panel,

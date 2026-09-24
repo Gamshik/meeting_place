@@ -148,7 +148,6 @@ export function ProfileEditor({
                 Sign out
               </button>
               <div className="profile-save-area">
-                {dirty && <p aria-live="polite">You have unsaved changes</p>}
                 <div className="row-actions">
                   {dirty && (
                     <button

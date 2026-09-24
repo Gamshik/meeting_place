@@ -6,7 +6,7 @@ const partnerId = '22222222-2222-4222-8222-222222222222'
 const relationshipId = '33333333-3333-4333-8333-333333333333'
 const secondPartnerId = '88888888-8888-4888-8888-888888888888'
 const secondRelationshipId = '99999999-9999-4999-8999-999999999999'
-async function signIn(page: Page, id = userId) {
+async function signIn(page: Page, id = userId, activityStartDate = '2025-09-14') {
   await page.addInitScript(
     ({ id }) => {
       localStorage.setItem(
@@ -65,7 +65,7 @@ async function signIn(page: Page, id = userId) {
       },
       isOwner: !isFriend,
       year: 2026,
-      startDate: '2025-09-14',
+      startDate: activityStartDate,
       endDate: '2026-09-13',
       timeZone: 'UTC',
       totals: {
@@ -290,7 +290,7 @@ test('serves production security headers on a browser route', async ({ page }) =
 
 test('prevents duplicate profile saves and restores saved values after cancel', async ({
   page,
-}) => {
+}, testInfo) => {
   await signIn(page)
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'clipboard', {
@@ -333,7 +333,8 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   const copiedNotice = page.getByRole('status').filter({ hasText: 'Username copied.' })
   await expect(copiedNotice).toBeVisible()
   expect((await copiedNotice.boundingBox())!.height).toBeLessThan(80)
-  await expect(copiedNotice).toHaveCSS('border-radius', '18px 18px 18px 6px')
+  await expect(copiedNotice).toHaveCSS('border-radius', '10px 10px 10px 3px')
+  await copiedNotice.screenshot({ path: testInfo.outputPath('success-toast.png') })
   await page.getByRole('button', { name: 'Profile settings' }).click()
   await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your profile' })).toHaveCount(0)
@@ -349,6 +350,9 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   )
   await page.getByLabel('Display name').fill('Alice Updated')
   await page.getByLabel('Activity timezone').selectOption('Europe/Minsk')
+  await page.getByRole('region', { name: 'Profile settings' }).screenshot({
+    path: testInfo.outputPath('profile-settings-desktop.png'),
+  })
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByRole('button', { name: 'Saving…' })).toBeDisabled()
   await expect(page.getByRole('button', { name: 'Reset', exact: true })).toBeDisabled()
@@ -367,7 +371,7 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
 
 test('shows yearly activity by default and lets friends open the monthly profile view', async ({
   page,
-}) => {
+}, testInfo) => {
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
@@ -440,7 +444,14 @@ test('shows yearly activity by default and lets friends open the monthly profile
   expect(firstLabelBounds?.width).toBeGreaterThanOrEqual(18)
   await expect(page.getByRole('gridcell', { name: /Dec 31, 2026/ })).toHaveCount(0)
   const todayCell = page.getByRole('gridcell', { name: /Sep 13, 2026: 5 practice actions/ })
+  const emptyCell = page.getByRole('gridcell', { name: /Sep 14, 2025: no practice activity/ })
+  await emptyCell.hover()
+  await expect(emptyCell).toHaveCSS('cursor', 'none')
+  await expect(page.locator('html')).not.toHaveClass(/custom-cursor-interactive/)
   await todayCell.scrollIntoViewIfNeeded()
+  await todayCell.hover()
+  await expect(todayCell).toHaveCSS('cursor', 'none')
+  await expect(page.locator('html')).toHaveClass(/custom-cursor-interactive/)
   const calendarBounds = await page.locator('.activity-year-calendar').boundingBox()
   const todayBounds = await todayCell.boundingBox()
   expect(todayBounds!.x + todayBounds!.width).toBeLessThan(
@@ -449,6 +460,17 @@ test('shows yearly activity by default and lets friends open the monthly profile
   await todayCell.click()
   await expect(page.getByRole('heading', { name: '5 practice actions' })).toBeVisible()
   await expect(page.getByText('Food', { exact: true })).toBeVisible()
+
+  const initialViewport = page.viewportSize()!
+  for (const width of [320, 375, 1280]) {
+    await page.setViewportSize({ width, height: 900 })
+    const details = page.locator('.activity-day-details')
+    expect(await details.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+      true,
+    )
+    await details.screenshot({ path: testInfo.outputPath(`activity-details-${width}.png`) })
+  }
+  await page.setViewportSize(initialViewport)
 
   const friendBounds = await page.locator('.friend-profile-page').boundingBox()
   const friendScroll = page.locator('.friend-profile-page .activity-year-scroll')
@@ -502,6 +524,154 @@ test('shows yearly activity by default and lets friends open the monthly profile
   await page.setViewportSize({ width: 390, height: 844 })
   const smallMonthCellBounds = await monthCell.boundingBox()
   expect(smallMonthCellBounds?.width).toBeCloseTo(smallMonthCellBounds!.height, 0.1)
+})
+
+test('partial-month calendar labels never overlap at responsive breakpoints', async ({ page }) => {
+  await signIn(page, userId, '2025-09-25')
+  await page.goto('/?view=profile')
+  const labels = page.locator('.activity-month-labels span')
+  await expect(labels.first()).toHaveText('Sep')
+  for (const width of [320, 375, 600, 700, 760, 900, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(labels.first()).toHaveCSS('visibility', 'hidden')
+    const bounds = await labels.evaluateAll((elements) =>
+      elements
+        .filter((element) => getComputedStyle(element).visibility !== 'hidden')
+        .map((element) => {
+          const range = document.createRange()
+          range.selectNodeContents(element)
+          const { left, right } = range.getBoundingClientRect()
+          return { left, right }
+        }),
+    )
+    for (let index = 1; index < bounds.length; index += 1) {
+      expect(bounds[index]!.left - bounds[index - 1]!.right).toBeGreaterThanOrEqual(4)
+    }
+  }
+})
+
+test.describe('mobile friends layout', () => {
+  test.use({ hasTouch: true, isMobile: true })
+
+  for (const width of [320, 375, 480, 540, 658]) {
+    test(`keeps friend rows compact at ${width}px`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 667 })
+      await signIn(page)
+      const friend = relationship('incoming', 'active')
+      friend.partner.username = 'a_long_username_for_mobile_layout'
+      await page.route('**/api/partnerships**', (route) =>
+        route.fulfill({ json: { data: [friend], nextCursor: null } }),
+      )
+      await page.goto('/?view=friends')
+      const profile = page.getByRole('link', { name: 'View Bob’s profile' })
+      await expect(profile).toBeVisible()
+      if (width >= 540) {
+        const tabs = (await page.getByRole('navigation', { name: 'Friend lists' }).boundingBox())!
+        const add = (await page
+          .getByRole('button', { name: 'Add a friend', exact: true })
+          .boundingBox())!
+        expect(Math.abs(tabs.y + tabs.height / 2 - add.y - add.height / 2)).toBeLessThan(1)
+        expect(add.x).toBeGreaterThan(tabs.x + tabs.width)
+      }
+      expect(
+        (await page.getByRole('button', { name: 'Add a friend', exact: true }).boundingBox())!
+          .height,
+      ).toBeLessThan(60)
+      expect((await page.locator('.friend-management').boundingBox())!.height).toBeLessThan(105)
+      await expect(page.getByRole('button', { name: 'Remove Bob', exact: true })).toBeInViewport()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      )
+      await page.screenshot({ path: testInfo.outputPath('friends-mobile.png'), fullPage: true })
+      await page.getByRole('searchbox', { name: 'Find a friend' }).fill('nobody')
+      await expect(page.getByText('No matching friends.')).toBeVisible()
+      await page.getByRole('searchbox', { name: 'Find a friend' }).fill('Bob')
+      await profile.click()
+      await expect(page).toHaveURL(`/profiles/${partnerId}`)
+    })
+  }
+})
+
+test.describe('mobile profile layout', () => {
+  test.use({ hasTouch: true, isMobile: true })
+
+  for (const width of [320, 375, 390]) {
+    test(`keeps activity compact on a ${width}px touch screen`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 667 })
+      await signIn(page)
+
+      for (const path of ['/?view=profile', `/profiles/${partnerId}`]) {
+        await page.goto(path)
+        await expect(page.locator('.activity-totals')).toBeVisible()
+        const totals = await page.locator('.activity-totals > div').evaluateAll((elements) =>
+          elements.map((element) => {
+            const { x, y } = element.getBoundingClientRect()
+            return { x, y }
+          }),
+        )
+        expect(totals[0]!.y).toBe(totals[1]!.y)
+        expect(totals[2]!.y).toBe(totals[3]!.y)
+        expect(totals[2]!.y).toBeGreaterThan(totals[0]!.y)
+
+        const cell = page.locator('.activity-cell:not(.activity-cell-hidden)').first()
+        const bounds = (await cell.boundingBox())!
+        expect(bounds.height).toBeLessThan(24)
+        expect(Math.abs(bounds.width - bounds.height)).toBeLessThan(1)
+        const calendar = page.locator('.activity-year-calendar')
+        expect((await calendar.boundingBox())!.height).toBeLessThan(200)
+        const scroll = page.locator('.activity-year-scroll')
+        await scroll.evaluate((element) => {
+          element.scrollLeft = element.scrollWidth
+        })
+        expect(await scroll.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0)
+        const gutter = (await page.locator('.activity-weekdays').boundingBox())!
+        const monday = (await page.locator('.activity-weekdays span').first().boundingBox())!
+        const mondayCell = (await page
+          .locator('.activity-week')
+          .nth(1)
+          .locator('.activity-cell')
+          .first()
+          .boundingBox())!
+        expect(monday.x - gutter.x).toBeGreaterThanOrEqual(10)
+        expect(
+          Math.abs(monday.y + monday.height / 2 - mondayCell.y - mondayCell.height / 2),
+        ).toBeLessThan(1)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        )
+
+        await page.screenshot({
+          path: testInfo.outputPath(
+            path.includes('profiles/') ? 'friend-year.png' : 'account-year.png',
+          ),
+          fullPage: true,
+        })
+        await scroll.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+        await scroll.screenshot({
+          path: testInfo.outputPath(
+            path.includes('profiles/') ? 'friend-calendar.png' : 'account-calendar.png',
+          ),
+        })
+        await page.getByRole('button', { name: 'Months', exact: true }).click()
+        const monthBounds = (await cell.boundingBox())!
+        expect(Math.abs(monthBounds.width - monthBounds.height)).toBeLessThan(1)
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+          true,
+        )
+        if (path === '/?view=profile') {
+          await page.getByRole('button', { name: 'Profile settings', exact: true }).click()
+          const editor = page.getByRole('region', { name: 'Profile settings' })
+          await expect(editor).toBeVisible()
+          await page.getByLabel('Display name', { exact: true }).fill('Alice Updated')
+          await expect(editor.getByRole('button', { name: 'Reset', exact: true })).toBeVisible()
+          expect((await editor.boundingBox())!.height).toBeLessThan(450)
+          await editor.screenshot({ path: testInfo.outputPath('profile-settings.png') })
+          await editor.getByRole('button', { name: 'Reset', exact: true }).click()
+          await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('Alice')
+        }
+      }
+    })
+  }
 })
 
 test('starts a word game and submits a browser recording for transcription', async ({ page }) => {

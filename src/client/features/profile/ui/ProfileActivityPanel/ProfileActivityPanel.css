@@ -134,6 +134,11 @@
   white-space: nowrap;
 }
 
+/* Partial months may occupy only one or two week columns. */
+.activity-month-labels .activity-month-label-short {
+  visibility: hidden;
+}
+
 .activity-year-body {
   display: grid;
   grid-template-columns: 30px minmax(0, 1fr);
@@ -186,6 +191,8 @@
   z-index: 1;
   display: block;
   width: 100%;
+  min-width: 0;
+  min-height: 0;
   aspect-ratio: 1;
   height: auto;
   padding: 0;
@@ -588,6 +595,15 @@ button.activity-cell:disabled {
 
   .activity-totals {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .activity-day-details {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .activity-day-details dl {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .activity-totals > div:nth-child(3) {

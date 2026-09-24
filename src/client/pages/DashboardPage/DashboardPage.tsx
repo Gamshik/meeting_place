@@ -369,7 +369,7 @@ export function DashboardPage() {
       )}
       {panel?.startsWith('remove:') && (
         <Panel title="Remove friend?" feedback={feedback} onClose={() => setPanel(null)}>
-          <p>You can invite them again after seven days.</p>
+          <p className="text-lg leading-relaxed">You can invite them again after seven days.</p>
           <div className="row-actions">
             <button className="button button-secondary" onClick={() => setPanel(null)}>
               Keep friend
