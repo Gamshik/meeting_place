@@ -28,6 +28,15 @@ Realtime subscription listens for changes to participant-visible partnership row
 treated as invalidation signals: the client debounces them and reloads the canonical partnership
 view through the Hono API rather than constructing joined partner data from an event payload.
 
+Client code follows a feature-first dependency direction: `app` configures routing, providers, and
+global styles; `pages` compose complete screens; `widgets` compose reusable cross-feature page
+regions; `features` own product behavior and feature UI; and `shared` contains reusable API
+infrastructure, utilities, and UI primitives. Dependencies flow from `app` through pages and widgets
+to features and then shared code. A lower layer must not import a higher layer. Substantial UI
+components own a directory containing their component and styles. Global CSS is limited to the
+ordered application foundation; component and page styles remain beside their owners while the
+central style manifest preserves the established cascade.
+
 ### Hono API
 
 The API is the application's server boundary. It:
