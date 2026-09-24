@@ -1,0 +1,141 @@
+/* Profile and activity pages use the same compact, frameless visual hierarchy. */
+.account-profile-heading,
+.friend-profile-heading {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 10px 0 18px;
+  border: 0;
+  border-bottom: 2px solid var(--mp-ink);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.account-profile-avatar,
+.friend-profile-avatar {
+  width: 56px;
+  height: 56px;
+  border-width: 2px;
+  border-radius: 15px 15px 15px 5px;
+  font-size: 21px;
+}
+
+.account-profile-heading h1,
+.friend-profile-heading h1 {
+  margin-top: 0;
+  font-size: clamp(28px, 3vw, 38px);
+}
+
+.account-profile-handle {
+  margin-top: 4px;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+}
+
+.friend-profile-identity > p:last-child {
+  margin-top: 4px;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+}
+
+.profile-back-link {
+  margin-bottom: 12px;
+}
+
+.account-profile-edit-btn {
+  min-height: 40px;
+  padding-inline: 14px;
+}
+
+.activity-panel,
+.account-page > .activity-panel {
+  margin-top: 18px;
+  padding: 16px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.activity-heading {
+  align-items: center;
+  gap: 18px;
+}
+
+.activity-heading h2 {
+  margin-top: 0;
+  font-size: clamp(28px, 3vw, 38px);
+}
+
+.activity-controls {
+  gap: 8px;
+}
+
+.activity-view-switch,
+.activity-year-control {
+  padding: 3px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+}
+
+.activity-view-switch button,
+.activity-year-control button {
+  min-height: 34px;
+  padding: 5px 10px;
+}
+
+.activity-totals {
+  margin: 18px 0 16px;
+}
+
+.activity-totals > div {
+  padding: 12px 14px;
+}
+
+.activity-totals > div + div {
+  padding-left: 14px;
+}
+
+.activity-totals strong {
+  margin-bottom: 2px;
+  font-size: clamp(20px, 2vw, 27px);
+}
+
+.activity-totals span {
+  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+}
+
+.activity-year-calendar {
+  padding: 12px 14px;
+}
+
+.activity-legend {
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .activity-heading {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 600px) {
+  .account-profile-heading,
+  .friend-profile-heading {
+    padding: 8px 0 14px;
+  }
+
+  .activity-panel,
+  .account-page > .activity-panel {
+    padding: 12px 0 0;
+  }
+
+  .activity-controls {
+    width: 100%;
+  }
+
+  .activity-year-control {
+    flex: 1;
+    justify-content: space-between;
+  }
+}

@@ -1,0 +1,201 @@
+/* Ending a game is a simple binary decision, so keep the confirmation compact. */
+.end-game-dialog {
+  width: min(100%, 390px);
+  padding: 24px 26px 26px;
+  animation: end-game-dialog-arrive 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.end-game-dialog h2 {
+  font-size: clamp(28px, 6vw, 36px);
+}
+
+.end-game-heading {
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.end-game-artwork {
+  position: relative;
+  display: grid;
+  width: 146px;
+  height: 62px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+}
+
+.end-game-player {
+  z-index: 2;
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 2px solid var(--mp-ink);
+  border-radius: 50%;
+  background: var(--mp-lilac);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+}
+
+.end-game-player > i {
+  position: relative;
+  width: 26px;
+  height: 28px;
+}
+
+.end-game-player > i::before {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 50%;
+  background: var(--mp-card);
+  content: '';
+}
+
+.end-game-player > i::after {
+  position: absolute;
+  bottom: 0;
+  left: 3px;
+  width: 20px;
+  height: 12px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 5px 5px;
+  background: var(--mp-card);
+  content: '';
+}
+
+.end-game-player.is-left {
+  animation: end-game-player-left 1.6s ease-in-out infinite;
+}
+
+.end-game-player.is-right {
+  background: var(--mp-acid);
+  animation: end-game-player-right 1.6s ease-in-out infinite;
+}
+
+.end-game-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  opacity: 0.8;
+  animation: end-game-link-break 1.6s ease-in-out infinite;
+}
+
+.end-game-link i {
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--mp-ink);
+  border-radius: 50%;
+  background: var(--mp-coral);
+}
+
+.end-game-break {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 50%;
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 2px solid var(--mp-ink);
+  border-radius: 50%;
+  background: var(--mp-coral);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  font-weight: 900;
+  transform: translateX(-50%) scale(0);
+  animation: end-game-break-pop 1.6s ease-in-out infinite;
+}
+
+.end-game-dialog .game-dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.end-game-dialog .button {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+}
+
+@keyframes end-game-dialog-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) rotate(-1deg) scale(0.94);
+  }
+
+  70% {
+    transform: translateY(-2px) rotate(0.35deg) scale(1.01);
+  }
+}
+
+@keyframes end-game-player-left {
+  45%,
+  100% {
+    transform: translateX(-7px) rotate(-5deg);
+  }
+}
+
+@keyframes end-game-player-right {
+  45%,
+  100% {
+    transform: translateX(7px) rotate(5deg);
+  }
+}
+
+@keyframes end-game-link-break {
+  0%,
+  25% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  45%,
+  100% {
+    opacity: 0;
+    transform: scaleX(0.25);
+  }
+}
+
+@keyframes end-game-break-pop {
+  0%,
+  24%,
+  100% {
+    transform: translateX(-50%) scale(0) rotate(-20deg);
+  }
+
+  38%,
+  72% {
+    transform: translateX(-50%) scale(1) rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .end-game-dialog,
+  .end-game-player,
+  .end-game-link,
+  .end-game-break {
+    animation: none;
+  }
+
+  .end-game-break {
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  .end-game-dialog {
+    padding-inline: 20px;
+  }
+
+  .end-game-dialog .game-dialog-actions {
+    grid-template-columns: 1fr;
+  }
+}

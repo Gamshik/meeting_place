@@ -1,0 +1,1136 @@
+/* Final responsive layer for the redesigned interface. Keep this after the
+   feature styles so old page-specific breakpoints cannot restore desktop
+   dimensions on touch-sized screens. */
+.app-shell {
+  overflow-x: clip;
+}
+
+.main-content > *,
+.site-header > *,
+.game-page-header > *,
+.panel-content > * {
+  min-width: 0;
+}
+
+.rounds-table-wrap,
+.activity-year-scroll {
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+@media (min-width: 701px) and (max-width: 1024px) {
+  .site-header,
+  .main-content {
+    width: calc(100% - 32px);
+  }
+
+  .site-header {
+    gap: 12px;
+  }
+
+  .site-header nav {
+    padding: 4px;
+  }
+
+  .site-header nav a {
+    padding-inline: 14px;
+  }
+
+  .header-actions {
+    gap: 8px;
+  }
+
+  .header-invite {
+    padding-inline: 14px;
+  }
+
+  .game-options {
+    grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.8fr);
+    gap: 18px;
+  }
+
+  .game-choice,
+  .future-game {
+    min-height: 230px;
+  }
+
+  .profile-editor-drawer,
+  .activity-panel,
+  .friends-page,
+  .history-page {
+    width: 100%;
+  }
+
+  .history-card {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .activity-heading {
+    align-items: end;
+    gap: 16px;
+  }
+
+  .game-page-header:not(.is-room) {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .game-page-header:not(.is-room) .game-header-tools {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  :root {
+    --mobile-nav-height: 68px;
+  }
+
+  body {
+    overscroll-behavior-x: none;
+  }
+
+  .site-header {
+    width: calc(100% - 20px);
+    min-height: 68px;
+    height: 68px;
+    gap: 10px;
+  }
+
+  .wordmark {
+    flex: 0 0 auto;
+  }
+
+  .wordmark > span:last-child {
+    display: none;
+  }
+
+  .brand-mark {
+    width: 44px;
+    height: 44px;
+  }
+
+  .site-header nav {
+    position: fixed;
+    z-index: 80;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    left: 50%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: min(420px, calc(100% - 20px));
+    height: var(--mobile-nav-height);
+    padding: 6px;
+    border: 2px solid var(--mp-ink);
+    border-radius: 18px 18px 18px 7px;
+    background: var(--mp-card);
+    box-shadow: 5px 5px 0 var(--mp-lilac);
+    transform: translateX(-50%);
+  }
+
+  .site-header nav a {
+    display: grid;
+    min-width: 0;
+    min-height: 52px;
+    padding: 0 8px;
+    place-items: center;
+    border: 0;
+    border-radius: 12px 12px 12px 4px;
+    box-shadow: none;
+    font-size: max(var(--mp-mobile-font-floor, 0px), 0.9rem);
+    line-height: 1;
+  }
+
+  .site-header nav a[aria-current='page'] {
+    background: var(--mp-acid);
+    box-shadow: 3px 3px 0 var(--mp-coral);
+    color: var(--mp-ink);
+  }
+
+  .header-actions {
+    margin-left: auto;
+    gap: 7px;
+  }
+
+  .header-invite {
+    display: grid !important;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    place-items: center;
+    font-size: 0;
+  }
+
+  .header-invite-icon {
+    display: block;
+    font-size: 1.45rem;
+    line-height: 1;
+  }
+
+  .header-invite-label {
+    display: none;
+  }
+
+  .notification-button,
+  .profile-link {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+  }
+
+  .app-shell:not(.app-shell-room) .main-content {
+    width: calc(100% - 20px);
+    padding-top: 16px;
+    padding-bottom: calc(var(--mobile-nav-height) + 34px + env(safe-area-inset-bottom));
+  }
+
+  .content-dialog,
+  .game-dialog {
+    width: calc(100% - 16px);
+    max-width: none;
+    max-height: calc(100dvh - 16px);
+    margin: auto;
+    border-radius: 18px 18px 18px 7px;
+    box-shadow: 5px 5px 0 var(--mp-ink);
+  }
+
+  .content-dialog .panel-content,
+  .game-dialog .panel-content {
+    max-height: calc(100dvh - 20px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .panel-heading,
+  .panel-body,
+  .game-dialog {
+    padding-inline: 18px;
+  }
+
+  .panel-heading {
+    gap: 12px;
+  }
+
+  .panel-heading h2,
+  .game-dialog h2 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+    line-height: 1.05;
+  }
+
+  .notifications-panel {
+    position: fixed;
+    inset: 78px 10px auto;
+    width: auto;
+    max-height: calc(100dvh - 172px - env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .notification-heading,
+  .notification-list {
+    padding-inline: 16px;
+  }
+
+  .quick-start-shell {
+    padding-top: 12px;
+  }
+
+  .practice-step-heading {
+    align-items: center;
+    gap: 10px;
+  }
+
+  .practice-step-heading h1,
+  .practice-step-heading h2 {
+    min-width: 0;
+    font-size: clamp(24px, 7.2vw, 30px);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .game-options {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .game-choice {
+    grid-template-columns: 76px minmax(0, 1fr);
+    min-height: 154px;
+    padding: 20px 18px;
+    gap: 16px;
+    border-radius: 18px 18px 18px 7px;
+    box-shadow: 6px 6px 0 var(--mp-lilac);
+  }
+
+  .game-choice-art,
+  .game-choice-art svg {
+    width: 76px;
+    height: 76px;
+  }
+
+  .game-choice h3 {
+    font-size: clamp(1.55rem, 8vw, 2.35rem);
+    line-height: 0.98;
+  }
+
+  .future-game {
+    min-height: 108px;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 17px;
+  }
+
+  .future-game svg {
+    width: 58px;
+  }
+
+  .future-game strong {
+    font-size: 17px;
+  }
+
+  .live-note {
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .practice-friend-step,
+  .game-workspace {
+    margin-top: 32px;
+  }
+
+  .play-friends,
+  .quick-friend-list {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-friend,
+  .quick-empty {
+    min-height: 0;
+  }
+
+  .quick-friend {
+    align-items: center;
+    flex-direction: row;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .quick-friend-person {
+    flex: 1 1 auto;
+  }
+
+  .quick-play-button {
+    display: grid;
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    min-height: 46px;
+    align-self: center;
+    padding: 0;
+    place-items: center;
+    border-radius: 13px 13px 13px 5px;
+  }
+
+  .quick-play-label {
+    display: none;
+  }
+
+  .quick-play-icon {
+    display: block;
+  }
+
+  .friends-toolbar,
+  .friends-add,
+  .friends-search,
+  .friend-management,
+  .friend-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .friends-toolbar,
+  .friends-add,
+  .friends-search {
+    gap: 10px;
+  }
+
+  .section-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .section-tabs button,
+  .friends-add .button,
+  .friends-search .button {
+    width: 100%;
+  }
+
+  .friend-list,
+  .invitations-list {
+    gap: 12px;
+  }
+
+  .friend-row {
+    padding: 16px;
+  }
+
+  .friend-remove-trigger {
+    align-self: flex-end;
+  }
+
+  .history-list {
+    gap: 14px;
+  }
+
+  .history-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 16px 16px 16px 22px;
+    gap: 12px;
+  }
+
+  .history-rounds {
+    grid-column: 1 / -1;
+  }
+
+  .history-card > .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .history-score {
+    grid-column: 2;
+  }
+
+  .history-title-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-pagination {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .history-pagination-controls {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    width: 100%;
+  }
+
+  .history-pagination-controls .button:last-child {
+    justify-self: stretch;
+  }
+
+  .friend-profile-heading,
+  .account-profile-heading,
+  .friend-profile-practice,
+  .account-profile-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-editor-drawer,
+  .activity-panel {
+    width: 100%;
+  }
+
+  .profile-editor-drawer {
+    border-radius: 18px 18px 18px 7px;
+  }
+
+  .profile-fields-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-timezone-field .input {
+    max-width: none;
+  }
+
+  .profile-editor-footer,
+  .activity-heading,
+  .activity-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profile-save-area,
+  .profile-save-area .button {
+    width: 100%;
+  }
+
+  .activity-controls {
+    gap: 10px;
+  }
+
+  .activity-view-switch,
+  .activity-year-control {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .activity-year-control {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+  }
+
+  .activity-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .activity-year-scroll {
+    margin-inline: -10px;
+    padding: 0 10px 10px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .activity-year-calendar {
+    min-width: 760px;
+  }
+
+  .activity-month-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-page-header,
+  .game-page-header:not(.is-room) {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .game-page-header:not(.is-room) .game-page-heading {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .game-page-header:not(.is-room) .game-back-link {
+    display: grid;
+    width: 48px;
+    min-height: 48px;
+    padding: 0;
+    place-items: center;
+  }
+
+  .game-page-header:not(.is-room) .game-title-row h1 {
+    margin: 0;
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .game-header-tools,
+  .game-page-header:not(.is-room) .game-header-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .game-page-header:not(.is-room) {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .game-page-header:not(.is-room) .game-page-heading,
+  .game-page-header:not(.is-room) .game-header-tools {
+    display: contents;
+  }
+
+  .game-page-header:not(.is-room) .game-title-row {
+    grid-column: 2;
+  }
+
+  .game-page-header:not(.is-room) .game-icon-button {
+    grid-column: 3;
+  }
+
+  .game-time-settings {
+    width: 100%;
+  }
+
+  .game-time-settings > button {
+    width: 100%;
+  }
+
+  .game-page-header.is-room:not(.is-active) {
+    display: grid;
+    grid-template-areas: 'identity controls';
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-top: 0;
+  }
+
+  .game-page-header.is-room:not(.is-active) .game-page-heading {
+    display: flex;
+    width: auto;
+    align-items: center;
+    grid-area: identity;
+  }
+
+  .game-page-header.is-room:not(.is-active) .game-header-tools {
+    display: flex;
+    width: auto;
+    align-items: center;
+    justify-self: end;
+    grid-area: controls;
+    gap: 8px;
+  }
+
+  .game-page-header.is-room:not(.is-active) .game-back-link {
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .game-page-header.is-room:not(.is-active) .game-time-settings,
+  .game-page-header.is-room:not(.is-active) .game-time-readout {
+    flex: 0 0 auto;
+    width: 116px;
+  }
+
+  .game-page-header.is-room:not(.is-active) .game-time-settings > summary,
+  .game-page-header.is-room:not(.is-active) .game-time-readout {
+    width: 116px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 10px;
+  }
+
+  .game-page-header.is-room:not(.is-active) .game-icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .game-page-header.is-room.is-active {
+    display: grid;
+    grid-template-areas: none;
+    grid-template-columns: 44px minmax(0, 1fr) 116px 44px 44px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-top: 0;
+  }
+
+  .game-page-header.is-room.is-active .game-page-heading,
+  .game-page-header.is-room.is-active .game-header-tools {
+    display: contents;
+  }
+
+  .game-page-header.is-room.is-active .game-back-link {
+    grid-row: 1;
+    grid-column: 1;
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .game-page-header.is-room.is-active .game-time-settings,
+  .game-page-header.is-room.is-active .game-time-readout {
+    grid-row: 1;
+    grid-column: 3;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .game-page-header.is-room.is-active .game-time-settings > summary,
+  .game-page-header.is-room.is-active .game-time-readout {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 9px;
+  }
+
+  .game-page-header.is-room.is-active .game-icon-button {
+    grid-row: 1;
+    grid-column: 4;
+    width: 44px;
+    height: 44px;
+  }
+
+  .game-page-header.is-room.is-active .game-end-control {
+    grid-row: 1;
+    grid-column: 5;
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .game-page-header.is-room.is-active .game-scoreboard {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .game-time-settings-popover {
+    right: auto;
+    left: 0;
+    width: min(320px, calc(100vw - 20px));
+  }
+
+  .game-scoreboard {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .game-end-control {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .game-invitation-card,
+  .session-pause-card,
+  .live-explain-card,
+  .guess-card,
+  .guess-review-card {
+    padding: 20px;
+    border-radius: 18px 18px 18px 7px;
+    box-shadow: 6px 6px 0 var(--mp-ink);
+  }
+
+  .duration-presets,
+  .duration-custom,
+  .game-lobby-actions,
+  .game-dialog-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .duration-presets .button,
+  .duration-custom .button,
+  .game-lobby-actions .button,
+  .game-dialog-actions .button {
+    width: 100%;
+  }
+
+  .topic-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .rounds-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rounds-table {
+    min-width: 580px;
+  }
+
+  .game-page-header:not(.is-room) .game-title-row h1 {
+    font-size: clamp(1.75rem, 8.5vw, 2.2rem);
+    letter-spacing: -0.055em;
+  }
+
+  .game-lobby-ready .game-mode-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .game-lobby-ready .game-mode-picker legend,
+  .game-lobby-ready .duration-picker legend {
+    margin-bottom: 10px;
+    font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  }
+
+  .game-lobby-ready .game-mode-picker label {
+    min-height: 62px;
+    grid-template-columns: minmax(0, 1fr) 18px;
+    gap: 8px;
+    padding: 9px 13px;
+  }
+
+  .game-lobby-ready .game-mode-picker strong {
+    font-size: 17px;
+    line-height: 1.15;
+  }
+
+  .game-lobby-ready .duration-picker {
+    margin-top: 26px;
+  }
+
+  .game-lobby-ready .duration-presets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .game-lobby-ready .duration-presets button {
+    min-height: 54px;
+    padding-inline: 8px;
+    font-size: 16px;
+  }
+
+  .game-lobby-ready .duration-custom > span:first-child,
+  .game-lobby-ready .duration-custom > span:last-child {
+    font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+  }
+
+  .game-lobby-ready .duration-custom input {
+    font-size: 16px;
+  }
+
+  .game-lobby-ready .game-lobby-action {
+    font-size: 18px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 430px) {
+  .site-header {
+    width: calc(100% - 16px);
+  }
+
+  .header-actions {
+    gap: 5px;
+  }
+
+  .header-invite,
+  .notification-button,
+  .profile-link {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+  }
+
+  .practice-step-heading h1,
+  .practice-step-heading h2,
+  .game-page-heading h1 {
+    overflow-wrap: anywhere;
+  }
+
+  .game-choice {
+    grid-template-columns: 62px minmax(0, 1fr);
+    padding: 17px 15px;
+  }
+
+  .game-choice-art,
+  .game-choice-art svg {
+    width: 62px;
+    height: 62px;
+  }
+
+  .activity-totals {
+    grid-template-columns: 1fr;
+  }
+
+  .history-card {
+    grid-template-columns: 1fr;
+  }
+
+  .history-index,
+  .history-score,
+  .history-rounds {
+    grid-column: 1;
+  }
+
+  .game-header-tools,
+  .game-page-header:not(.is-room) .game-header-tools {
+    grid-template-columns: minmax(0, 1fr) 48px;
+  }
+
+  .game-scoreboard,
+  .game-end-control {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 360px) {
+  .brand-mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .header-invite,
+  .notification-button,
+  .profile-link {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  .site-header nav a {
+    padding-inline: 4px;
+    font-size: max(var(--mp-mobile-font-floor, 0px), 0.82rem);
+  }
+
+  .panel-heading,
+  .panel-body,
+  .game-dialog,
+  .game-invitation-card,
+  .session-pause-card,
+  .live-explain-card,
+  .guess-card,
+  .guess-review-card {
+    padding-inline: 14px;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 800px) {
+  .game-page-header.is-room.is-active {
+    display: grid;
+    grid-template-areas: none;
+    grid-template-columns: 44px minmax(0, 1fr) 116px 44px 44px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-top: 0;
+  }
+
+  .game-page-header.is-room.is-active .game-page-heading,
+  .game-page-header.is-room.is-active .game-header-tools {
+    display: contents;
+  }
+
+  .game-page-header.is-room.is-active .game-back-link {
+    grid-row: 1;
+    grid-column: 1;
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .game-page-header.is-room.is-active .game-time-settings,
+  .game-page-header.is-room.is-active .game-time-readout {
+    grid-row: 1;
+    grid-column: 3;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .game-page-header.is-room.is-active .game-time-settings > summary,
+  .game-page-header.is-room.is-active .game-time-readout {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px 9px;
+  }
+
+  .game-page-header.is-room.is-active .game-icon-button {
+    grid-row: 1;
+    grid-column: 4;
+    width: 44px;
+    height: 44px;
+  }
+
+  .game-page-header.is-room.is-active .game-end-control {
+    grid-row: 1;
+    grid-column: 5;
+    width: 44px;
+    min-height: 44px;
+  }
+
+  .game-page-header.is-room.is-active .game-scoreboard {
+    position: static;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    width: 100%;
+    transform: none;
+    animation-name: room-scoreboard-arrive-static;
+  }
+}
+
+@media (max-width: 800px) {
+  .game-page-header.is-room .game-time-settings {
+    position: static;
+  }
+
+  .game-page-header.is-room .game-time-settings-popover {
+    position: absolute;
+    top: 52px;
+    right: 0;
+    left: auto;
+    width: min(460px, calc(100vw - 28px));
+    transform: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  a,
+  button,
+  input,
+  label,
+  select,
+  textarea,
+  summary,
+  [role='button'] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  .button,
+  .site-header nav a,
+  .header-invite,
+  .notification-button,
+  .profile-link,
+  .game-choice,
+  .quick-friend {
+    min-height: 44px;
+  }
+
+  .game-mode-picker label,
+  .duration-presets button {
+    transition: transform 120ms ease !important;
+  }
+
+  .game-choice:hover,
+  .quick-friend:hover,
+  .button:hover:not(:disabled),
+  .header-invite:hover,
+  .notification-button:hover,
+  .profile-link:hover,
+  .future-game:hover,
+  .rules-steps li:hover {
+    transform: none !important;
+  }
+
+  button:not(:active):hover,
+  a:not(:active):hover,
+  label:not(:active):hover,
+  summary:not(:active):hover,
+  [role='button']:not(:active):hover {
+    transform: none !important;
+  }
+
+  .button:not(:active):hover:not(:disabled) {
+    box-shadow: 4px 4px 0 var(--mp-ink);
+  }
+
+  .button-primary:not(:active):hover:not(:disabled) {
+    background: var(--mp-ink);
+    box-shadow: 4px 4px 0 var(--mp-coral);
+  }
+
+  .button-secondary:not(:active):hover:not(:disabled) {
+    background: #eee9df;
+    box-shadow: 4px 4px 0 var(--mp-lilac);
+  }
+
+  .button-accent:not(:active):hover:not(:disabled) {
+    background: var(--mp-coral);
+    box-shadow: 4px 4px 0 var(--mp-ink);
+  }
+
+  .button-danger:not(:active):hover:not(:disabled) {
+    background: #f7e9e4;
+    box-shadow: 4px 4px 0 #982719;
+  }
+
+  .header-invite:not(:active):hover,
+  .profile-link:not(:active):hover {
+    box-shadow: 3px 3px 0 var(--mp-coral);
+  }
+
+  .header-invite:not(:active):hover {
+    background: var(--mp-ink);
+  }
+
+  .profile-link:not(:active):hover {
+    background: var(--mp-lilac);
+  }
+
+  .icon-button:not(:active):hover:not(:disabled),
+  .game-icon-button:not(:active):hover:not(:disabled),
+  .game-dialog-close:not(:active):hover:not(:disabled),
+  .activity-year-control:not(:active):hover:not(:disabled) {
+    background: var(--mp-card);
+    box-shadow: 3px 3px 0 var(--mp-ink);
+  }
+
+  .quick-friend:not(:active):hover {
+    box-shadow: 4px 4px 0 var(--mp-lilac);
+  }
+
+  .game-choice:not(:active):hover {
+    background: var(--mp-card);
+    box-shadow: 7px 7px 0 var(--mp-lilac);
+  }
+
+  .game-choice[aria-pressed='true']:not(:active):hover {
+    background: var(--mp-acid);
+  }
+
+  .game-choice:not(:active):hover .game-choice-art {
+    transform: rotate(-3deg);
+  }
+
+  .friends-page .section-tabs button:not(:active):hover:not(:disabled) {
+    background: transparent;
+    color: var(--mp-muted);
+    box-shadow: none;
+  }
+
+  .friends-page .section-tabs button[aria-current='page']:not(:active):hover:not(:disabled) {
+    background: var(--mp-ink);
+    color: white;
+    box-shadow: 2px 2px 0 var(--mp-coral);
+  }
+
+  .friends-page .friend-remove-trigger:not(:active):hover {
+    box-shadow: 4px 4px 0 var(--mp-ink);
+  }
+
+  button:active:not(:disabled),
+  a:active,
+  label:active,
+  summary:active,
+  [role='button']:active,
+  .button:active:not(:disabled),
+  .icon-button:active:not(:disabled),
+  .game-icon-button:active:not(:disabled),
+  .game-dialog-close:active:not(:disabled),
+  .activity-year-control:active:not(:disabled),
+  .friends-page .section-tabs button:active:not(:disabled),
+  .friends-page .friend-remove-trigger:active,
+  .header-invite:active,
+  .notification-button:active,
+  .profile-link:active,
+  .game-choice:active,
+  .quick-friend:active,
+  .future-game:active,
+  .rules-steps li:active,
+  .site-header nav a:active {
+    transform: none !important;
+  }
+
+  html.touch-input .is-touch-pressed {
+    transform: translate(2px, 2px) !important;
+    transition: transform 120ms ease !important;
+  }
+
+  .custom-cursor {
+    display: none !important;
+  }
+}
+
+@media (max-height: 600px) and (max-width: 900px) {
+  .content-dialog,
+  .game-dialog {
+    max-height: calc(100dvh - 12px);
+  }
+
+  .notifications-panel {
+    top: 72px;
+    max-height: calc(100dvh - 154px - env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header nav,
+  .game-choice,
+  .quick-friend,
+  .header-invite,
+  .notification-button,
+  .profile-link {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}

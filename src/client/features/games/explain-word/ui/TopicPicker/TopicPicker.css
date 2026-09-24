@@ -1,0 +1,352 @@
+/* Topic selection uses the same compact, frameless layout as game setup. */
+.new-round-card {
+  max-width: 1080px;
+  margin: 18px auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--mp-ink);
+  box-shadow: none;
+  overflow: visible;
+}
+
+.new-round-card::after {
+  display: none;
+}
+
+.new-round-card h2 {
+  font-size: clamp(38px, 4vw, 52px);
+}
+
+.new-round-card .topic-picker {
+  max-width: none;
+  margin-top: 26px;
+  gap: 14px;
+}
+
+.new-round-card .topic-picker span {
+  min-height: 72px;
+  gap: 13px;
+  padding: 12px 14px;
+  font-size: 16px;
+}
+
+.new-round-card .topic-picker strong {
+  min-width: 0;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.topic-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  padding: 7px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 11px 11px 11px 4px;
+  background: var(--mp-lilac);
+  color: var(--mp-ink);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  transition:
+    background 160ms,
+    color 160ms,
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+.topic-icon * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-icon {
+  box-shadow: 3px 3px 0 var(--mp-ink);
+  transform: translate(-1px, -1px);
+}
+
+.topic-picker input:checked + span .topic-icon {
+  background: var(--mp-ink);
+  color: var(--mp-acid);
+  box-shadow: 2px 2px 0 var(--mp-coral);
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-home-art {
+  animation: topic-home-bounce 520ms cubic-bezier(0.2, 0.85, 0.3, 1.25);
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-home-door {
+  animation: topic-home-door 520ms ease-in-out;
+  transform-origin: right center;
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-food-cover {
+  transform: translateY(-3px) rotate(-4deg);
+}
+
+.topic-food-cover,
+.topic-travel-handle,
+.topic-book-page,
+.topic-code-left,
+.topic-code-right,
+.topic-code-cursor {
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-travel-case {
+  animation: topic-suitcase-trip 620ms ease-in-out;
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-travel-handle {
+  transform: translateY(-2px);
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-nature-leaf {
+  animation: topic-leaf-sway 700ms ease-in-out;
+  transform-origin: left bottom;
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-book-page-left {
+  transform: translateX(-1px) rotate(-4deg);
+  transform-origin: right bottom;
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-book-page-right {
+  transform: translateX(1px) rotate(4deg);
+  transform-origin: left bottom;
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-code-left {
+  transform: translateX(-2px);
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-code-right {
+  transform: translateX(2px);
+}
+
+html:not(.touch-input) .topic-picker label:hover .topic-code-cursor {
+  animation: topic-code-blink 360ms steps(2, jump-none) 2;
+}
+
+@keyframes topic-home-bounce {
+  45% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes topic-home-door {
+  45% {
+    transform: scaleX(0.45);
+  }
+}
+
+@keyframes topic-suitcase-trip {
+  30% {
+    transform: translateX(2px) rotate(3deg);
+  }
+  65% {
+    transform: translateX(-1px) rotate(-2deg);
+  }
+}
+
+@keyframes topic-leaf-sway {
+  30% {
+    transform: rotate(-7deg);
+  }
+  65% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes topic-code-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.new-round-card .new-round-action {
+  display: grid;
+  place-items: center;
+  width: 126px;
+  min-width: 126px;
+  min-height: 76px;
+  margin: 28px 0 0 auto;
+  padding: 5px 9px 7px;
+  overflow: visible;
+}
+
+.word-deal-icon {
+  width: 104px;
+  height: 62px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.word-deal-card,
+.word-deal-arrow,
+.word-deal-spark,
+.word-deal-question {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.word-deal-card-back rect {
+  fill: var(--mp-lilac);
+}
+
+.word-deal-card-middle rect {
+  fill: var(--mp-card);
+}
+
+.word-deal-card-front rect {
+  fill: var(--mp-acid);
+}
+
+.word-deal-card-front {
+  animation: word-deal-float 2.5s ease-in-out infinite;
+}
+
+.word-deal-spark {
+  stroke-width: 3;
+  animation: word-deal-sparkle 1.8s steps(2, jump-none) infinite;
+}
+
+.word-deal-spark-two {
+  animation-delay: -0.9s;
+}
+
+.new-round-action:hover:not(:disabled) .word-deal-card-back {
+  animation: word-deal-back 620ms cubic-bezier(0.2, 0.85, 0.3, 1.2);
+}
+
+.new-round-action:hover:not(:disabled) .word-deal-card-middle {
+  animation: word-deal-middle 620ms 60ms cubic-bezier(0.2, 0.85, 0.3, 1.2);
+}
+
+.new-round-action:hover:not(:disabled) .word-deal-card-front {
+  animation: word-deal-front 620ms 120ms cubic-bezier(0.2, 0.85, 0.3, 1.2);
+}
+
+.new-round-action:hover:not(:disabled) .word-deal-arrow {
+  animation: word-deal-arrow 620ms ease-in-out;
+}
+
+.new-round-action[data-busy='true'] .word-deal-card {
+  animation: word-deal-loading 900ms ease-in-out infinite alternate;
+}
+
+.new-round-action[data-busy='true'] .word-deal-card-middle {
+  animation-delay: -300ms;
+}
+
+.new-round-action[data-busy='true'] .word-deal-card-front {
+  animation-delay: -600ms;
+}
+
+@keyframes word-deal-float {
+  50% {
+    transform: translateY(-2px) rotate(1deg);
+  }
+}
+
+@keyframes word-deal-sparkle {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.65) rotate(45deg);
+  }
+}
+
+@keyframes word-deal-back {
+  45% {
+    transform: translate(-8px, -3px) rotate(-8deg);
+  }
+}
+
+@keyframes word-deal-middle {
+  45% {
+    transform: translateY(-9px) rotate(4deg);
+  }
+}
+
+@keyframes word-deal-front {
+  45% {
+    transform: translate(9px, -5px) rotate(8deg) scale(1.05);
+  }
+}
+
+@keyframes word-deal-arrow {
+  45% {
+    transform: translateX(4px) scaleX(1.08);
+  }
+}
+
+@keyframes word-deal-loading {
+  to {
+    transform: translateY(-5px);
+  }
+}
+
+@media (max-width: 600px) {
+  .game-page-header.is-room.is-active {
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+  }
+
+  .new-round-card {
+    margin-top: 4px;
+  }
+
+  .new-round-card .topic-picker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .new-round-card .new-round-action {
+    width: 108px;
+    min-width: 108px;
+    min-height: 64px;
+    padding: 4px 7px;
+  }
+
+  .new-round-card .word-deal-icon {
+    width: 90px;
+    height: 54px;
+  }
+
+  .new-round-card .topic-picker span {
+    min-height: 48px;
+    gap: 8px;
+    padding: 5px 8px;
+  }
+
+  .new-round-card .topic-picker strong {
+    font-size: 16px;
+    line-height: 1.1;
+  }
+
+  .topic-icon {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+    padding: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topic-icon,
+  .topic-icon *,
+  .word-deal-icon * {
+    animation: none !important;
+    transition: none;
+  }
+
+  html:not(.touch-input) .topic-picker label:hover .topic-icon,
+  html:not(.touch-input) .topic-picker label:hover .topic-icon * {
+    transform: none;
+  }
+}

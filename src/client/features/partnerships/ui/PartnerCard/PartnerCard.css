@@ -1,0 +1,15 @@
+/* The partner cards provide the visual grouping; the page section itself stays frameless. */
+.quick-start-shell {
+  padding: 28px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .quick-start-shell {
+    padding-top: 16px;
+    box-shadow: none;
+  }
+}

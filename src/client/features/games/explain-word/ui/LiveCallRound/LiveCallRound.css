@@ -1,0 +1,273 @@
+/* During a live clue, keep attention on the word and the clock. */
+.live-round > .live-round-clock {
+  width: fit-content;
+  min-width: 220px;
+  min-height: 0;
+  flex-direction: row;
+  gap: 18px;
+  margin-inline: auto;
+  padding: 9px 10px 9px 14px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+}
+
+.live-round > .live-round-clock p {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.live-round > .live-round-clock > strong {
+  min-width: 70px;
+  padding: 6px 9px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 9px 9px 9px 3px;
+  background: var(--mp-lilac);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font-size: 27px;
+  text-align: center;
+}
+
+.live-round-clock.is-final-guess {
+  width: fit-content;
+  min-width: 230px;
+  min-height: 0;
+  flex-direction: row;
+  justify-self: center;
+  gap: 18px;
+  margin-inline: auto;
+  padding: 9px 10px 9px 14px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-coral);
+}
+
+.live-round-clock.is-final-guess p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  letter-spacing: -0.02em;
+}
+
+.live-round-clock.is-final-guess p::before {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border: 2px solid var(--mp-ink);
+  border-radius: 2px;
+  background: var(--mp-coral);
+  content: '';
+  transform: rotate(8deg);
+}
+
+.live-round-clock.is-final-guess > strong {
+  min-width: 70px;
+  padding: 6px 9px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 9px 9px 9px 3px;
+  background: var(--mp-coral);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font-size: 27px;
+  text-align: center;
+}
+
+.live-round-clock.is-preparing {
+  width: fit-content;
+  min-width: 220px;
+  min-height: 0;
+  flex-direction: row;
+  gap: 18px;
+  margin-inline: auto;
+  padding: 9px 10px 9px 14px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-coral);
+}
+
+.live-round-clock.is-preparing p {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.live-round-clock.is-preparing > strong {
+  min-width: 62px;
+  padding: 6px 9px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 9px 9px 9px 3px;
+  background: var(--mp-acid);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font-size: 27px;
+  text-align: center;
+}
+
+.live-round-clock.is-compact {
+  max-width: 1080px;
+  min-height: 64px;
+  margin-inline: auto;
+  padding: 12px 18px;
+  border-width: 2px;
+  border-color: var(--mp-ink);
+  border-radius: 15px 15px 15px 5px;
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+}
+
+.live-round-clock.is-compact > strong {
+  font-size: clamp(28px, 3vw, 38px);
+}
+
+.live-explain-card {
+  max-width: 980px !important;
+  margin: 18px auto 0;
+  padding: clamp(18px, 3vw, 26px);
+  border: 2px solid var(--mp-ink);
+  border-radius: 18px 18px 18px 6px;
+  background: var(--mp-card);
+  box-shadow: 8px 8px 0 var(--mp-ink);
+  overflow: visible;
+  animation: live-secret-arrive 420ms cubic-bezier(0.2, 0.85, 0.3, 1.15) both;
+}
+
+.live-explain-card .explain-card-topbar {
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--mp-ink);
+}
+
+.live-explain-card .explain-brief {
+  grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
+  gap: 16px;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+}
+
+.live-explain-card .secret-word-block,
+.live-explain-card .forbidden-words-block {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  min-height: 150px;
+  padding: clamp(18px, 3vw, 26px);
+  border: 2px solid var(--mp-ink);
+  border-radius: 14px 14px 14px 5px;
+}
+
+.live-explain-card .secret-word-block {
+  background: var(--mp-acid);
+  box-shadow: 5px 5px 0 var(--mp-coral);
+}
+
+.live-explain-card .secret-word-block:only-child {
+  grid-column: 1 / -1;
+}
+
+.live-explain-card .forbidden-words-block {
+  background: #fff1ec;
+  box-shadow: 5px 5px 0 var(--mp-lilac);
+}
+
+.live-explain-card .secret-word-block > span,
+.live-explain-card .forbidden-words-block > p {
+  color: var(--mp-ink);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 10px);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.live-explain-card .secret-word-block h2 {
+  min-width: 0;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+  font-size: clamp(40px, 5vw, 64px);
+}
+
+.live-explain-card .forbidden-words-block > div {
+  margin-top: 12px;
+}
+
+.live-explain-card .forbidden-words-block span {
+  border: 2px solid var(--mp-ink);
+  border-radius: 9px 9px 9px 3px;
+  background: var(--mp-card);
+  box-shadow: 2px 2px 0 var(--mp-coral);
+  color: #8b2f21;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+  font-weight: 850;
+}
+
+.live-explain-card .explain-skip-control {
+  min-height: 38px;
+  padding-inline: 13px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--mp-card);
+  box-shadow: 3px 3px 0 var(--mp-coral);
+  color: var(--mp-ink);
+  font-weight: 850;
+  transition:
+    box-shadow 150ms,
+    transform 150ms,
+    background 150ms;
+}
+
+.live-explain-card .explain-skip-control:hover:not(:disabled) {
+  border-color: var(--mp-ink);
+  background: #fff1ec;
+  box-shadow: 1px 1px 0 var(--mp-coral);
+  transform: translate(2px, 2px);
+}
+
+.live-explain-card .explain-skip-control:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(3px, 3px);
+}
+
+@keyframes live-secret-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+
+@media (max-width: 600px) {
+  .live-explain-card {
+    margin-top: 12px;
+    padding: 15px;
+    box-shadow: 5px 5px 0 var(--mp-ink);
+  }
+
+  .live-explain-card .explain-brief {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .live-explain-card .secret-word-block,
+  .live-explain-card .forbidden-words-block {
+    min-height: 0;
+    padding: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-explain-card {
+    animation: none;
+  }
+
+  .live-explain-card .explain-skip-control {
+    transition: none;
+  }
+
+  .live-explain-card .explain-skip-control:hover:not(:disabled),
+  .live-explain-card .explain-skip-control:active:not(:disabled) {
+    transform: none;
+  }
+}

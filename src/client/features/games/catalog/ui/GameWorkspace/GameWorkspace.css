@@ -1,0 +1,146 @@
+/* Keep game setup focused on its three decisions: partner, mode, and time. */
+.game-lobby-ready {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  margin: 18px auto 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.game-lobby-ready::before {
+  display: none;
+}
+
+.game-lobby-ready .game-lobby-copy {
+  padding: 0;
+}
+
+.game-lobby-ready .game-lobby-copy h2 {
+  margin-top: 0;
+  font-size: clamp(36px, 4vw, 52px);
+}
+
+.game-lobby-ready .game-mode-picker {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: none;
+  margin-top: 0;
+  gap: 14px;
+}
+
+.game-lobby-ready .game-mode-picker legend,
+.game-lobby-ready .duration-picker legend {
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+}
+
+.game-lobby-ready .game-mode-picker label {
+  grid-template-columns: minmax(0, 1fr) 20px;
+  min-height: 72px;
+  padding: 16px 20px;
+}
+
+.game-lobby-ready .game-mode-picker strong {
+  font-size: 16px;
+}
+
+.game-lobby-ready .duration-picker {
+  max-width: none;
+  margin-top: 30px;
+}
+
+.game-lobby-ready .duration-presets {
+  gap: 10px;
+}
+
+.game-lobby-ready .duration-presets button {
+  min-height: 48px;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+}
+
+.game-lobby-ready .duration-custom {
+  width: fit-content;
+  min-height: 44px;
+  justify-self: end;
+  gap: 10px;
+  padding: 5px 8px 5px 12px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 11px 11px 11px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+  color: var(--mp-ink);
+  transition:
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+.game-lobby-ready .duration-custom > span:first-child {
+  font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.game-lobby-ready .duration-custom > span:last-child {
+  gap: 6px;
+  color: var(--mp-muted);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+}
+
+.game-lobby-ready .duration-custom input {
+  width: 64px;
+  min-height: 32px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 8px 8px 8px 3px;
+  background: var(--mp-acid);
+  box-shadow: 2px 2px 0 var(--mp-coral);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+  font-weight: 900;
+  appearance: textfield;
+}
+
+.game-lobby-ready .duration-custom input::-webkit-inner-spin-button,
+.game-lobby-ready .duration-custom input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.game-lobby-ready .duration-custom:focus-within {
+  box-shadow: 1px 1px 0 var(--mp-lilac);
+  transform: translate(3px, 3px);
+}
+
+.game-lobby-ready .game-lobby-actions {
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+
+.game-lobby-ready .game-lobby-action {
+  min-width: 210px;
+  min-height: 56px;
+  margin-top: 0;
+  font-size: 17px;
+}
+
+@media (max-width: 600px) {
+  .game-lobby-ready {
+    margin-top: 12px;
+    padding: 0;
+  }
+
+  .game-lobby-ready .game-mode-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .game-lobby-ready .game-lobby-action {
+    width: 100%;
+  }
+
+  .game-lobby-ready .duration-custom {
+    justify-self: stretch;
+    width: auto;
+  }
+}

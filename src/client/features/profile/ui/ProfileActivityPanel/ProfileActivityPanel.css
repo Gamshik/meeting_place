@@ -1,0 +1,626 @@
+/* Profile activity calendar */
+.activity-panel {
+  margin-top: 24px;
+  padding: clamp(22px, 3vw, 34px);
+  border: 1px solid #d8d6cf;
+  border-radius: 24px;
+  background: #fffdfa;
+}
+
+.activity-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.activity-heading h2 {
+  margin-top: 6px;
+  font-size: clamp(28px, 3.2vw, 42px);
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.activity-heading > div:first-child > p:last-child {
+  max-width: 650px;
+  margin-top: 10px;
+  color: #706e68;
+  line-height: 1.5;
+}
+
+.activity-controls,
+.activity-view-switch,
+.activity-year-control {
+  display: flex;
+  align-items: center;
+}
+
+.activity-controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.activity-view-switch,
+.activity-year-control {
+  gap: 3px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #efede8;
+}
+
+.activity-view-switch button,
+.activity-year-control button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 5px;
+  padding: 7px 12px;
+  color: #625f59;
+}
+
+.activity-view-switch button[aria-pressed='true'] {
+  background: #242422;
+  color: white;
+}
+
+.activity-year-control strong {
+  min-width: 48px;
+  text-align: center;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+}
+
+.activity-year-control button:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.activity-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 28px 0 22px;
+  border-block: 1px solid #dedbd4;
+}
+
+.activity-totals > div {
+  padding: 18px 20px 18px 0;
+}
+
+.activity-totals > div + div {
+  border-left: 1px solid #dedbd4;
+  padding-left: 20px;
+}
+
+.activity-totals strong,
+.activity-totals span {
+  display: block;
+}
+
+.activity-totals strong {
+  margin-bottom: 4px;
+  font-size: clamp(23px, 2.5vw, 32px);
+}
+
+.activity-totals span {
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+}
+
+.activity-year-scroll {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  padding-bottom: 8px;
+}
+
+.activity-year-calendar {
+  width: 100%;
+  min-width: 930px;
+  padding: 16px 18px;
+  border: 1px solid #e1ded7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.activity-month-labels {
+  display: grid;
+  column-gap: 3px;
+  margin: 0 0 10px 40px;
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
+}
+
+.activity-month-labels span {
+  min-width: 0;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.activity-year-body {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.activity-weekdays {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 10px);
+  background: #fff;
+}
+
+.activity-weekdays span {
+  display: flex;
+  align-items: center;
+}
+
+.activity-weekdays span:nth-child(1) {
+  grid-row: 1;
+}
+
+.activity-weekdays span:nth-child(2) {
+  grid-row: 3;
+}
+
+.activity-weekdays span:nth-child(3) {
+  grid-row: 5;
+}
+
+.activity-weeks {
+  display: grid;
+  gap: 3px;
+}
+
+.activity-week {
+  display: grid;
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.activity-cell {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: #ebe9e4;
+}
+
+button.activity-cell:disabled {
+  cursor: default;
+}
+
+.activity-cell-hidden {
+  visibility: hidden;
+}
+
+.activity-level-0 {
+  background: #ebe9e4;
+}
+
+.activity-level-1 {
+  background: #f5cbc2;
+}
+
+.activity-level-2 {
+  background: #efaa9b;
+}
+
+.activity-level-3 {
+  background: #e9826e;
+}
+
+.activity-level-4 {
+  background: #de563f;
+}
+
+.activity-level-5 {
+  background: #b92c19;
+}
+
+.activity-cell.activity-connects::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  bottom: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  background: inherit;
+}
+
+.activity-legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 12px;
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
+}
+
+.activity-legend i {
+  width: 15px;
+  height: 15px;
+  border-radius: 3px;
+}
+
+.activity-month-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.activity-month {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e1ded7;
+  border-radius: 10px;
+  background: white;
+}
+
+.activity-month-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.activity-month-heading h3 {
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+}
+
+.activity-month-heading span {
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
+}
+
+.activity-month-weekdays,
+.activity-month-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(10px, 1fr));
+  gap: 5px;
+}
+
+.activity-month-weekdays {
+  margin-bottom: 6px;
+  color: #8b8880;
+  text-align: center;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 9px);
+}
+
+.activity-month-days .activity-cell {
+  width: 100%;
+  max-width: 28px;
+  aspect-ratio: 1;
+  height: auto;
+  margin-inline: auto;
+}
+
+.activity-day-details {
+  display: grid;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(300px, 1.25fr) auto;
+  gap: 28px;
+  align-items: start;
+  margin-top: 18px;
+  padding: 22px;
+  border-left: 3px solid #d93621;
+  background: #f3f0ea;
+}
+
+.activity-day-details h3 {
+  margin-top: 5px;
+  font-size: 22px;
+}
+
+.activity-day-details p:last-child {
+  margin-top: 7px;
+  color: #706e68;
+}
+
+.activity-day-details dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  gap: 8px 24px;
+  margin: 0;
+}
+
+.activity-day-details dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #d8d5ce;
+  padding-bottom: 7px;
+}
+
+.activity-day-details dt {
+  color: #706e68;
+}
+
+.activity-day-details dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+.activity-topics {
+  display: flex;
+  max-width: 240px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.activity-topics span {
+  border: 1px solid #d8d5ce;
+  border-radius: 999px;
+  background: white;
+  padding: 7px 10px;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+}
+
+.activity-loading,
+.activity-error,
+.activity-empty {
+  margin-top: 24px;
+  padding: 28px;
+  border: 1px solid #dedbd4;
+  color: #706e68;
+}
+
+.activity-error {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.friend-profile-link {
+  flex: 1 1 170px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.friend-profile-link:hover h3 {
+  color: #c32e1c;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.friend-profile-page,
+.account-page {
+  width: min(1320px, 90%);
+  margin-inline: auto;
+}
+
+.profile-back-link {
+  display: inline-block;
+  margin-bottom: 22px;
+  color: #343430;
+  text-underline-offset: 4px;
+}
+
+.friend-profile-heading,
+.account-profile-heading {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 22px;
+  border: 1px solid #ddd8ce;
+  border-radius: 20px;
+  background: #fffdfa;
+  box-shadow: 0 12px 36px #2a263508;
+}
+
+.friend-profile-heading h1,
+.account-profile-heading h1 {
+  margin-top: 4px;
+  font-size: clamp(31px, 4vw, 43px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.friend-profile-identity,
+.account-profile-identity {
+  min-width: 0;
+}
+
+.friend-profile-identity > p:last-child {
+  overflow: hidden;
+  margin-top: 6px;
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-profile-handle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: #706e68;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+}
+
+.account-profile-handle .text-action {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mp-coral, #d93621);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.friend-profile-kicker,
+.account-profile-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #615d55;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 10px);
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.friend-profile-kicker span,
+.account-profile-kicker span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mp-coral);
+}
+
+.friend-profile-avatar,
+.account-profile-avatar {
+  width: 68px;
+  height: 68px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 3px solid #fffdfa;
+  border-radius: 20px 20px 20px 7px;
+  background: var(--mp-lilac);
+  box-shadow: 0 0 0 1px #d8d1c4;
+  display: grid;
+  place-items: center;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.friend-profile-avatar img,
+.account-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.friend-profile-practice {
+  gap: 12px;
+  min-height: 46px;
+  white-space: nowrap;
+}
+
+.account-profile-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-profile-edit-btn {
+  min-height: 46px;
+  padding: 0 18px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.account-profile-actions .profile-signout {
+  margin: 0;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: #9b3c2c;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.friend-profile-practice span {
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+}
+
+@media (max-width: 900px) {
+  .activity-heading,
+  .activity-day-details {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-heading {
+    display: grid;
+  }
+
+  .activity-controls {
+    justify-content: flex-start;
+  }
+
+  .activity-month-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .activity-topics {
+    max-width: none;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 1180px) {
+  .friend-profile-page,
+  .account-page {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .friend-profile-page,
+  .account-page {
+    width: min(100% - 24px, 1320px);
+  }
+
+  .activity-panel {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .activity-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .activity-totals > div:nth-child(3) {
+    border-left: 0;
+    border-top: 1px solid #dedbd4;
+  }
+
+  .activity-totals > div:nth-child(4) {
+    border-top: 1px solid #dedbd4;
+  }
+
+  .activity-month-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .friend-profile-heading,
+  .account-profile-heading {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    padding: 18px;
+  }
+
+  .friend-profile-avatar,
+  .account-profile-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 17px 17px 17px 6px;
+  }
+
+  .friend-profile-practice,
+  .account-profile-actions {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    width: 100%;
+  }
+}

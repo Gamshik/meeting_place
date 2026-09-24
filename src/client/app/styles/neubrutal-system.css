@@ -1,0 +1,423 @@
+/* Site-wide Neubrutalist design system */
+body {
+  background: var(--mp-paper);
+}
+
+.site-header,
+.login-header {
+  border-bottom: 2px solid var(--mp-ink);
+}
+
+.brand-mark {
+  border: 2px solid var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-acid);
+}
+
+.site-header nav {
+  height: 50px;
+  padding: 4px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 14px 14px 14px 5px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+}
+
+.site-header nav a {
+  border: 2px solid transparent;
+  border-radius: 9px 9px 9px 3px;
+}
+
+.site-header nav a[aria-current='page'] {
+  border-color: var(--mp-ink);
+  background: var(--mp-acid);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+}
+
+.header-invite,
+.profile-link {
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  box-shadow: 3px 3px 0 var(--mp-coral);
+  transition:
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+.header-invite:hover,
+.profile-link:hover {
+  box-shadow: 1px 1px 0 var(--mp-coral);
+  transform: translate(2px, 2px);
+}
+
+.button {
+  border: 2px solid var(--mp-ink);
+  border-radius: 13px 13px 13px 4px;
+  box-shadow: 4px 4px 0 var(--mp-ink);
+  transition:
+    background 160ms,
+    box-shadow 160ms,
+    color 160ms,
+    transform 160ms;
+}
+
+.button-primary {
+  box-shadow: 4px 4px 0 var(--mp-coral);
+}
+
+.button-secondary {
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+}
+
+.button-danger {
+  border-color: #982719;
+  box-shadow: 4px 4px 0 #982719;
+}
+
+.button:hover:not(:disabled) {
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  transform: translate(2px, 2px);
+}
+
+.button-primary:hover:not(:disabled) {
+  box-shadow: 2px 2px 0 var(--mp-coral);
+}
+
+.button-secondary:hover:not(:disabled) {
+  box-shadow: 2px 2px 0 var(--mp-lilac);
+}
+
+.button-danger:hover:not(:disabled) {
+  box-shadow: 2px 2px 0 #982719;
+}
+
+.button:active:not(:disabled) {
+  box-shadow: none;
+  transform: translate(4px, 4px);
+}
+
+.icon-button,
+.game-icon-button,
+.game-dialog-close,
+.activity-year-control {
+  border: 2px solid var(--mp-ink);
+  border-radius: 11px 11px 11px 4px;
+  background: var(--mp-card);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+  transition:
+    background 160ms,
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+.icon-button:hover:not(:disabled),
+.game-icon-button:hover:not(:disabled),
+.game-dialog-close:hover:not(:disabled),
+.activity-year-control:hover:not(:disabled) {
+  box-shadow: 1px 1px 0 var(--mp-ink);
+  transform: translate(2px, 2px);
+}
+
+.input,
+.game-select {
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+  transition:
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+.input:focus,
+.game-select:focus {
+  outline: 3px solid var(--mp-coral);
+  outline-offset: 3px;
+  box-shadow: 1px 1px 0 var(--mp-lilac);
+  transform: translate(3px, 3px);
+}
+
+.practice-hero {
+  border: 2px solid var(--mp-ink);
+  border-radius: 24px 24px 24px 8px;
+  background: var(--mp-ink);
+  box-shadow: 10px 10px 0 var(--mp-coral);
+}
+
+.practice-library {
+  border: 2px solid var(--mp-ink);
+  border-radius: 20px 20px 20px 7px;
+  background: var(--mp-lilac);
+  box-shadow: 9px 9px 0 var(--mp-coral);
+}
+
+.quick-start-shell,
+.history-card,
+.history-pagination,
+.rounds-section,
+.activity-panel,
+.friend-profile-heading,
+.account-profile-heading,
+.profile-editor-drawer {
+  border: 2px solid var(--mp-ink);
+  border-radius: 20px 20px 20px 7px;
+  background: var(--mp-card);
+  box-shadow: 7px 7px 0 var(--mp-ink);
+}
+
+.quick-friend,
+.game-choice,
+.activity-day-details,
+.activity-month,
+.rounds-table-wrap,
+.custom-audio-player,
+.audio-recorder {
+  border: 2px solid var(--mp-ink);
+  border-radius: 15px 15px 15px 5px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+}
+
+.quick-friend:hover,
+.game-choice:hover {
+  border-color: var(--mp-ink);
+  box-shadow: 2px 2px 0 var(--mp-lilac);
+  transform: translate(2px, 2px);
+}
+
+.content-dialog,
+.notifications-panel,
+.game-dialog {
+  border: 2px solid var(--mp-ink);
+  border-radius: 20px 20px 20px 7px;
+  background: var(--mp-card);
+  box-shadow: 9px 9px 0 var(--mp-ink);
+}
+
+.content-dialog::backdrop,
+.game-dialog-backdrop {
+  backdrop-filter: none;
+}
+
+.notification-item,
+.rules-tip,
+.rules-steps li,
+.round-recap-message {
+  border: 2px solid var(--mp-ink);
+  border-radius: 13px 13px 13px 4px;
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+}
+
+.game-request-toast {
+  border: 2px solid var(--mp-ink);
+  border-radius: 20px 20px 7px 20px;
+  box-shadow: 7px 7px 0 var(--mp-lilac);
+}
+
+.login-art {
+  border: 2px solid var(--mp-ink);
+  border-radius: 24px 24px 24px 8px;
+  background: var(--mp-lilac);
+  box-shadow: 10px 10px 0 var(--mp-ink);
+}
+
+.login-promises span,
+.history-meta span,
+.round-result,
+.game-mode-badge {
+  border: 2px solid var(--mp-ink);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--mp-ink);
+}
+
+.game-lobby,
+.game-invitation-card,
+.game-surface,
+.game-stage,
+.session-pause-card,
+.session-finished-card,
+.round-recap {
+  border: 2px solid var(--mp-ink);
+  border-radius: 20px 20px 20px 7px;
+  background: var(--mp-card);
+  box-shadow: 7px 7px 0 var(--mp-ink);
+}
+
+.game-stage {
+  background: var(--mp-ink);
+  color: white;
+  box-shadow: 7px 7px 0 var(--mp-coral);
+}
+
+.game-stage .topic-picker span {
+  border-color: var(--mp-ink);
+  background: var(--mp-card);
+  color: var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+}
+
+html:not(.touch-input) .game-stage .topic-picker label:hover span {
+  background: var(--mp-card);
+}
+
+.game-stage .topic-picker input:checked + span {
+  background: var(--mp-acid);
+  box-shadow: 3px 3px 0 var(--mp-coral);
+}
+
+.game-lobby::before,
+.game-invitation-card::after {
+  opacity: 1;
+}
+
+.game-mode-picker label,
+.duration-presets button,
+.topic-picker span,
+.activity-view-switch button {
+  border: 2px solid var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+  transition:
+    background 160ms,
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+html:not(.touch-input) .game-mode-picker label:hover,
+html:not(.touch-input) .duration-presets button:hover:not(:disabled),
+html:not(.touch-input) .topic-picker label:hover span,
+.activity-view-switch button:hover {
+  box-shadow: 1px 1px 0 var(--mp-lilac);
+  transform: translate(2px, 2px);
+}
+
+.game-mode-picker label:has(input:checked),
+.duration-presets button.is-selected,
+.topic-picker input:checked + span,
+.activity-view-switch button[aria-pressed='true'] {
+  border-color: var(--mp-ink);
+  background: var(--mp-acid);
+  color: var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-coral);
+}
+
+.activity-totals,
+.activity-year-calendar,
+.coaching-disclosure {
+  border: 2px solid var(--mp-ink);
+  border-radius: 15px 15px 15px 5px;
+  background: var(--mp-card);
+}
+
+.rounds-table th {
+  border-bottom: 2px solid var(--mp-ink);
+  background: var(--mp-lilac);
+  color: var(--mp-ink);
+}
+
+.rounds-table td {
+  border-bottom-color: var(--mp-ink);
+}
+
+.game-back-link,
+.profile-back-link {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 7px 11px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--mp-card);
+  color: var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+  font-weight: 750;
+  text-decoration: none;
+  transition:
+    box-shadow 160ms,
+    transform 160ms;
+}
+
+@media (max-width: 420px) {
+  .site-header {
+    width: calc(100% - 16px);
+    gap: 6px;
+  }
+
+  .site-header nav {
+    gap: 1px;
+    padding: 2px;
+  }
+
+  .site-header nav a {
+    padding-inline: 7px;
+    font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+  }
+
+  .header-actions {
+    gap: 2px;
+  }
+}
+
+.game-back-link:hover,
+.profile-back-link:hover {
+  box-shadow: 1px 1px 0 var(--mp-lilac);
+  transform: translate(2px, 2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .icon-button,
+  .game-icon-button,
+  .game-dialog-close,
+  .activity-year-control,
+  .input,
+  .game-select,
+  .quick-friend,
+  .game-choice,
+  .game-mode-picker label,
+  .duration-presets button,
+  .topic-picker span,
+  .activity-view-switch button {
+    transition: none;
+  }
+
+  .button:hover,
+  .icon-button:hover,
+  .game-icon-button:hover,
+  .game-dialog-close:hover,
+  .activity-year-control:hover,
+  .input:focus,
+  .game-select:focus,
+  .quick-friend:hover,
+  .game-choice:hover,
+  .game-mode-picker label:hover,
+  .duration-presets button:hover,
+  html:not(.touch-input) .topic-picker label:hover span,
+  .activity-view-switch button:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .practice-hero,
+  .login-art {
+    box-shadow: 6px 6px 0 var(--mp-coral);
+  }
+
+  .quick-start-shell,
+  .history-card,
+  .history-pagination,
+  .rounds-section,
+  .activity-panel,
+  .friend-profile-heading,
+  .account-profile-heading,
+  .profile-editor-drawer,
+  .game-lobby,
+  .game-invitation-card,
+  .game-surface,
+  .game-stage,
+  .session-pause-card,
+  .session-finished-card,
+  .round-recap {
+    box-shadow: 5px 5px 0 var(--mp-ink);
+  }
+}

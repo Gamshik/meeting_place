@@ -1,0 +1,58 @@
+/* Keep the friend invite focused on its single required action. */
+.invite-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.invite-input {
+  padding: 6px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 14px 14px 14px 5px;
+  box-shadow: 4px 4px 0 var(--mp-lilac);
+  transition:
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.invite-input:focus-within {
+  box-shadow: 2px 2px 0 var(--mp-lilac);
+  transform: translate(2px, 2px);
+}
+
+.invite-input > span {
+  color: var(--mp-ink);
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.invite-input input {
+  outline: 0;
+  font-size: 17px;
+}
+
+.invite-submit {
+  min-width: 150px;
+  min-height: 58px;
+}
+
+@media (max-width: 600px) {
+  .invite-form {
+    grid-template-columns: 1fr;
+  }
+
+  .invite-submit {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .invite-input {
+    transition: none;
+  }
+
+  .invite-input:focus-within {
+    transform: none;
+  }
+}

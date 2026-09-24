@@ -1,0 +1,425 @@
+/* Active games use a dedicated room shell instead of the site navigation. */
+.site-header-room {
+  width: min(1680px, calc(100% - 64px));
+  height: 70px;
+  justify-content: flex-start;
+  border-bottom: 0;
+}
+
+.site-header-room .wordmark {
+  min-width: 0;
+}
+
+.app-shell-room .main-content {
+  width: min(1680px, calc(100% - 64px));
+  max-width: none;
+  padding: 6px 0 56px;
+}
+
+.game-page-header.is-room {
+  position: relative;
+  display: grid;
+  grid-template-areas: 'identity controls';
+  grid-template-columns: minmax(300px, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 30px;
+  padding: 8px 0 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.game-page-header.is-room .game-page-heading {
+  grid-area: identity;
+  display: flex;
+  min-width: 280px;
+  align-items: center;
+  gap: 14px;
+}
+
+.game-page-header.is-room .game-back-link {
+  justify-content: center;
+  width: 52px;
+  min-height: 46px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 2px solid var(--mp-ink);
+  border-radius: 11px 11px 11px 4px;
+  background: var(--mp-card);
+  box-shadow: 3px 3px 0 var(--mp-lilac);
+  color: var(--mp-ink);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+  font-weight: 900;
+  transition:
+    box-shadow 150ms,
+    transform 150ms;
+}
+
+.game-page-header.is-room .game-back-link:hover {
+  box-shadow: 1px 1px 0 var(--mp-lilac);
+  background: var(--mp-lilac);
+  color: var(--mp-ink);
+  transform: translate(2px, 2px);
+}
+
+.game-page-header.is-room .game-title-row h1 {
+  margin: 2px 0 0;
+  color: var(--mp-ink);
+  font-size: clamp(25px, 2.3vw, 34px);
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+
+.game-page-header.is-room .game-header-tools {
+  position: static;
+  grid-area: controls;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.game-page-header.is-room .game-scoreboard {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(86px, auto) 18px minmax(86px, auto);
+  gap: 8px;
+  min-height: 66px;
+  padding: 8px 18px;
+  background: var(--mp-ink);
+  box-shadow:
+    5px 5px 0 var(--mp-coral),
+    -3px -3px 0 var(--mp-acid);
+  transform: translate(-50%, -50%);
+  transition:
+    box-shadow 180ms ease,
+    margin 180ms ease;
+  animation: room-scoreboard-arrive 420ms cubic-bezier(0.2, 0.85, 0.3, 1.2) both;
+}
+
+.game-page-header.is-room .game-scoreboard p,
+.game-page-header.is-room .game-scoreboard .is-you p {
+  color: #c5b7f5;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.game-page-header.is-room .game-scoreboard > div {
+  perspective: 180px;
+}
+
+.game-page-header.is-room .game-scoreboard strong {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 36px;
+  margin: 3px auto 0;
+  color: white;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  transition: transform 180ms ease;
+  animation: room-score-flip 520ms cubic-bezier(0.2, 0.85, 0.3, 1.25) both;
+  isolation: isolate;
+}
+
+.game-page-header.is-room .game-scoreboard strong::before,
+.game-page-header.is-room .game-scoreboard strong::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+}
+
+.game-page-header.is-room .game-scoreboard strong::before {
+  width: 34px;
+  height: 34px;
+  border: 2px solid var(--mp-acid);
+  border-radius: 10px 10px 10px 3px;
+  animation: room-score-ring 620ms ease-out both;
+}
+
+.game-page-header.is-room .game-scoreboard strong::after {
+  width: 5px;
+  height: 5px;
+  background: var(--mp-coral);
+  box-shadow:
+    -24px -12px 0 var(--mp-acid),
+    25px -8px 0 var(--mp-lilac),
+    -20px 15px 0 var(--mp-lilac),
+    22px 14px 0 var(--mp-acid);
+  animation: room-score-burst 640ms ease-out both;
+}
+
+.game-page-header.is-room .game-scoreboard > span {
+  color: var(--mp-coral);
+  font-size: 24px;
+  animation: room-score-separator 1.8s ease-in-out infinite;
+}
+
+.game-page-header.is-room .game-scoreboard:hover {
+  margin-top: 2px;
+  box-shadow:
+    3px 3px 0 var(--mp-coral),
+    -2px -2px 0 var(--mp-acid);
+}
+
+.game-page-header.is-room .game-scoreboard:hover strong {
+  transform: translateY(-2px);
+}
+
+.game-page-header.is-room .game-time-settings > summary {
+  background: var(--mp-acid);
+  box-shadow: 3px 3px 0 var(--mp-coral);
+}
+
+.game-page-header.is-room .game-icon-button {
+  background: var(--mp-lilac);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+}
+
+.game-page-header.is-room .game-end-control {
+  width: 52px;
+  justify-content: center;
+  padding: 0;
+  background: var(--mp-coral);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+}
+
+.game-page-header.is-room .game-end-control span {
+  background: var(--mp-ink);
+}
+
+.room-control-icon {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+
+.room-lobby-home,
+.room-lobby-door,
+.room-timer-hand,
+.room-end-stop {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 220ms cubic-bezier(0.2, 0.85, 0.3, 1.25);
+}
+
+.room-end-stop {
+  fill: currentColor;
+}
+
+.game-back-link:hover .room-lobby-home {
+  transform: translateY(-2px);
+}
+
+.game-back-link:hover .room-lobby-door {
+  transform: scaleY(0.72);
+}
+
+.game-time-settings > summary:hover .room-timer-hand,
+.game-time-settings[open] > summary .room-timer-hand {
+  transform: rotate(160deg);
+}
+
+.game-end-control:hover:not(:disabled) .room-end-stop {
+  animation: room-stop-pulse 440ms ease-in-out;
+}
+
+.game-time-readout > .room-control-icon,
+.game-time-settings > summary > .room-control-icon {
+  width: 23px;
+  height: 23px;
+}
+
+.game-time-readout {
+  grid-template-columns: auto auto;
+}
+
+@keyframes room-stop-pulse {
+  50% {
+    transform: scale(0.65) rotate(8deg);
+  }
+}
+
+@keyframes room-scoreboard-arrive {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 8px)) scale(0.96);
+  }
+}
+
+@keyframes room-score-flip {
+  0% {
+    opacity: 0;
+    transform: translateY(-9px) rotateX(-85deg) scale(0.78);
+  }
+
+  58% {
+    opacity: 1;
+    transform: translateY(3px) rotateX(12deg) scale(1.18);
+  }
+
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes room-score-ring {
+  0% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.25) rotate(-12deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.75) rotate(12deg);
+  }
+}
+
+@keyframes room-score-burst {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) rotate(-18deg);
+  }
+
+  28% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.35) rotate(18deg);
+  }
+}
+
+@keyframes room-score-separator {
+  50% {
+    transform: scale(1.22);
+  }
+}
+
+@media (max-width: 700px) {
+  .game-page-header.is-room {
+    grid-template-areas:
+      'identity'
+      'controls';
+    grid-template-columns: 1fr;
+  }
+
+  .game-page-header.is-room .game-header-tools {
+    width: 100%;
+  }
+
+  .game-page-header.is-room .game-scoreboard {
+    position: static;
+    transform: none;
+    animation-name: room-scoreboard-arrive-static;
+  }
+}
+
+@keyframes room-scoreboard-arrive-static {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+@media (max-width: 680px) {
+  .site-header-room,
+  .app-shell-room .main-content {
+    width: calc(100% - 28px);
+  }
+
+  .site-header-room {
+    height: 64px;
+  }
+
+  .game-page-header.is-room {
+    gap: 14px;
+    padding: 8px 0 16px;
+    box-shadow: none;
+  }
+
+  .game-page-header.is-room .game-page-heading {
+    min-width: 0;
+  }
+
+  .game-page-header.is-room .game-title-row h1 {
+    white-space: normal;
+  }
+
+  .game-page-header.is-room .game-header-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .game-page-header.is-room .game-scoreboard {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .game-page-header.is-room .game-time-settings {
+    min-width: 0;
+  }
+
+  .game-page-header.is-room .game-end-control {
+    padding: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-page-header.is-room .game-back-link {
+    transition: none;
+  }
+
+  .game-page-header.is-room .game-back-link:hover {
+    transform: none;
+  }
+
+  .room-lobby-home,
+  .room-lobby-door,
+  .room-timer-hand,
+  .room-end-stop {
+    transition: none;
+  }
+
+  .game-back-link:hover .room-lobby-home,
+  .game-back-link:hover .room-lobby-door,
+  .game-time-settings > summary:hover .room-timer-hand,
+  .game-time-settings[open] > summary .room-timer-hand {
+    transform: none;
+  }
+
+  .game-end-control:hover:not(:disabled) .room-end-stop {
+    animation: none;
+  }
+
+  .game-page-header.is-room .game-scoreboard,
+  .game-page-header.is-room .game-scoreboard strong,
+  .game-page-header.is-room .game-scoreboard > span {
+    animation: none;
+  }
+
+  .game-page-header.is-room .game-scoreboard:hover strong {
+    transform: none;
+  }
+
+  .game-page-header.is-room .game-scoreboard strong::before,
+  .game-page-header.is-room .game-scoreboard strong::after {
+    display: none;
+  }
+}

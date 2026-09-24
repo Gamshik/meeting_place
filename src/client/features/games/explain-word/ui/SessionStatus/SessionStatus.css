@@ -1,0 +1,125 @@
+/* Paused session: make the person, recovery state, and deadline immediately clear. */
+.session-pause-card {
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  gap: 18px;
+  width: min(100%, 760px);
+  min-height: 124px;
+  margin: 0 auto 20px;
+  padding: 16px 22px;
+  border-radius: 20px 20px 20px 7px;
+  background: var(--mp-card);
+  box-shadow: 7px 7px 0 var(--mp-ink);
+}
+
+.session-pause-signal {
+  width: 66px;
+  height: 66px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 16px 16px 16px 5px;
+  background: var(--mp-lilac);
+  color: var(--mp-ink);
+  box-shadow: 3px 3px 0 var(--mp-coral);
+  font-size: 24px;
+}
+
+.session-pause-signal i {
+  right: -5px;
+  bottom: -5px;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--mp-card);
+  background: var(--mp-coral);
+}
+
+.session-pause-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 5px;
+  color: #8c3926;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.session-pause-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--mp-coral);
+}
+
+.session-pause-copy h2 {
+  font-size: clamp(27px, 3vw, 34px);
+  line-height: 1.05;
+}
+
+.session-pause-copy > p:last-child {
+  max-width: 650px;
+  margin-top: 7px;
+  color: var(--mp-muted);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  line-height: 1.35;
+}
+
+.session-pause-timer {
+  min-width: 148px;
+  padding: 13px 16px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 14px 14px 14px 5px;
+  background: var(--mp-acid);
+  box-shadow: 4px 4px 0 var(--mp-coral);
+  text-align: center;
+}
+
+.session-pause-timer span {
+  color: var(--mp-ink);
+  font-size: max(var(--mp-mobile-font-floor, 0px), 10px);
+  letter-spacing: 0.1em;
+}
+
+.session-pause-timer strong {
+  margin-top: 4px;
+  color: var(--mp-ink);
+  font-size: 32px;
+}
+
+@media (max-width: 800px) {
+  .session-pause-card {
+    grid-template-columns: 58px minmax(0, 1fr);
+    min-height: 0;
+    padding: 18px;
+  }
+
+  .session-pause-signal {
+    width: 54px;
+    height: 54px;
+  }
+
+  .session-pause-timer {
+    grid-column: 2;
+    width: fit-content;
+    min-width: 140px;
+    margin-top: 2px;
+    padding: 10px 14px;
+    border-top: 2px solid var(--mp-ink);
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .session-pause-card {
+    grid-template-columns: 1fr;
+  }
+
+  .session-pause-signal,
+  .session-pause-timer {
+    grid-column: 1;
+  }
+
+  .session-pause-timer {
+    width: 100%;
+  }
+}

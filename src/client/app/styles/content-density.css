@@ -1,0 +1,314 @@
+/* Site-wide information density: compact sparse views without shrinking controls. */
+.site-header {
+  height: 76px;
+}
+
+.main-content {
+  padding-top: 24px;
+  padding-bottom: 56px;
+}
+
+.practice-hero {
+  min-height: 380px;
+  grid-template-columns: minmax(0, 1.18fr) minmax(330px, 0.82fr);
+  gap: 26px;
+  padding: 42px 52px;
+  border-radius: 30px;
+}
+
+.practice-hero::before {
+  width: 270px;
+  height: 270px;
+  bottom: -225px;
+  border-width: 46px;
+}
+
+.practice-hero h1 {
+  max-width: 650px;
+  margin-top: 12px;
+  font-size: clamp(46px, 5vw, 68px);
+}
+
+.practice-intro {
+  margin-top: 16px;
+  font-size: clamp(16px, 1.5vw, 18px);
+}
+
+.practice-actions {
+  margin-top: 20px;
+}
+
+.practice-primary-action {
+  min-height: 48px;
+}
+
+.practice-library {
+  max-width: 390px;
+}
+
+.quick-start-shell {
+  margin-top: 0;
+  padding: 36px 38px;
+  border-radius: 26px;
+}
+
+.game-pill {
+  min-width: 220px;
+  padding-block: 8px;
+}
+
+.game-pill-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.game-workspace {
+  margin-top: 18px;
+}
+
+.quick-empty {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'icon title action'
+    'icon copy action';
+  gap: 4px 16px;
+  align-items: center;
+  padding: 26px 22px;
+  text-align: left;
+}
+
+.quick-empty-icon {
+  grid-area: icon;
+  width: 52px;
+  height: 52px;
+  margin: 0;
+  border-radius: 17px 17px 17px 5px;
+}
+
+.quick-empty h3 {
+  grid-area: title;
+  font-size: 21px;
+}
+
+.quick-empty p {
+  grid-area: copy;
+  max-width: none;
+  margin: 2px 0 0;
+}
+
+.quick-empty > .button {
+  grid-area: action;
+}
+
+.quick-start-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.section-heading {
+  min-height: 0;
+  padding: 26px 30px;
+  border-radius: 24px;
+}
+
+.section-heading h1 {
+  margin-top: 6px;
+  font-size: clamp(38px, 5vw, 56px);
+}
+
+.section-heading p:last-child {
+  margin-top: 8px;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+}
+
+.friends-search {
+  margin-top: 18px;
+}
+
+.friend-list,
+.invitations-list,
+.profile-editor {
+  margin-top: 12px;
+}
+
+.profile-editor {
+  padding: 22px;
+}
+
+.profile-summary {
+  margin-bottom: 18px;
+}
+
+.history-list {
+  margin-top: 16px;
+}
+
+.history-card {
+  gap: 16px;
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.history-empty {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  grid-template-areas:
+    'icon title'
+    'icon copy';
+  gap: 4px 16px;
+  align-items: center;
+  margin-top: 16px;
+  padding: 22px 24px;
+  text-align: left;
+}
+
+.history-empty > span {
+  grid-area: icon;
+  margin: 0;
+}
+
+.history-empty h2 {
+  grid-area: title;
+}
+
+.history-empty p {
+  grid-area: copy;
+  margin-top: 2px;
+}
+
+.rounds-section {
+  margin-top: 16px;
+  padding: 18px;
+}
+
+.game-lobby {
+  padding: clamp(26px, 4vw, 42px);
+}
+
+.game-lobby-preview {
+  min-height: 190px;
+}
+
+.game-invitation-card {
+  min-height: 190px;
+  padding: clamp(24px, 4vw, 36px);
+}
+
+.game-waiting {
+  min-height: 240px;
+  padding-block: 38px;
+}
+
+.new-round-card {
+  padding: clamp(26px, 4vw, 40px);
+}
+
+.new-round-card h2 {
+  font-size: clamp(32px, 4vw, 44px);
+}
+
+.topic-picker {
+  margin-top: 22px;
+}
+
+.new-round-action {
+  margin-top: 18px;
+}
+
+@media (max-width: 800px) {
+  .main-content {
+    padding-top: 16px;
+    padding-bottom: 44px;
+  }
+
+  .practice-hero {
+    grid-template-columns: 1fr;
+    padding: 32px 26px 24px;
+  }
+
+  .practice-library {
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .site-header {
+    height: 68px;
+  }
+
+  .main-content {
+    padding-top: 12px;
+  }
+
+  .practice-hero {
+    padding: 28px 20px 18px;
+  }
+
+  .practice-hero h1 {
+    font-size: clamp(40px, 12vw, 54px);
+  }
+
+  .practice-library-heading {
+    padding-bottom: 13px;
+  }
+
+  .quick-start-shell {
+    padding: 22px 17px;
+  }
+
+  .quick-empty {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'icon'
+      'title'
+      'copy'
+      'action';
+    gap: 9px;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .quick-empty p {
+    margin-top: 0;
+  }
+
+  .history-empty {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'icon'
+      'title'
+      'copy';
+    gap: 9px;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .section-heading {
+    padding: 22px;
+  }
+
+  .friends-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .friends-add {
+    width: 100%;
+  }
+
+  .friends-page .section-tabs {
+    width: 100%;
+  }
+
+  .friends-page .section-tabs button {
+    flex: 1 1 0;
+  }
+
+  .friends-page .friend-list,
+  .friends-page .invitations-list {
+    padding-inline: 17px;
+    box-shadow: 5px 5px 0 var(--mp-ink);
+  }
+}
