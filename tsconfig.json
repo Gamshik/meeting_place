@@ -11,6 +11,15 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@app/*": ["./src/client/app/*"],
+      "@contracts/*": ["./src/shared/*"],
+      "@features/*": ["./src/client/features/*"],
+      "@pages/*": ["./src/client/pages/*"],
+      "@shared/*": ["./src/client/shared/*"],
+      "@widgets/*": ["./src/client/widgets/*"]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
@@ -25,6 +34,7 @@
     "tests",
     "vite.config.ts",
     "vitest.config.ts",
+    "aliases.ts",
     "playwright.config.ts",
     "eslint.config.js"
   ]

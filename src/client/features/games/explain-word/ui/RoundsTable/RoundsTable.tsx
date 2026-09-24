@@ -1,4 +1,4 @@
-import type { WordGameRoundSummary } from '../../../../../../shared/contracts'
+import type { WordGameRoundSummary } from '@contracts/contracts'
 
 export function RoundsTable({
   rounds,

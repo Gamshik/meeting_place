@@ -1,4 +1,4 @@
-import type { WordGame } from '../../../../../../shared/contracts'
+import type { WordGame } from '@contracts/contracts'
 
 export function GuessReviewCard({
   disabled,

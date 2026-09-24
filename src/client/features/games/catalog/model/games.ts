@@ -1,5 +1,5 @@
-import type { WordGameHistoryItem, WordGameSummary } from '../../../../../shared/contracts'
-import { api } from '../../../../shared/api/api'
+import type { WordGameHistoryItem, WordGameSummary } from '@contracts/contracts'
+import { api } from '@shared/api/api'
 export type GameDefinition = {
   id: string
   title: string

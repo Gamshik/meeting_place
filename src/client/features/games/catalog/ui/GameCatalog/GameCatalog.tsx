@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { GameDefinition } from '../../model/games'
+import type { GameDefinition } from '@features/games/catalog/model/games'
 export function GameCatalog({
   onPlay,
   items,

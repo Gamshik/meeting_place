@@ -1,4 +1,4 @@
-import type { WordGameMode } from '../../../../../shared/contracts'
+import type { WordGameMode } from '@contracts/contracts'
 
 export const WORD_GAME_MODES = [
   {

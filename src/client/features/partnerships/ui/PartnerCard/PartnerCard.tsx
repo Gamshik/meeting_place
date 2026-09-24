@@ -1,4 +1,4 @@
-import type { Partnership } from '../../../../../shared/contracts'
+import type { Partnership } from '@contracts/contracts'
 import { Link } from 'react-router-dom'
 
 type PartnerCardProps = {

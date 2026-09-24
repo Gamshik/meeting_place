@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { useAuth } from '../../../auth/model/AuthContext'
-import { api } from '../../../../shared/api/api'
-import { games } from '../../../games/catalog/model/games'
-import { supabase } from '../../../../shared/api/supabase'
+import { useAuth } from '@features/auth/model/AuthContext'
+import { api } from '@shared/api/api'
+import { games } from '@features/games/catalog/model/games'
+import { supabase } from '@shared/api/supabase'
 import {
   CommunityContext,
   type CommunityData,
   type GameHistoryItem,
   type GameSession,
-} from '../../model/CommunityContext'
-import type { Partnership, PartnershipCursor } from '../../../../../shared/contracts'
+} from '@features/community/model/CommunityContext'
+import type { Partnership, PartnershipCursor } from '@contracts/contracts'
 
 export function CommunityProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth()

@@ -1,10 +1,16 @@
 import { useEffect, useRef } from 'react'
 
-import type { WordGame } from '../../../../../../shared/contracts'
-import { LIVE_FINAL_GUESS_MS, LIVE_PREPARATION_MS } from '../../model/game-constants'
-import { useServerNow } from '../../lib/game-time'
-import { GuessCard } from '../GuessCard/GuessCard'
-import { RoundClock, SecretWordBrief } from '../RoundPlayShared/RoundPlayShared'
+import type { WordGame } from '@contracts/contracts'
+import {
+  LIVE_FINAL_GUESS_MS,
+  LIVE_PREPARATION_MS,
+} from '@features/games/explain-word/model/game-constants'
+import { useServerNow } from '@features/games/explain-word/lib/game-time'
+import { GuessCard } from '@features/games/explain-word/ui/GuessCard/GuessCard'
+import {
+  RoundClock,
+  SecretWordBrief,
+} from '@features/games/explain-word/ui/RoundPlayShared/RoundPlayShared'
 
 export function LiveCallRound({
   disabled,

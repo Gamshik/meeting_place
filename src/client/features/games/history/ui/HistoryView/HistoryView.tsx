@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
-import type { Partnership } from '../../../../../../shared/contracts'
-import type { GameHistoryItem } from '../../../../community/model/CommunityContext'
-import { games } from '../../../catalog/model/games'
-import { wordGameModeLabel } from '../../../explain-word/model/word-game-mode'
-import { RoundsTable } from '../../../explain-word/ui/RoundsTable/RoundsTable'
+import type { Partnership } from '@contracts/contracts'
+import type { GameHistoryItem } from '@features/community/model/CommunityContext'
+import { games } from '@features/games/catalog/model/games'
+import { wordGameModeLabel } from '@features/games/explain-word/model/word-game-mode'
+import { RoundsTable } from '@features/games/explain-word/ui/RoundsTable/RoundsTable'
 
 export function HistoryView({
   history,

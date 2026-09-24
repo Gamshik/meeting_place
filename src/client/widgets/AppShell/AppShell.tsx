@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { NotificationCenter } from '../../features/notifications/ui/NotificationCenter/NotificationCenter'
+import { NotificationCenter } from '@features/notifications/ui/NotificationCenter/NotificationCenter'
 import { Link, useLocation } from 'react-router-dom'
-import type { Profile } from '../../../shared/contracts'
-import { InvitePartnerPanel } from '../../features/partnerships/ui/InvitePartnerPanel/InvitePartnerPanel'
+import type { Profile } from '@contracts/contracts'
+import { InvitePartnerPanel } from '@features/partnerships/ui/InvitePartnerPanel/InvitePartnerPanel'
 
 type AppShellProps = {
   children: ReactNode

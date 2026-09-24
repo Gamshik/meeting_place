@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
-import type { WordGame } from '../../../../../../shared/contracts'
-import { formatCountdown } from '../../lib/game-time'
+import type { WordGame } from '@contracts/contracts'
+import { formatCountdown } from '@features/games/explain-word/lib/game-time'
 
 export function SessionStatus({ game, userId }: { game: WordGame; userId: string }) {
   const [now, setNow] = useState(() => Date.now())

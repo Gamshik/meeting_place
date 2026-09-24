@@ -1,5 +1,5 @@
-import type { WordGameMode } from '../../../../../../shared/contracts'
-import { wordGameModeLabel } from '../../model/word-game-mode'
+import type { WordGameMode } from '@contracts/contracts'
+import { wordGameModeLabel } from '@features/games/explain-word/model/word-game-mode'
 
 export function GameModeBadge({ mode }: { mode: WordGameMode }) {
   return (

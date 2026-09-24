@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 
-import type { WordGame } from '../../../../../../shared/contracts'
-import { formatDuration } from '../../lib/game-time'
-import { DurationPicker } from '../DurationPicker/DurationPicker'
-import { RoomControlIcon } from '../RoomControlIcon/RoomControlIcon'
+import type { WordGame } from '@contracts/contracts'
+import { formatDuration } from '@features/games/explain-word/lib/game-time'
+import { DurationPicker } from '@features/games/explain-word/ui/DurationPicker/DurationPicker'
+import { RoomControlIcon } from '@features/games/explain-word/ui/RoomControlIcon/RoomControlIcon'
 
 export function GameTimeSettings({
   disabled,

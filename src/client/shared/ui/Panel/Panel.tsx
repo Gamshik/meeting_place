@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { CustomCursorSurface } from '../CustomCursor/CustomCursor'
+import { CustomCursorSurface } from '@shared/ui/CustomCursor/CustomCursor'
 
 export function Panel({
   title,

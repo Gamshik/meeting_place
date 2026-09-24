@@ -1,5 +1,5 @@
-import type { WordGame } from '../../../../../../shared/contracts'
-import { GameModeBadge } from '../GameModeBadge/GameModeBadge'
+import type { WordGame } from '@contracts/contracts'
+import { GameModeBadge } from '@features/games/explain-word/ui/GameModeBadge/GameModeBadge'
 
 export function GameInvitation({
   acceptBlocked,

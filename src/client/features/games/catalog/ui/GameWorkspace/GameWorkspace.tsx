@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Partnership } from '../../../../../../shared/contracts'
-import type { GameSession } from '../../../../community/model/CommunityContext'
-import { useAuth } from '../../../../auth/model/AuthContext'
-import type { GameDefinition } from '../../model/games'
+import type { Partnership } from '@contracts/contracts'
+import type { GameSession } from '@features/community/model/CommunityContext'
+import { useAuth } from '@features/auth/model/AuthContext'
+import type { GameDefinition } from '@features/games/catalog/model/games'
 
 export function GameWorkspace({
   game,

@@ -9,9 +9,9 @@ import type {
   WordGameHistoryItem,
   WordGameMode,
   WordGameSummary,
-} from '../../../shared/contracts'
+} from '@contracts/contracts'
 import { supabase } from './supabase'
-import { apiErrorBodySchema } from '../../../shared/contracts'
+import { apiErrorBodySchema } from '@contracts/contracts'
 
 export class ApiError extends Error {
   constructor(

@@ -1,4 +1,4 @@
-import type { WordGame } from '../../../../../../shared/contracts'
+import type { WordGame } from '@contracts/contracts'
 
 export function RoundOutcome({ round }: { round: NonNullable<WordGame['round']> }) {
   const outcome = round.status === 'skipped' ? 'skipped' : round.isCorrect ? 'success' : 'missed'

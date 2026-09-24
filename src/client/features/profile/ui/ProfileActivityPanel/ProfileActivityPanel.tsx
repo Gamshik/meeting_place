@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import type { ProfileActivity, ProfileActivityDay } from '../../../../../shared/contracts'
-import { api } from '../../../../shared/api/api'
+import type { ProfileActivity, ProfileActivityDay } from '@contracts/contracts'
+import { api } from '@shared/api/api'
 
 type CalendarView = 'year' | 'months'
 

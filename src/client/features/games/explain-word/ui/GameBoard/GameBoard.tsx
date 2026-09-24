@@ -1,12 +1,12 @@
-import type { WordGame } from '../../../../../../shared/contracts'
-import { api } from '../../../../../shared/api/api'
-import { GuessReviewCard } from '../GuessReviewCard/GuessReviewCard'
-import { LiveCallRound } from '../LiveCallRound/LiveCallRound'
-import { RecordedRound } from '../RecordedRound/RecordedRound'
-import { RoundOutcome } from '../RoundOutcome/RoundOutcome'
-import { SessionStatus } from '../SessionStatus/SessionStatus'
-import { WaitingCard } from '../WaitingCard/WaitingCard'
-import { NewRoundCard } from '../TopicPicker/TopicPicker'
+import type { WordGame } from '@contracts/contracts'
+import { api } from '@shared/api/api'
+import { GuessReviewCard } from '@features/games/explain-word/ui/GuessReviewCard/GuessReviewCard'
+import { LiveCallRound } from '@features/games/explain-word/ui/LiveCallRound/LiveCallRound'
+import { RecordedRound } from '@features/games/explain-word/ui/RecordedRound/RecordedRound'
+import { RoundOutcome } from '@features/games/explain-word/ui/RoundOutcome/RoundOutcome'
+import { SessionStatus } from '@features/games/explain-word/ui/SessionStatus/SessionStatus'
+import { WaitingCard } from '@features/games/explain-word/ui/WaitingCard/WaitingCard'
+import { NewRoundCard } from '@features/games/explain-word/ui/TopicPicker/TopicPicker'
 
 export function GameBoard({
   game,

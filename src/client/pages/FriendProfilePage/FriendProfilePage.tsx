@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import type { Profile, ProfileActivity } from '../../../shared/contracts'
-import { useCommunity } from '../../features/community/model/CommunityContext'
-import { AppShell } from '../../widgets/AppShell/AppShell'
-import { ProfileActivityPanel } from '../../features/profile/ui/ProfileActivityPanel/ProfileActivityPanel'
-import { api } from '../../shared/api/api'
-import { browserTimeZone } from '../../shared/lib/time-zone'
+import type { Profile, ProfileActivity } from '@contracts/contracts'
+import { useCommunity } from '@features/community/model/CommunityContext'
+import { AppShell } from '@widgets/AppShell/AppShell'
+import { ProfileActivityPanel } from '@features/profile/ui/ProfileActivityPanel/ProfileActivityPanel'
+import { api } from '@shared/api/api'
+import { browserTimeZone } from '@shared/lib/time-zone'
 
 export function FriendProfilePage() {
   const { profileId = '' } = useParams()

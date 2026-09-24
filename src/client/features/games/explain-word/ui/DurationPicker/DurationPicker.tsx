@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { EXPLANATION_PRESETS } from '../../model/game-constants'
+import { EXPLANATION_PRESETS } from '@features/games/explain-word/model/game-constants'
 
 export function DurationPicker({
   compact = false,

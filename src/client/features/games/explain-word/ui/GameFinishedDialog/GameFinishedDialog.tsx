@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-import type { WordGame } from '../../../../../../shared/contracts'
+import type { WordGame } from '@contracts/contracts'
 
 export function GameFinishedDialog({
   game,

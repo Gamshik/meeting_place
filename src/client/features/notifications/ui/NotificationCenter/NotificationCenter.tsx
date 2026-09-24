@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../../auth/model/AuthContext'
-import { useCommunity } from '../../../community/model/CommunityContext'
-import { api } from '../../../../shared/api/api'
-import { games } from '../../../games/catalog/model/games'
-import { wordGameModeLabel } from '../../../games/explain-word/model/word-game-mode'
+import { useAuth } from '@features/auth/model/AuthContext'
+import { useCommunity } from '@features/community/model/CommunityContext'
+import { api } from '@shared/api/api'
+import { games } from '@features/games/catalog/model/games'
+import { wordGameModeLabel } from '@features/games/explain-word/model/word-game-mode'
 
 export function NotificationCenter({ onNavigate }: { onNavigate?: () => void }) {
   const { session } = useAuth()

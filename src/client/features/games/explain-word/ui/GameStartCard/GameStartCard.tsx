@@ -1,9 +1,9 @@
 import { useState } from 'react'
 
-import type { WordGameMode } from '../../../../../../shared/contracts'
-import { DEFAULT_EXPLANATION_SECONDS } from '../../model/game-constants'
-import { WORD_GAME_MODES } from '../../model/word-game-mode'
-import { DurationPicker } from '../DurationPicker/DurationPicker'
+import type { WordGameMode } from '@contracts/contracts'
+import { DEFAULT_EXPLANATION_SECONDS } from '@features/games/explain-word/model/game-constants'
+import { WORD_GAME_MODES } from '@features/games/explain-word/model/word-game-mode'
+import { DurationPicker } from '@features/games/explain-word/ui/DurationPicker/DurationPicker'
 
 export function GameStartCard({
   blocked,

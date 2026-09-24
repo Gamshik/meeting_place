@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import { TOPICS } from '../../model/game-constants'
+import { TOPICS } from '@features/games/explain-word/model/game-constants'
 
 export function NewRoundCard({
   disabled,

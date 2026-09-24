@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import type { Partnership, ProfileActivity, WordGame } from '../../src/shared/contracts'
+import type { Partnership, ProfileActivity, WordGame } from '@contracts/contracts'
 
 const userId = '11111111-1111-4111-8111-111111111111'
 const partnerId = '22222222-2222-4222-8222-222222222222'

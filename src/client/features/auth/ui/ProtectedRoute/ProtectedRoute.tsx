@@ -2,11 +2,11 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import { lazy } from 'react'
 const CommunityProvider = lazy(() =>
-  import('../../../community/ui/CommunityProvider/CommunityProvider').then((module) => ({
+  import('@features/community/ui/CommunityProvider/CommunityProvider').then((module) => ({
     default: module.CommunityProvider,
   })),
 )
-import { useAuth } from '../../model/AuthContext'
+import { useAuth } from '@features/auth/model/AuthContext'
 
 export function ProtectedRoute() {
   const { isLoading, session } = useAuth()

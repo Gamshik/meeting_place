@@ -37,6 +37,11 @@ components own a directory containing their component and styles. Global CSS is 
 ordered application foundation; component and page styles remain beside their owners while the
 central style manifest preserves the established cascade.
 
+Cross-layer TypeScript imports use the `@app`, `@pages`, `@widgets`, `@features`, `@shared`, and
+`@contracts` aliases. Relative imports are reserved for files within the same local module. Alias
+definitions are shared by Vite and Vitest in `aliases.ts` and mirrored in `tsconfig.json` for editor
+and compiler resolution.
+
 ### Hono API
 
 The API is the application's server boundary. It:

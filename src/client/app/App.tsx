@@ -1,25 +1,25 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-import { AuthProvider } from '../features/auth/ui/AuthProvider/AuthProvider'
-import { FullPageLoader, ProtectedRoute } from '../features/auth/ui/ProtectedRoute/ProtectedRoute'
-import { CustomCursor } from '../shared/ui/CustomCursor/CustomCursor'
-import { AuthCallbackPage } from '../pages/AuthCallbackPage/AuthCallbackPage'
-import { LoginPage } from '../pages/LoginPage/LoginPage'
+import { AuthProvider } from '@features/auth/ui/AuthProvider/AuthProvider'
+import { FullPageLoader, ProtectedRoute } from '@features/auth/ui/ProtectedRoute/ProtectedRoute'
+import { CustomCursor } from '@shared/ui/CustomCursor/CustomCursor'
+import { AuthCallbackPage } from '@pages/AuthCallbackPage/AuthCallbackPage'
+import { LoginPage } from '@pages/LoginPage/LoginPage'
 import { useTouchInputMode } from './hooks/useTouchInputMode'
 
 const DashboardPage = lazy(() =>
-  import('../pages/DashboardPage/DashboardPage').then((module) => ({
+  import('@pages/DashboardPage/DashboardPage').then((module) => ({
     default: module.DashboardPage,
   })),
 )
 const ExplainWordGamePage = lazy(() =>
-  import('../pages/ExplainWordGamePage/ExplainWordGamePage').then((module) => ({
+  import('@pages/ExplainWordGamePage/ExplainWordGamePage').then((module) => ({
     default: module.ExplainWordGamePage,
   })),
 )
 const FriendProfilePage = lazy(() =>
-  import('../pages/FriendProfilePage/FriendProfilePage').then((module) => ({
+  import('@pages/FriendProfilePage/FriendProfilePage').then((module) => ({
     default: module.FriendProfilePage,
   })),
 )

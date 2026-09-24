@@ -1,11 +1,15 @@
 import { useEffect, useRef } from 'react'
 
-import type { WordGame } from '../../../../../../shared/contracts'
-import { RECORDED_GUESS_MS } from '../../model/game-constants'
-import { parseTimestamp, useServerNow } from '../../lib/game-time'
-import { GuessCard } from '../GuessCard/GuessCard'
-import { WaitingCard } from '../WaitingCard/WaitingCard'
-import { ExplainCard, PhaseNotice, RoundClock } from '../RoundPlayShared/RoundPlayShared'
+import type { WordGame } from '@contracts/contracts'
+import { RECORDED_GUESS_MS } from '@features/games/explain-word/model/game-constants'
+import { parseTimestamp, useServerNow } from '@features/games/explain-word/lib/game-time'
+import { GuessCard } from '@features/games/explain-word/ui/GuessCard/GuessCard'
+import { WaitingCard } from '@features/games/explain-word/ui/WaitingCard/WaitingCard'
+import {
+  ExplainCard,
+  PhaseNotice,
+  RoundClock,
+} from '@features/games/explain-word/ui/RoundPlayShared/RoundPlayShared'
 
 export function RecordedRound({
   disabled,

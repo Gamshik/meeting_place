@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import { api } from '../../../../../shared/api/api'
-import { messageFromError } from '../../../../../shared/lib/errors'
-import { AudioPlayer } from '../../../../../shared/ui/AudioPlayer/AudioPlayer'
+import { api } from '@shared/api/api'
+import { messageFromError } from '@shared/lib/errors'
+import { AudioPlayer } from '@shared/ui/AudioPlayer/AudioPlayer'
 
 export function GuessCard({
   audioAvailable,

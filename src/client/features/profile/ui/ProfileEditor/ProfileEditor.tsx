@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
-import type { Profile } from '../../../../../shared/contracts'
-import { browserTimeZone, supportedTimeZones } from '../../../../shared/lib/time-zone'
+import type { Profile } from '@contracts/contracts'
+import { browserTimeZone, supportedTimeZones } from '@shared/lib/time-zone'
 
 export function ProfileEditor({
   profile,

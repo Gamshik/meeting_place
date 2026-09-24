@@ -1,9 +1,5 @@
 import { createContext, useContext } from 'react'
-import type {
-  Partnership,
-  WordGameHistoryItem,
-  WordGameSummary,
-} from '../../../../shared/contracts'
+import type { Partnership, WordGameHistoryItem, WordGameSummary } from '@contracts/contracts'
 export type GameSession = WordGameSummary & { gameId: string }
 export type GameHistoryItem = WordGameHistoryItem & { gameId: string }
 export type CommunityData = {

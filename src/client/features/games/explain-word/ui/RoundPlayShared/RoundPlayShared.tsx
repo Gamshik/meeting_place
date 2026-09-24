@@ -1,6 +1,6 @@
-import type { WordGame } from '../../../../../../shared/contracts'
-import { formatCountdown } from '../../lib/game-time'
-import { AudioRecorder } from '../AudioRecorder/AudioRecorder'
+import type { WordGame } from '@contracts/contracts'
+import { formatCountdown } from '@features/games/explain-word/lib/game-time'
+import { AudioRecorder } from '@features/games/explain-word/ui/AudioRecorder/AudioRecorder'
 
 export function ExplainCard({
   disabled,

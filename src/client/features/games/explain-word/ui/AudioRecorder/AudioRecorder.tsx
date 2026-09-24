@@ -1,8 +1,15 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
-import { AudioPlayer } from '../../../../../shared/ui/AudioPlayer/AudioPlayer'
-import { convertRecordingToWav, preferredMimeType } from '../../lib/audio-recording'
-import { formatCountdown, formatDuration, useServerNow } from '../../lib/game-time'
+import { AudioPlayer } from '@shared/ui/AudioPlayer/AudioPlayer'
+import {
+  convertRecordingToWav,
+  preferredMimeType,
+} from '@features/games/explain-word/lib/audio-recording'
+import {
+  formatCountdown,
+  formatDuration,
+  useServerNow,
+} from '@features/games/explain-word/lib/game-time'
 
 export function AudioRecorder({
   disabled,

@@ -1,7 +1,7 @@
 import { useCallback, useState, type FormEvent } from 'react'
-import { useCommunity } from '../../../community/model/CommunityContext'
-import { api } from '../../../../shared/api/api'
-import { Notice, Panel } from '../../../../shared/ui/Panel/Panel'
+import { useCommunity } from '@features/community/model/CommunityContext'
+import { api } from '@shared/api/api'
+import { Notice, Panel } from '@shared/ui/Panel/Panel'
 
 export function InvitePartnerPanel({ onClose }: { onClose: () => void }) {
   const { refresh } = useCommunity()
