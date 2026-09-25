@@ -28,12 +28,18 @@
 
 .account-profile-handle {
   margin-top: 4px;
-  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+  font-size: 16px;
+  line-height: 1.35;
 }
 
 .friend-profile-identity > p:last-child {
   margin-top: 4px;
-  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
+  font-size: 16px;
+}
+
+.account-profile-handle .account-copy-handle,
+.account-profile-actions .profile-signout {
+  font-size: 16px;
 }
 
 .profile-back-link {
@@ -226,7 +232,7 @@
   border: 2px solid var(--mp-ink);
   border-radius: 4px;
   background: var(--mp-lilac);
-  font-size: 14px;
+  font-size: max(var(--mp-mobile-font-floor, 15px), 14px);
   font-weight: 700;
 }
 

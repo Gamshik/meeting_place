@@ -9,7 +9,7 @@
   width: fit-content;
   margin: 8px 0 24px 12px;
   color: var(--mp-muted);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
 }
 .archive-count-number {
@@ -26,7 +26,7 @@
   background: var(--mp-acid);
   color: var(--mp-ink);
   box-shadow: 3px 3px 0 var(--mp-ink);
-  font-size: 30px;
+  font-size: 36px;
   line-height: 1;
 }
 .archive-count-orbit {
@@ -137,12 +137,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 850;
 }
 .archive-partner time {
   color: var(--mp-muted);
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.4;
 }
 .archive-outcome {
@@ -151,7 +151,7 @@
   border: 2px solid var(--mp-ink);
   border-radius: 7px 7px 7px 3px;
   box-shadow: 2px 2px 0 var(--mp-ink);
-  font-size: 11px;
+  font-size: max(var(--mp-mobile-font-floor, 15px), 14px);
   font-weight: 850;
   text-transform: uppercase;
   text-align: center;
@@ -172,7 +172,7 @@
 }
 .archive-score {
   white-space: nowrap;
-  font-size: 19px;
+  font-size: 22px;
   font-weight: 850;
   font-variant-numeric: tabular-nums;
 }
@@ -184,6 +184,7 @@
   padding: 13px 16px;
   border-top: 1px solid var(--mp-line);
   font-weight: 700;
+  font-size: 16px;
 }
 .archive-pagination button {
   min-height: 40px;
@@ -224,7 +225,7 @@
 }
 .archive-result-header h2 {
   min-width: 0;
-  font-size: clamp(22px, 2.1vw, 30px);
+  font-size: clamp(28px, 2.4vw, 36px);
   font-weight: 850;
   line-height: 1.2;
   letter-spacing: -0.04em;
@@ -234,7 +235,7 @@
   flex-shrink: 0;
   min-height: 44px;
   padding: 10px 16px;
-  font-size: 14px;
+  font-size: 16px;
 }
 .archive-rounds-scroll {
   max-height: min(420px, 48dvh);
@@ -282,7 +283,7 @@
 .archive-rounds thead th {
   border-top: 0;
   background: var(--mp-card);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--mp-muted);
   font-weight: 650;
 }
@@ -291,10 +292,15 @@
   font-weight: 800;
 }
 .archive-rounds tbody {
-  font-size: 16px;
+  font-size: 18px;
 }
 .archive-incorrect {
   color: #b42318;
+}
+.archive-incorrect,
+.archive-result-paused,
+.archive-result-neutral {
+  white-space: nowrap;
 }
 .archive-result-earned {
   color: #287137;
@@ -309,7 +315,7 @@
   padding: 24px;
 }
 .archive-empty h2 {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 800;
 }
 .archive-empty p,
@@ -351,7 +357,7 @@
     padding: 12px;
   }
   .archive-result-header h2 {
-    font-size: 23px;
+    font-size: 26px;
   }
   .archive-rounds th,
   .archive-rounds td {
@@ -369,21 +375,21 @@
     height: 28px;
   }
   .archive-partner strong {
-    font-size: 15px;
+    font-size: 17px;
   }
   .archive-partner time {
-    font-size: 12px;
+    font-size: var(--mp-mobile-font-floor, 16px);
   }
   .archive-score {
-    font-size: 16px;
+    font-size: 18px;
   }
   .archive-outcome {
     min-width: 43px;
     padding: 4px;
-    font-size: 10px;
+    font-size: var(--mp-mobile-font-floor, 16px);
   }
   .archive-rounds tbody {
-    font-size: 14px;
+    font-size: 16px;
   }
   .archive-rounds th,
   .archive-rounds td {

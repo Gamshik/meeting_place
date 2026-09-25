@@ -9,10 +9,17 @@
   --color-amber-50: #f1f0eb;
   --color-amber-200: #d9d6cf;
   --color-amber-800: #55534d;
+  --text-xs: 15px;
+  --text-sm: 16px;
+  --text-base: 17px;
 }
 :root {
-  --mp-mobile-font-floor: 0px;
+  --mp-font-size-body: 17px;
+  --mp-font-size-supporting: 15px;
+  /* Kept as the shared floor name because existing component styles already consume it. */
+  --mp-mobile-font-floor: var(--mp-font-size-supporting);
   font-family: Arial, Helvetica, sans-serif;
+  font-size: var(--mp-font-size-body);
   color: #242422;
   background: #f8f7f4;
   font-synthesis: none;
@@ -21,9 +28,10 @@
 
 @media (max-width: 760px) {
   :root {
-    --mp-mobile-font-floor: 16px;
+    --mp-font-size-supporting: 16px;
     --text-xs: 16px;
     --text-sm: 16px;
+    --text-base: 17px;
   }
 }
 
@@ -620,15 +628,20 @@ h1 {
   font-size: 17px;
   font-weight: 850;
 }
-.toast-message {
+.toast-content {
   min-width: 0;
   flex: 1;
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+}
+.toast-message {
   font-size: 16px;
   font-weight: 800;
   overflow-wrap: anywhere;
   line-height: 1.35;
 }
-.toast button {
+.toast-dismiss {
   display: grid;
   width: 44px;
   height: 44px;
@@ -643,12 +656,32 @@ h1 {
   font-size: 21px;
   line-height: 1;
 }
-.toast button:hover {
+.toast-dismiss:hover {
   background: var(--mp-lilac, #b6a4ff);
   box-shadow: 1px 1px 0 var(--mp-ink, #17151d);
   transform: translate(1px, 1px);
 }
-.toast button:active {
+.toast-dismiss:active {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+.toast-action {
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 2px solid var(--mp-ink, #17151d);
+  border-radius: 6px 6px 6px 2px;
+  background: var(--mp-coral, #ff6d55);
+  color: var(--mp-ink, #17151d);
+  box-shadow: 2px 2px 0 var(--mp-ink, #17151d);
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1;
+}
+.toast-action:hover {
+  box-shadow: 1px 1px 0 var(--mp-ink, #17151d);
+  transform: translate(1px, 1px);
+}
+.toast-action:active {
   box-shadow: none;
   transform: translate(2px, 2px);
 }

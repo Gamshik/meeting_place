@@ -36,6 +36,11 @@ partnerships, but every partnership contains exactly two users.
 - Make interactive elements feel tactile: their hard shadow should shorten or disappear on hover
   and press without relying on color alone. Preserve keyboard focus visibility and reduced-motion
   behavior while applying this treatment.
+- Keep user-facing typography readable across the site. Use `17px` for normal body and control text,
+  and never render supporting text below `15px` on larger screens or below `16px` at viewport widths
+  of `760px` and under. Use the shared typography tokens in `base.css`; do not shrink text to solve a
+  layout problem. Sizes below these floors are allowed only for decorative glyphs with no readable
+  text content.
 - Run Prettier instead of manually aligning code.
 
 ## Required verification
