@@ -637,9 +637,3 @@
     color: var(--mp-ink);
   }
 }
-
-@media (max-width: 360px) {
-  .wordmark {
-    display: none;
-  }
-}

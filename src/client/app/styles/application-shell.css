@@ -22,6 +22,14 @@ body:has(.content-dialog[open], .game-dialog-backdrop, .notifications-panel) {
   overscroll-behavior: none;
 }
 
+/* The class is set by Panel as a fallback for narrow mobile browsers whose
+   :has() invalidation can lag when a dialog enters the top layer. */
+html.content-dialog-open,
+html.content-dialog-open body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   color: var(--mp-ink);
   background: radial-gradient(circle at 8% 8%, #fff8df 0 16%, transparent 35%), var(--mp-paper);

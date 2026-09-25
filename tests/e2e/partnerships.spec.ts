@@ -1667,6 +1667,52 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
   await expect(page.locator('.archive-match').nth(1)).toHaveAttribute('aria-pressed', 'true')
 })
 
+test('does not leave history rows hovered while scrolling on touch screens', async ({
+  browser,
+}) => {
+  const page = await browser.newPage({
+    baseURL: 'http://127.0.0.1:5174',
+    hasTouch: true,
+    viewport: { width: 360, height: 800 },
+  })
+  await signIn(page)
+  await page.unroute('**/api/games/explain-word/history')
+  await page.route('**/api/games/explain-word/history', (route) =>
+    route.fulfill({
+      json: {
+        data: [
+          {
+            id: '44444444-4444-4444-8444-444444444444',
+            partnershipId: relationshipId,
+            mode: 'live_call',
+            finishedAt: '2026-09-24T12:10:00Z',
+            partner: {
+              id: partnerId,
+              username: 'bob',
+              displayName: 'Bob',
+              avatarUrl: null,
+            },
+            scores: { you: 1, partner: 1 },
+            roundCount: 0,
+            rounds: [],
+          },
+        ],
+      },
+    }),
+  )
+
+  await page.goto('/?view=history')
+  expect(await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches)).toBe(
+    false,
+  )
+  const match = page.locator('.archive-match')
+  const outcome = match.locator('.archive-outcome')
+  await match.hover()
+  await expect(match).toHaveCSS('box-shadow', 'none')
+  expect(await outcome.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe('none')
+  await page.close()
+})
+
 test('returns to Games after cancelling a replay request from History', async ({ page }) => {
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
@@ -1866,11 +1912,14 @@ test('requires a game selection before a friend can be chosen', async ({ page })
   await expect(start).toBeDisabled()
 })
 
-for (const width of [320, 390, 1440]) {
+for (const width of [320, 360, 390, 1440]) {
   test(`compact add-friend flow fits ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await signIn(page)
     await page.goto('/')
+    if (width <= 360) {
+      await expect(page.getByRole('link', { name: 'Meeting Place home' })).toBeVisible()
+    }
     if (width === 1440) {
       await expect(page.getByRole('heading', { name: 'Choose a game' })).toBeInViewport()
       await page.getByRole('link', { name: 'History', exact: true }).click()
@@ -1882,6 +1931,10 @@ for (const width of [320, 390, 1440]) {
     await page.getByRole('link', { name: 'Invite your first friend', exact: true }).click()
     const inviteDialog = page.getByRole('dialog', { name: 'Invite a friend' })
     await expect(inviteDialog).toBeVisible()
+    if (width <= 360) {
+      await expect(page.locator('html')).toHaveCSS('overflow', 'hidden')
+      await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
+    }
     expect((await inviteDialog.boundingBox())!.height).toBeLessThan(400)
     if (width === 1440) {
       const closeButton = page.getByRole('button', { name: 'Close panel' })
@@ -2273,7 +2326,7 @@ test('a busy friend is not invited and can be retried later', async ({ page }) =
   expect(attempts).toBe(2)
 })
 
-for (const width of [320, 1440]) {
+for (const width of [320, 358, 1440]) {
   test(`history selection, pagination, and answers fit ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -2369,6 +2422,19 @@ for (const width of [320, 1440]) {
     await expect(results).toBeFocused()
     await expect(page.locator('.archive-match')).toHaveCount(2)
     await expect(results.getByRole('columnheader')).toHaveText(['Word', 'Answer', 'Result'])
+    if (width <= 380) {
+      const columnWidths = await results.getByRole('columnheader').evaluateAll((headers) =>
+        headers.map((header) => ({
+          textAlign: getComputedStyle(header).textAlign,
+          width: header.getBoundingClientRect().width,
+        })),
+      )
+      const totalWidth = columnWidths.reduce((total, column) => total + column.width, 0)
+      expect(columnWidths[1]!.textAlign).toBe('center')
+      expect(columnWidths[0]!.width / totalWidth).toBeCloseTo(0.33, 1)
+      expect(columnWidths[1]!.width / totalWidth).toBeCloseTo(0.3, 1)
+      expect(columnWidths[2]!.width / totalWidth).toBeCloseTo(0.37, 1)
+    }
     await expect(results.getByRole('row').nth(1)).toContainText('forest')
     await expect(results.getByRole('row').nth(1)).toContainText('Incorrect')
     await expect(results.getByRole('row').nth(2)).toContainText(
@@ -2380,26 +2446,26 @@ for (const width of [320, 1440]) {
     await expect(page.locator('.archive-count-number strong')).toHaveCSS('font-size', '36px')
     await expect(page.locator('.archive-partner strong').first()).toHaveCSS(
       'font-size',
-      width === 320 ? '17px' : '20px',
+      width <= 380 ? '17px' : '20px',
     )
     await expect(page.locator('.archive-partner time').first()).toHaveCSS('font-size', '16px')
     await expect(page.locator('.archive-outcome').first()).toHaveCSS(
       'font-size',
-      width === 320 ? '16px' : '15px',
+      width <= 380 ? '16px' : '15px',
     )
     await expect(page.locator('.archive-score').first()).toHaveCSS(
       'font-size',
-      width === 320 ? '18px' : '22px',
+      width <= 380 ? '18px' : '22px',
     )
     await expect(results.getByRole('heading')).toHaveCSS(
       'font-size',
-      width === 320 ? '26px' : '34.56px',
+      width <= 380 ? '26px' : '34.56px',
     )
     await expect(results.getByRole('button', { name: 'Play again' })).toHaveCSS('font-size', '16px')
     await expect(results.getByRole('columnheader').first()).toHaveCSS('font-size', '16px')
     await expect(results.getByRole('row').nth(1)).toHaveCSS(
       'font-size',
-      width === 320 ? '16px' : '18px',
+      width <= 380 ? '16px' : '18px',
     )
     await expect(page.locator('.archive-count-orbit')).toHaveCSS('animation-name', 'none')
     await expect(page.getByRole('heading', { name: 'History', exact: true })).toHaveCount(0)

@@ -16,9 +16,11 @@ export function Panel({
   useEffect(() => {
     const element = dialog.current!
     const previousFocus = document.activeElement
+    document.documentElement.classList.add('content-dialog-open')
     element.showModal()
     return () => {
       element.close()
+      document.documentElement.classList.remove('content-dialog-open')
       if (previousFocus instanceof HTMLElement) queueMicrotask(() => previousFocus.focus())
     }
   }, [])
