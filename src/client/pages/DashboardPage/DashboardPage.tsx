@@ -33,6 +33,7 @@ export function DashboardPage() {
   const [profileLoading, setProfileLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [dismissedLoadError, setDismissedLoadError] = useState<string | null>(null)
   const [panel, setPanel] = useState<string | null>(null)
   const modal = panel ?? (params.get('add') === '1' ? 'add' : null)
   const [search, setSearch] = useState('')
@@ -134,12 +135,32 @@ export function DashboardPage() {
     )
   if (!profile)
     return (
-      <main className="loading-screen">
-        <h1>Could not open your profile</h1>
-        <p role="alert">{error}</p>
-        <button className="button button-primary" onClick={() => void loadProfile()}>
-          Try again
-        </button>
+      <main className="loading-screen loading-error-screen">
+        <section className="loading-error-card" aria-labelledby="profile-load-error-title">
+          <span className="loading-error-icon" aria-hidden="true">
+            !
+          </span>
+          <div className="loading-error-copy">
+            <h1 id="profile-load-error-title">Could not open your profile</h1>
+            <p role="alert">{error}</p>
+          </div>
+          <div className="loading-error-actions">
+            <button
+              className="button button-primary"
+              disabled={isBusy}
+              onClick={() => void run(loadProfile)}
+            >
+              Try again
+            </button>
+            <button
+              className="button button-secondary"
+              disabled={isBusy}
+              onClick={() => void run(signOut)}
+            >
+              Sign out
+            </button>
+          </div>
+        </section>
       </main>
     )
   const feedback = (
@@ -151,14 +172,18 @@ export function DashboardPage() {
   return (
     <AppShell profile={profile}>
       {!modal && feedback}
-      {loadError && (
-        <div className="inline-error" role="alert">
-          {loadError}
-          <button className="text-action" onClick={() => void refresh()}>
-            Retry
-          </button>
-        </div>
-      )}
+      {loadError && dismissedLoadError !== loadError ? (
+        <Notice
+          error
+          message={loadError}
+          actionLabel="Retry"
+          onAction={() => {
+            setDismissedLoadError(null)
+            void refresh()
+          }}
+          onClose={() => setDismissedLoadError(loadError)}
+        />
+      ) : null}
       {view === 'profile' ? (
         <section className="account-page">
           <ProfileEditor

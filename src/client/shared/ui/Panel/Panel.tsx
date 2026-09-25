@@ -50,10 +50,14 @@ export function Panel({
 export function Notice({
   message,
   onClose,
+  actionLabel,
+  onAction,
   error = false,
 }: {
   message: string
   onClose: () => void
+  actionLabel?: string
+  onAction?: () => void
   error?: boolean
 }) {
   useEffect(() => {
@@ -66,8 +70,15 @@ export function Notice({
       <span className="toast-icon" aria-hidden="true">
         {error ? '!' : '✓'}
       </span>
-      <span className="toast-message">{message}</span>
-      <button aria-label="Dismiss notification" onClick={onClose}>
+      <span className="toast-content">
+        <span className="toast-message">{message}</span>
+        {actionLabel && onAction ? (
+          <button className="toast-action" onClick={onAction}>
+            {actionLabel}
+          </button>
+        ) : null}
+      </span>
+      <button className="toast-dismiss" aria-label="Dismiss notification" onClick={onClose}>
         <span aria-hidden="true">×</span>
       </button>
     </div>

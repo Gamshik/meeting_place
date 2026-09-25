@@ -1540,14 +1540,6 @@ summary:focus-visible {
   font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
   line-height: 1.45;
 }
-.inline-error {
-  padding: 14px;
-  border-left: 3px solid #982719;
-  margin-bottom: 18px;
-}
-.inline-error .text-action {
-  margin-left: 16px;
-}
 .loading-screen {
   min-height: 100dvh;
   display: flex;
@@ -1556,6 +1548,85 @@ summary:focus-visible {
   align-items: center;
   gap: 16px;
   padding: 24px;
+}
+.loading-error-screen {
+  background: var(--mp-bg);
+}
+.loading-error-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  width: min(620px, 100%);
+  padding: 28px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 14px 14px 14px 5px;
+  background: var(--mp-card);
+  box-shadow: 8px 8px 0 var(--mp-coral);
+}
+.loading-error-icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border: 2px solid var(--mp-ink);
+  border-radius: 10px 10px 10px 3px;
+  background: var(--mp-coral);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1;
+}
+.loading-error-copy h1 {
+  font-size: clamp(30px, 4vw, 40px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+.loading-error-copy p {
+  margin-top: 12px;
+  color: var(--mp-muted);
+  font-size: 19px;
+  line-height: 1.45;
+}
+.loading-error-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 4px;
+}
+.loading-error-actions .button {
+  min-width: 132px;
+  min-height: 50px;
+  font-size: 17px;
+}
+@media (max-width: 520px) {
+  .loading-error-screen {
+    padding: 16px;
+  }
+  .loading-error-card {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 22px;
+    box-shadow: 6px 6px 0 var(--mp-coral);
+  }
+  .loading-error-icon {
+    width: 46px;
+    height: 46px;
+    font-size: 25px;
+  }
+  .loading-error-copy h1 {
+    font-size: 30px;
+  }
+  .loading-error-copy p {
+    font-size: 17px;
+  }
+  .loading-error-actions {
+    grid-column: auto;
+  }
+  .loading-error-actions .button {
+    flex: 1 1 130px;
+  }
 }
 @media (max-width: 760px) {
   .site-header {
