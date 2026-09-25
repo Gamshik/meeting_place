@@ -329,6 +329,12 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   await page.goto('/?view=profile')
   const copyUsername = page.getByRole('button', { name: 'Copy username' })
   await expect(copyUsername).toBeVisible()
+  await expect(page.locator('.account-profile-handle > span')).toHaveCSS('font-size', '16px')
+  await expect(copyUsername).toHaveCSS('font-size', '16px')
+  await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toHaveCSS(
+    'font-size',
+    '16px',
+  )
   await copyUsername.click()
   const copiedNotice = page.getByRole('status').filter({ hasText: 'Username copied.' })
   await expect(copiedNotice).toBeVisible()
@@ -337,6 +343,11 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   await copiedNotice.screenshot({ path: testInfo.outputPath('success-toast.png') })
   await page.getByRole('button', { name: 'Profile settings' }).click()
   await expect(page.getByRole('heading', { name: 'Profile settings' })).toBeVisible()
+  await expect(
+    page
+      .getByRole('region', { name: 'Profile settings' })
+      .getByRole('button', { name: 'Sign out' }),
+  ).toHaveCSS('font-size', '16px')
   await expect(page.getByRole('heading', { name: 'Your profile' })).toHaveCount(0)
   await expect(page.getByText('Shown to friends and during games.')).toHaveCount(0)
   await expect(page.getByText('Friends use this unique handle to find you.')).toHaveCount(0)
@@ -367,6 +378,52 @@ test('prevents duplicate profile saves and restores saved values after cancel', 
   await page.getByLabel('Display name').fill('Unsaved')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await expect(page.getByLabel('Display name')).toHaveValue('Alice Updated')
+})
+
+test('profile load failure offers readable retry and sign-out actions', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  await signIn(page)
+  let shouldFail = true
+  await page.route('**/api/me', (route) =>
+    shouldFail
+      ? route.fulfill({
+          status: 401,
+          json: {
+            error: {
+              code: 'authentication_required',
+              message: 'Your session has expired. Sign in again.',
+            },
+          },
+        })
+      : route.fulfill({
+          json: {
+            data: {
+              id: userId,
+              username: 'alice',
+              displayName: 'Alice',
+              avatarUrl: null,
+              createdAt: '2026-01-01T00:00:00Z',
+              timeZone: 'UTC',
+            },
+          },
+        }),
+  )
+
+  await page.goto('/')
+  const failure = page.locator('.loading-error-card')
+  await expect(page.getByRole('heading', { name: 'Could not open your profile' })).toHaveCSS(
+    'font-size',
+    '30px',
+  )
+  await expect(page.getByRole('alert')).toHaveCSS('font-size', '17px')
+  await expect(failure.getByRole('button', { name: 'Try again' })).toBeVisible()
+  await expect(failure.getByRole('button', { name: 'Sign out' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+
+  shouldFail = false
+  await failure.getByRole('button', { name: 'Try again' }).click()
+  await expect(failure).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Your profile' })).toBeVisible()
 })
 
 test('shows yearly activity by default and lets friends open the monthly profile view', async ({
@@ -1693,6 +1750,8 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
   await page.goto('/')
   const gameRequest = page.getByRole('region', { name: 'Game invitation' })
   await expect(gameRequest).toBeVisible()
+  await expect(gameRequest).toHaveCSS('background-color', 'rgb(255, 253, 248)')
+  await expect(gameRequest).toHaveCSS('color', 'rgb(23, 21, 29)')
   await expect(gameRequest).toContainText('Bob wants to play')
   await expect(gameRequest).toContainText('Live call')
   expect(await gameRequest.evaluate((element) => element.parentElement === document.body)).toBe(
@@ -1726,6 +1785,41 @@ test('notifications are anchored, actionable, and do not block navigation', asyn
   await page.getByRole('link', { name: 'Friends', exact: true }).click()
   await expect(panel).toHaveCount(0)
   await expect(page.getByRole('navigation', { name: 'Friend lists' })).toBeVisible()
+})
+
+test('shows dashboard refresh failures as an actionable toast', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  await signIn(page)
+  let shouldFail = true
+  await page.route('**/api/partnerships**', (route) =>
+    shouldFail
+      ? route.fulfill({
+          status: 401,
+          json: {
+            error: {
+              code: 'authentication_required',
+              message: 'Your session has expired. Sign in again.',
+            },
+          },
+        })
+      : route.fulfill({ json: { data: [], nextCursor: null } }),
+  )
+
+  await page.goto('/')
+  const toast = page.getByRole('alert').filter({ hasText: 'Your session has expired.' })
+  await expect(toast).toBeVisible()
+  await expect(toast).toHaveCSS('position', 'fixed')
+  await expect(page.locator('.inline-error')).toHaveCount(0)
+
+  const toastBounds = (await toast.boundingBox())!
+  const mobileNavigationBounds = (await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .boundingBox())!
+  expect(toastBounds.y + toastBounds.height).toBeLessThan(mobileNavigationBounds.y)
+
+  shouldFail = false
+  await toast.getByRole('button', { name: 'Retry' }).click()
+  await expect(toast).toHaveCount(0)
 })
 
 test('keeps the app shell aligned between dashboard views with different heights', async ({
@@ -1872,6 +1966,13 @@ test('keeps the mobile game setup heading aligned', async ({ page }) => {
   expect(infoBox!.x).toBeGreaterThan(titleBox!.x + titleBox!.width)
   await expect(home).toHaveCSS('width', '48px')
   await expect(title).toHaveCSS('white-space', 'nowrap')
+  await info.click()
+  const stepArrows = page.locator('.rules-step-arrow')
+  await expect(stepArrows).toHaveCount(3)
+  for (const arrow of await stepArrows.all()) {
+    await expect(arrow).toBeVisible()
+    await expect(arrow.locator('svg')).toBeVisible()
+  }
 })
 
 test('dashboard opens mode selection before sending one invitation', async ({ page }) => {
@@ -2275,6 +2376,31 @@ for (const width of [320, 1440]) {
     )
     await expect(results).toContainText('Unfinished')
     await expect(results.getByRole('row').nth(4)).toContainText('No point')
+    await expect(page.locator('.archive-count')).toHaveCSS('font-size', '24px')
+    await expect(page.locator('.archive-count-number strong')).toHaveCSS('font-size', '36px')
+    await expect(page.locator('.archive-partner strong').first()).toHaveCSS(
+      'font-size',
+      width === 320 ? '17px' : '20px',
+    )
+    await expect(page.locator('.archive-partner time').first()).toHaveCSS('font-size', '16px')
+    await expect(page.locator('.archive-outcome').first()).toHaveCSS(
+      'font-size',
+      width === 320 ? '16px' : '15px',
+    )
+    await expect(page.locator('.archive-score').first()).toHaveCSS(
+      'font-size',
+      width === 320 ? '18px' : '22px',
+    )
+    await expect(results.getByRole('heading')).toHaveCSS(
+      'font-size',
+      width === 320 ? '26px' : '34.56px',
+    )
+    await expect(results.getByRole('button', { name: 'Play again' })).toHaveCSS('font-size', '16px')
+    await expect(results.getByRole('columnheader').first()).toHaveCSS('font-size', '16px')
+    await expect(results.getByRole('row').nth(1)).toHaveCSS(
+      'font-size',
+      width === 320 ? '16px' : '18px',
+    )
     await expect(page.locator('.archive-count-orbit')).toHaveCSS('animation-name', 'none')
     await expect(page.getByRole('heading', { name: 'History', exact: true })).toHaveCount(0)
     expect(
