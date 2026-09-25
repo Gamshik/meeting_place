@@ -83,8 +83,7 @@
   transform: translate(2px, 2px);
 }
 
-.rules-steps li::after {
-  content: '';
+.rules-step-arrow {
   position: absolute;
   z-index: 5;
   top: 50%;
@@ -96,10 +95,6 @@
   border: 2px solid var(--mp-ink);
   border-radius: 9px 9px 9px 3px;
   background: var(--mp-acid);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317151d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14m-6-6 6 6-6 6'/%3E%3C/svg%3E");
-  background-size: 18px 18px;
-  background-position: center;
-  background-repeat: no-repeat;
   box-shadow: 3px 3px 0 var(--mp-coral);
   color: var(--mp-ink);
   font-size: 20px;
@@ -109,16 +104,17 @@
   animation: rules-arrow-flow 1.5s ease-in-out infinite;
 }
 
-.rules-steps li:nth-child(2)::after {
+.rules-step-arrow svg {
+  width: 18px;
+  height: 18px;
+}
+
+.rules-steps li:nth-child(2) .rules-step-arrow {
   animation-delay: 180ms;
 }
 
-.rules-steps li:nth-child(3)::after {
+.rules-steps li:nth-child(3) .rules-step-arrow {
   animation-delay: 360ms;
-}
-
-.rules-steps li:last-child::after {
-  display: none;
 }
 
 .rules-steps li > .rules-step-icon {
@@ -280,7 +276,7 @@
     min-height: 158px;
   }
 
-  .rules-steps li::after {
+  .rules-step-arrow {
     display: none;
   }
 }
@@ -334,8 +330,7 @@
     text-align: left;
   }
 
-  .rules-steps li::after {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2317151d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 5v14m-6-6 6 6 6-6'/%3E%3C/svg%3E");
+  .rules-step-arrow {
     top: auto;
     right: auto;
     bottom: -17px;
@@ -347,6 +342,10 @@
     font-size: 18px;
     translate: -50% 0;
     animation: rules-arrow-down-flow 1.5s ease-in-out infinite;
+  }
+
+  .rules-step-arrow svg {
+    transform: rotate(90deg);
   }
 
   .rules-steps li > .rules-step-icon {
@@ -400,7 +399,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .rules-steps li,
-  .rules-steps li::after,
+  .rules-step-arrow,
   .rules-step-icon svg,
   .rules-modes > div {
     animation: none;

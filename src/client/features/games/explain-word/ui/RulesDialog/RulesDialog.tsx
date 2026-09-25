@@ -50,18 +50,21 @@ export function RulesDialog({ onClose }: { onClose: () => void }) {
                 <RulesStepIcon step="topic" />
               </span>
               <strong>Choose a topic</strong>
+              <RulesStepArrow />
             </li>
             <li>
               <span className="rules-step-icon" aria-hidden="true">
                 <RulesStepIcon step="explain" />
               </span>
               <strong>Explain naturally</strong>
+              <RulesStepArrow />
             </li>
             <li>
               <span className="rules-step-icon" aria-hidden="true">
                 <RulesStepIcon step="guess" />
               </span>
               <strong>Partner guesses</strong>
+              <RulesStepArrow />
             </li>
             <li>
               <span className="rules-step-icon" aria-hidden="true">
@@ -87,6 +90,14 @@ export function RulesDialog({ onClose }: { onClose: () => void }) {
         </div>
       </section>
     </div>
+  )
+}
+
+function RulesStepArrow() {
+  return (
+    <span className="rules-step-arrow" aria-hidden="true">
+      <ArrowIcon />
+    </span>
   )
 }
 
