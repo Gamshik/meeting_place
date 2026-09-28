@@ -105,9 +105,11 @@
 }
 
 .login-practice-core small {
+  max-width: 120px;
   font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
   font-weight: 900;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
   text-transform: uppercase;
 }
 
@@ -295,7 +297,7 @@
   .login-practice-core {
     width: 190px;
     min-height: 165px;
-    padding: 18px;
+    padding: 18px 12px;
   }
 
   .login-practice-core strong {
@@ -313,6 +315,10 @@
   .login-listen-bubble {
     padding: 9px 12px;
     font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+  }
+
+  .login-speak-bubble {
+    top: 3%;
   }
 }
 

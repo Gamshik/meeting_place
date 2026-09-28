@@ -57,6 +57,43 @@ test('login badge icons fit their backgrounds on mobile', async ({ page }, testI
   }
 })
 
+test('practice label stays inside its bubble and clear of the speech badge', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/login')
+
+  for (const width of [320, 362, 375, 480, 800, 1440]) {
+    await page.setViewportSize({ width, height: 838 })
+
+    const bounds = await page.locator('.login-practice-core').evaluate((core) => {
+      const bubble = core.getBoundingClientRect()
+      const label = core.querySelector('small')!.getBoundingClientRect()
+      const speechBadge = document.querySelector('.login-speak-bubble')!.getBoundingClientRect()
+
+      return {
+        bottom: label.bottom <= bubble.bottom,
+        left: label.left >= bubble.left,
+        overlapsSpeechBadge:
+          label.left < speechBadge.right &&
+          label.right > speechBadge.left &&
+          label.top < speechBadge.bottom &&
+          label.bottom > speechBadge.top,
+        right: label.right <= bubble.right,
+        top: label.top >= bubble.top,
+        width: label.width,
+      }
+    })
+
+    expect(bounds.width).toBeLessThanOrEqual(120)
+    expect(bounds).toMatchObject({
+      bottom: true,
+      left: true,
+      overlapsSpeechBadge: false,
+      right: true,
+      top: true,
+    })
+  }
+})
+
 test('custom cursor stays subtle and responds to interactive controls', async ({ page }) => {
   await page.goto('/login')
   await page.mouse.move(80, 120)
