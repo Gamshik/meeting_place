@@ -1,0 +1,74 @@
+.archive-replay {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  margin: 6px;
+  padding: 10px 16px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 10px;
+  background: var(--mp-acid);
+  color: var(--mp-ink);
+  box-shadow:
+    0 0 0 4px white,
+    5px 6px 0 4px var(--mp-ink);
+  font-family: inherit;
+  font-size: var(--mp-font-size-body);
+  font-weight: 850;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transform: rotate(-4deg);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.archive-replay-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  transition: transform 420ms ease;
+}
+
+.archive-replay:focus-visible {
+  outline: 3px solid var(--mp-ink);
+  outline-offset: 10px;
+}
+
+.archive-replay:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Keep incidental touch and scroll gestures at rest, including sticky :hover. */
+@media (hover: hover) and (pointer: fine) {
+  html:not(.touch-input) .archive-replay:hover:not(:disabled) {
+    transform: translate(2px, 2px) rotate(0deg);
+    box-shadow:
+      0 0 0 4px white,
+      3px 4px 0 4px var(--mp-ink);
+  }
+
+  html:not(.touch-input) .archive-replay:hover:not(:disabled) .archive-replay-icon {
+    transform: rotate(-360deg);
+  }
+
+  html:not(.touch-input) .archive-replay:active:not(:disabled) {
+    transform: translate(5px, 6px) rotate(0deg);
+    box-shadow: 0 0 0 4px white;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archive-replay,
+  .archive-replay-icon {
+    transition: none;
+  }
+
+  html:not(.touch-input) .archive-replay:hover:not(:disabled) .archive-replay-icon {
+    transform: none;
+  }
+}

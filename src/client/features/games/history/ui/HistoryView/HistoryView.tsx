@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Partnership, WordGameRoundSummary } from '@contracts/contracts'
 import type { GameHistoryItem } from '@features/community/model/CommunityContext'
 import { games } from '@features/games/catalog/model/games'
+import './ReplaySticker.css'
 
 export function HistoryView({
   history,
@@ -144,11 +145,21 @@ export function HistoryView({
               {friends.some((friend) => friend.id === selected.partnershipId) && (
                 <button
                   type="button"
-                  className="button button-primary"
+                  className="archive-replay"
                   disabled={disabled}
                   onClick={() => onPlayAgain(selected)}
                 >
-                  Play again
+                  <svg className="archive-replay-icon" viewBox="0 0 32 32" aria-hidden="true">
+                    <path
+                      d="M7 10a11 11 0 1 1-2 10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                    />
+                    <path d="M2 3v11h11Z" fill="currentColor" />
+                  </svg>
+                  <span>Play again</span>
                 </button>
               )}
             </header>

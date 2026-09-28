@@ -33,6 +33,9 @@ finished games per page in a compact list with game icons, outcomes, scores, and
 Selecting a game opens its Word, Answer, and Result panel beside the list (below it on mobile).
 Long round lists scroll within the results panel, keeping the score and column headings visible.
 The game counter has a subtle orbit animation that respects reduced-motion preferences.
+The **Play again** action uses a lime replay sticker that straightens and rotates its arrow on
+mouse hover. Touch screens keep the sticker still while scrolling; reduced-motion preferences
+disable its animation.
 
 Friends manages connections only. **Invite** is also available from the global header and Practice
 screen, so a missing partner never becomes a navigation dead end. The compact form uses exact

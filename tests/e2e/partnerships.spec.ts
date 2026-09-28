@@ -1649,7 +1649,7 @@ test('shows every finished game and its rounds in History', async ({ page }) => 
   await expect(page.locator('.archive-match').nth(1)).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('does not leave history rows hovered while scrolling on touch screens', async ({
+test('does not leave history rows or replay sticker hovered on touch screens', async ({
   browser,
 }) => {
   const page = await browser.newPage({
@@ -1658,6 +1658,9 @@ test('does not leave history rows hovered while scrolling on touch screens', asy
     viewport: { width: 360, height: 800 },
   })
   await signIn(page)
+  await page.route('**/api/partnerships**', (route) =>
+    route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
+  )
   await page.unroute('**/api/games/explain-word/history')
   await page.route('**/api/games/explain-word/history', (route) =>
     route.fulfill({
@@ -1692,6 +1695,13 @@ test('does not leave history rows hovered while scrolling on touch screens', asy
   await match.hover()
   await expect(match).toHaveCSS('box-shadow', 'none')
   expect(await outcome.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe('none')
+  const replay = page.getByRole('button', { name: 'Play again' })
+  const restingTransform = await replay.evaluate((element) => getComputedStyle(element).transform)
+  const restingShadow = await replay.evaluate((element) => getComputedStyle(element).boxShadow)
+  await replay.hover()
+  await expect(replay).toHaveCSS('transform', restingTransform)
+  await expect(replay).toHaveCSS('box-shadow', restingShadow)
+  await expect(replay.locator('svg')).toHaveCSS('transform', 'none')
   await page.close()
 })
 
@@ -1745,7 +1755,16 @@ test('returns to Games after cancelling a replay request from History', async ({
   })
 
   await page.goto('/?view=history')
-  await page.getByRole('button', { name: 'Play again' }).click()
+  const replay = page.getByRole('button', { name: 'Play again' })
+  const restingTransform = await replay.evaluate((element) => getComputedStyle(element).transform)
+  await replay.hover()
+  await expect(replay).not.toHaveCSS('transform', restingTransform)
+  await expect(replay.locator('svg')).not.toHaveCSS('transform', 'none')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(replay.locator('svg')).toHaveCSS('transform', 'none')
+  await replay.focus()
+  await expect(replay).toHaveCSS('outline-style', 'solid')
+  await replay.press('Enter')
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
 
@@ -2443,7 +2462,7 @@ for (const width of [320, 358, 1440]) {
       'font-size',
       width <= 380 ? '26px' : '34.56px',
     )
-    await expect(results.getByRole('button', { name: 'Play again' })).toHaveCSS('font-size', '16px')
+    await expect(results.getByRole('button', { name: 'Play again' })).toHaveCSS('font-size', '17px')
     await expect(results.getByRole('columnheader').first()).toHaveCSS('font-size', '16px')
     await expect(results.getByRole('row').nth(1)).toHaveCSS(
       'font-size',
