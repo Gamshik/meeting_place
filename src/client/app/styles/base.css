@@ -935,8 +935,7 @@ html.touch-input .profile-link:hover {
 
 html.touch-input .icon-button:hover:not(:disabled),
 html.touch-input .game-icon-button:hover:not(:disabled),
-html.touch-input .game-dialog-close:hover:not(:disabled),
-html.touch-input .activity-year-control:hover:not(:disabled) {
+html.touch-input .game-dialog-close:hover:not(:disabled) {
   background: var(--mp-card);
   box-shadow: 3px 3px 0 var(--mp-ink);
   transform: none;

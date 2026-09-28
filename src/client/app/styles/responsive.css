@@ -527,8 +527,7 @@
   }
 
   .profile-editor-footer,
-  .activity-heading,
-  .activity-controls {
+  .activity-heading {
     align-items: stretch;
     flex-direction: column;
   }
@@ -536,21 +535,6 @@
   .profile-save-area,
   .profile-save-area .button {
     width: 100%;
-  }
-
-  .activity-controls {
-    gap: 10px;
-  }
-
-  .activity-view-switch,
-  .activity-year-control {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  .activity-year-control {
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
   }
 
   .activity-totals {
@@ -571,10 +555,6 @@
 
   .activity-weekdays {
     line-height: 1;
-  }
-
-  .activity-month-grid {
-    grid-template-columns: 1fr;
   }
 
   .game-page-header,
@@ -1117,8 +1097,7 @@
 
   .icon-button:not(:active):hover:not(:disabled),
   .game-icon-button:not(:active):hover:not(:disabled),
-  .game-dialog-close:not(:active):hover:not(:disabled),
-  .activity-year-control:not(:active):hover:not(:disabled) {
+  .game-dialog-close:not(:active):hover:not(:disabled) {
     background: var(--mp-card);
     box-shadow: 3px 3px 0 var(--mp-ink);
   }
@@ -1165,7 +1144,6 @@
   .icon-button:active:not(:disabled),
   .game-icon-button:active:not(:disabled),
   .game-dialog-close:active:not(:disabled),
-  .activity-year-control:active:not(:disabled),
   .friends-page .section-tabs button:active:not(:disabled),
   .friends-page .friend-remove-trigger:active,
   .header-invite:active,

@@ -130,7 +130,6 @@ test('custom cursor overrides component and disabled cursors across control type
       'position:fixed;inset:0;z-index:100;background:white;overflow:auto;padding:20px'
     fixture.innerHTML = `
       <button class="activity-cell" disabled style="width:30px;height:30px">Day</button>
-      <div class="activity-year-control"><button disabled>Year</button></div>
       <div class="history-pagination"><button disabled>Previous</button></div>
       <div class="archive-pagination"><button disabled>Next</button></div>
       <fieldset class="game-mode-picker" disabled><label>Disabled mode</label></fieldset>
@@ -149,7 +148,6 @@ test('custom cursor overrides component and disabled cursors across control type
   const controls = page.locator('#cursor-controls')
   for (const selector of [
     '.activity-cell',
-    '.activity-year-control button',
     '.history-pagination button',
     '.archive-pagination button',
     '.game-mode-picker label',

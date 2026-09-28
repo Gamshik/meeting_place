@@ -426,9 +426,7 @@ test('profile load failure offers readable retry and sign-out actions', async ({
   await expect(page.getByRole('link', { name: 'Your profile' })).toBeVisible()
 })
 
-test('shows yearly activity by default and lets friends open the monthly profile view', async ({
-  page,
-}, testInfo) => {
+test('shows rolling yearly activity on owner and friend profiles', async ({ page }, testInfo) => {
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
@@ -487,6 +485,8 @@ test('shows yearly activity by default and lets friends open the monthly profile
   await expect(page.getByRole('link', { name: 'Practice with Bob' })).toBeVisible()
   expect((await page.locator('.friend-profile-heading').boundingBox())!.height).toBeLessThan(140)
   await expect(page.getByRole('heading', { name: 'Bob’s practice activity' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Months', exact: true })).toHaveCount(0)
+  await expect(page.getByLabel('Activity year')).toHaveCount(0)
   await expect(page.getByLabel('Sep 14, 2025 to Sep 13, 2026 practice summary')).toContainText(
     '5practice actions',
   )
@@ -533,10 +533,6 @@ test('shows yearly activity by default and lets friends open the monthly profile
   const friendScroll = page.locator('.friend-profile-page .activity-year-scroll')
   expect(await friendScroll.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true)
 
-  await page.getByRole('button', { name: 'Months' }).click()
-  await expect(page.getByRole('region', { name: 'Sep 2025' })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Sep 2026' })).toContainText('1 active')
-  await expect(page.getByRole('region', { name: 'Oct 2026' })).toHaveCount(0)
   await page.getByRole('link', { name: 'Back to friends' }).click()
   await expect(page).toHaveURL('/?view=friends')
 
@@ -570,17 +566,6 @@ test('shows yearly activity by default and lets friends open the monthly profile
   const scrolledAt250 = (await weekdays.boundingBox())!.x
   expect(scrolledAt100).toBe(scrolledAt250)
   await expect(weekdays).toBeVisible()
-
-  await page.getByRole('button', { name: 'Months' }).click()
-  const monthCell = page
-    .locator('.account-page .activity-month-days .activity-cell:not(.activity-cell-hidden)')
-    .first()
-  const monthCellBounds = await monthCell.boundingBox()
-  expect(monthCellBounds?.width).toBeCloseTo(monthCellBounds!.height, 0.1)
-
-  await page.setViewportSize({ width: 390, height: 844 })
-  const smallMonthCellBounds = await monthCell.boundingBox()
-  expect(smallMonthCellBounds?.width).toBeCloseTo(smallMonthCellBounds!.height, 0.1)
 })
 
 test('partial-month calendar labels never overlap at responsive breakpoints', async ({ page }) => {
@@ -709,9 +694,6 @@ test.describe('mobile profile layout', () => {
             path.includes('profiles/') ? 'friend-calendar.png' : 'account-calendar.png',
           ),
         })
-        await page.getByRole('button', { name: 'Months', exact: true }).click()
-        const monthBounds = (await cell.boundingBox())!
-        expect(Math.abs(monthBounds.width - monthBounds.height)).toBeLessThan(1)
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
           true,
         )

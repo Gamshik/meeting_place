@@ -43,8 +43,7 @@ options menu and requires confirmation. Profile fields are editable directly, wi
 Reset, and Copy username actions. Profiles are created on first Google sign-in. A profile activity calendar
 counts successful game requests, acceptances, round starts, explanations, guesses, and meaningful
 game completions. The default trail shows the previous 365 days with today at the right edge and
-connects consecutive active days; the month view regroups the same rolling period into familiar
-calendars. Active friends can open one another's profile and see
+connects consecutive active days. Active friends can open one another's profile and see
 these aggregates, while recordings, transcripts, answers, and private coaching remain protected.
 Each profile keeps an editable IANA activity timezone. It is initially detected from the browser,
 never inferred from an IP address, and determines the calendar day for both the owner and friends.

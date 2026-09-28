@@ -71,25 +71,6 @@
   font-size: clamp(28px, 3vw, 38px);
 }
 
-.activity-controls {
-  gap: 8px;
-}
-
-.activity-view-switch,
-.activity-year-control {
-  padding: 3px;
-  border: 2px solid var(--mp-ink);
-  border-radius: 12px 12px 12px 4px;
-  background: var(--mp-card);
-  box-shadow: 3px 3px 0 var(--mp-lilac);
-}
-
-.activity-view-switch button,
-.activity-year-control button {
-  min-height: 34px;
-  padding: 5px 10px;
-}
-
 .activity-totals {
   margin: 18px 0 16px;
 }
@@ -387,14 +368,5 @@
   .activity-panel,
   .account-page > .activity-panel {
     padding: 12px 0 0;
-  }
-
-  .activity-controls {
-    width: 100%;
-  }
-
-  .activity-year-control {
-    flex: 1;
-    justify-content: space-between;
   }
 }

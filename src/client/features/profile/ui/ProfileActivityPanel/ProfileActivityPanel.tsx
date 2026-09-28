@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 
 import type { ProfileActivity, ProfileActivityDay } from '@contracts/contracts'
 import { api } from '@shared/api/api'
-
-type CalendarView = 'year' | 'months'
 
 export function ProfileActivityPanel({
   profileId,
@@ -19,7 +16,6 @@ export function ProfileActivityPanel({
 }) {
   const browserCurrentYear = new Date().getFullYear()
   const [year, setYear] = useState(browserCurrentYear)
-  const [view, setView] = useState<CalendarView>('year')
   const [activity, setActivity] = useState<ProfileActivity | null>(null)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,13 +57,10 @@ export function ProfileActivityPanel({
   const selectedDay = selectedDate ? days.get(selectedDate) : undefined
   const displayName = profileName ?? activity?.profile.displayName ?? 'Their'
   const owner = activity?.isOwner ?? isOwner
-  const minimumYear = activity ? new Date(activity.profile.createdAt).getUTCFullYear() : 2000
   const ownerToday = activity ? todayInTimeZone(activity.timeZone) : toDateKey(new Date())
   const currentYear = Number(ownerToday.slice(0, 4))
   const calendarStart = activity?.startDate ?? `${year}-01-01`
   const calendarEnd = activity?.endDate ?? (year === currentYear ? ownerToday : `${year}-12-31`)
-  const isRollingYear = year === currentYear
-  const periodLabel = isRollingYear ? 'the last 12 months' : String(year)
 
   return (
     <section className="activity-panel" aria-labelledby="activity-heading">
@@ -76,39 +69,6 @@ export function ProfileActivityPanel({
           <h2 id="activity-heading">
             {owner ? 'Your practice activity' : `${firstName(displayName)}’s practice activity`}
           </h2>
-        </div>
-        <div className="activity-controls">
-          <div className="activity-view-switch" aria-label="Calendar view">
-            <button type="button" aria-pressed={view === 'year'} onClick={() => setView('year')}>
-              Year
-            </button>
-            <button
-              type="button"
-              aria-pressed={view === 'months'}
-              onClick={() => setView('months')}
-            >
-              Months
-            </button>
-          </div>
-          <div className="activity-year-control" aria-label="Activity year">
-            <button
-              type="button"
-              aria-label="Previous year"
-              disabled={year <= minimumYear}
-              onClick={() => setYear((value) => value - 1)}
-            >
-              <ArrowIcon direction="left" />
-            </button>
-            <strong>{isRollingYear ? 'Last 12 months' : year}</strong>
-            <button
-              type="button"
-              aria-label="Next year"
-              disabled={year >= currentYear}
-              onClick={() => setYear((value) => value + 1)}
-            >
-              <ArrowIcon />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -138,21 +98,12 @@ export function ProfileActivityPanel({
             />
           </div>
 
-          {view === 'year' ? (
-            <YearCalendar
-              startDate={calendarStart}
-              endDate={calendarEnd}
-              days={days}
-              onSelect={setSelectedDate}
-            />
-          ) : (
-            <MonthCalendars
-              startDate={calendarStart}
-              endDate={calendarEnd}
-              days={days}
-              onSelect={setSelectedDate}
-            />
-          )}
+          <YearCalendar
+            startDate={calendarStart}
+            endDate={calendarEnd}
+            days={days}
+            onSelect={setSelectedDate}
+          />
 
           <ActivityLegend />
           {selectedDay ? <ActivityDayDetails day={selectedDay} /> : null}
@@ -160,7 +111,7 @@ export function ProfileActivityPanel({
             <p className="activity-empty">
               {owner
                 ? 'Finish a meaningful game action and your first activity day will appear here.'
-                : `${firstName(displayName)} has no practice activity in ${periodLabel}.`}
+                : `${firstName(displayName)} has no practice activity in the last 12 months.`}
             </p>
           ) : null}
         </>
@@ -244,54 +195,6 @@ function YearCalendar({
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function MonthCalendars({
-  startDate,
-  endDate,
-  days,
-  onSelect,
-}: {
-  startDate: string
-  endDate: string
-  days: Map<string, ProfileActivityDay>
-  onSelect: (date: string) => void
-}) {
-  const months = monthsInRange(startDate, endDate)
-  const spansYears = startDate.slice(0, 4) !== endDate.slice(0, 4)
-  return (
-    <div className="activity-month-grid">
-      {months.map(({ year, month, key }) => {
-        const dates = monthDates(year, month, startDate, endDate)
-        const activeDays = dates.filter((date) => date && days.has(date)).length
-        return (
-          <section className="activity-month" key={key} aria-label={`${monthNames[month]} ${year}`}>
-            <div className="activity-month-heading">
-              <h3>
-                {monthNames[month]}
-                {spansYears ? ` ’${String(year).slice(2)}` : ''}
-              </h3>
-              <span>{activeDays} active</span>
-            </div>
-            <div className="activity-month-weekdays" aria-hidden="true">
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, index) => (
-                <span key={`${label}:${index}`}>{label}</span>
-              ))}
-            </div>
-            <div className="activity-month-days">
-              {dates.map((date, index) =>
-                date ? (
-                  <ActivityCell key={date} date={date} day={days.get(date)} onSelect={onSelect} />
-                ) : (
-                  <span className="activity-cell activity-cell-hidden" key={`blank:${index}`} />
-                ),
-              )}
-            </div>
-          </section>
-        )
-      })}
     </div>
   )
 }
@@ -409,18 +312,6 @@ function rangeWeeks(startDate: string, endDate: string) {
     cursor = addDays(cursor, 7)
   }
   return weeks
-}
-
-function monthDates(year: number, month: number, startDate: string, endDate: string) {
-  const first = new Date(Date.UTC(year, month, 1))
-  const count = new Date(Date.UTC(year, month + 1, 0)).getUTCDate()
-  return [
-    ...Array<string | null>(mondayIndex(first)).fill(null),
-    ...Array.from({ length: count }, (_, index) => {
-      const date = toDateKey(new Date(Date.UTC(year, month, index + 1)))
-      return date >= startDate && date <= endDate ? date : null
-    }),
-  ]
 }
 
 function monthsInRange(startDate: string, endDate: string) {

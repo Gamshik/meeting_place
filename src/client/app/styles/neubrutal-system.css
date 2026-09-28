@@ -97,8 +97,7 @@ body {
 
 .icon-button,
 .game-icon-button,
-.game-dialog-close,
-.activity-year-control {
+.game-dialog-close {
   border: 2px solid var(--mp-ink);
   border-radius: 11px 11px 11px 4px;
   background: var(--mp-card);
@@ -111,8 +110,7 @@ body {
 
 .icon-button:hover:not(:disabled),
 .game-icon-button:hover:not(:disabled),
-.game-dialog-close:hover:not(:disabled),
-.activity-year-control:hover:not(:disabled) {
+.game-dialog-close:hover:not(:disabled) {
   box-shadow: 1px 1px 0 var(--mp-ink);
   transform: translate(2px, 2px);
 }
@@ -167,7 +165,6 @@ body {
 .quick-friend,
 .game-choice,
 .activity-day-details,
-.activity-month,
 .rounds-table-wrap,
 .custom-audio-player,
 .audio-recorder {
@@ -271,8 +268,7 @@ html:not(.touch-input) .game-stage .topic-picker label:hover span {
 
 .game-mode-picker label,
 .duration-presets button,
-.topic-picker span,
-.activity-view-switch button {
+.topic-picker span {
   border: 2px solid var(--mp-ink);
   box-shadow: 3px 3px 0 var(--mp-lilac);
   transition:
@@ -283,16 +279,14 @@ html:not(.touch-input) .game-stage .topic-picker label:hover span {
 
 html:not(.touch-input) .game-mode-picker label:hover,
 html:not(.touch-input) .duration-presets button:hover:not(:disabled),
-html:not(.touch-input) .topic-picker label:hover span,
-.activity-view-switch button:hover {
+html:not(.touch-input) .topic-picker label:hover span {
   box-shadow: 1px 1px 0 var(--mp-lilac);
   transform: translate(2px, 2px);
 }
 
 .game-mode-picker label:has(input:checked),
 .duration-presets button.is-selected,
-.topic-picker input:checked + span,
-.activity-view-switch button[aria-pressed='true'] {
+.topic-picker input:checked + span {
   border-color: var(--mp-ink);
   background: var(--mp-acid);
   color: var(--mp-ink);
@@ -368,15 +362,13 @@ html:not(.touch-input) .topic-picker label:hover span,
   .icon-button,
   .game-icon-button,
   .game-dialog-close,
-  .activity-year-control,
   .input,
   .game-select,
   .quick-friend,
   .game-choice,
   .game-mode-picker label,
   .duration-presets button,
-  .topic-picker span,
-  .activity-view-switch button {
+  .topic-picker span {
     transition: none;
   }
 
@@ -384,15 +376,13 @@ html:not(.touch-input) .topic-picker label:hover span,
   .icon-button:hover,
   .game-icon-button:hover,
   .game-dialog-close:hover,
-  .activity-year-control:hover,
   .input:focus,
   .game-select:focus,
   .quick-friend:hover,
   .game-choice:hover,
   .game-mode-picker label:hover,
   .duration-presets button:hover,
-  html:not(.touch-input) .topic-picker label:hover span,
-  .activity-view-switch button:hover {
+  html:not(.touch-input) .topic-picker label:hover span {
     transform: none;
   }
 }
