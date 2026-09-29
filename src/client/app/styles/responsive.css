@@ -71,14 +71,24 @@
   }
 
   .game-page-header:not(.is-room) {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 16px;
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .game-page-header:not(.is-room) .game-page-heading {
+    display: flex;
+    align-items: center;
+    gap: 18px;
   }
 
   .game-page-header:not(.is-room) .game-header-tools {
-    justify-content: flex-start;
-    width: 100%;
+    width: auto;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+  }
+
+  .game-page-header:not(.is-room) .game-title-row h1 {
+    margin: 0;
   }
 }
 
@@ -757,14 +767,12 @@
   }
 
   .duration-presets,
-  .duration-custom,
   .game-lobby-actions,
   .game-dialog-actions {
     grid-template-columns: 1fr;
   }
 
   .duration-presets .button,
-  .duration-custom .button,
   .game-lobby-actions .button,
   .game-dialog-actions .button {
     width: 100%;
@@ -791,13 +799,46 @@
 
   .game-lobby-ready .game-mode-picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    column-gap: 10px;
+    row-gap: 0;
   }
 
   .game-lobby-ready .game-mode-picker legend,
   .game-lobby-ready .duration-picker legend {
-    margin-bottom: 10px;
+    margin-bottom: 0;
     font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  }
+
+  .setting-info-button {
+    width: 22px;
+    min-width: 22px;
+    height: 22px;
+    min-height: 22px;
+    border-radius: 6px 6px 6px 2px;
+    background: var(--mp-lilac);
+    box-shadow: 2px 2px 0 var(--mp-ink);
+    font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
+  }
+
+  .setting-info-button::before {
+    position: absolute;
+    content: '';
+    inset: -11px;
+  }
+
+  .setting-info-tooltip {
+    top: calc(100% + 10px);
+    transform: none;
+  }
+
+  .game-mode-picker .setting-info-tooltip {
+    left: 0;
+  }
+
+  .duration-picker .setting-info-tooltip,
+  .game-time-settings-title-row .setting-info-tooltip {
+    right: 0;
+    left: auto;
   }
 
   .game-lobby-ready .game-mode-picker label {
@@ -824,15 +865,6 @@
   .game-lobby-ready .duration-presets button {
     min-height: 54px;
     padding-inline: 8px;
-    font-size: 16px;
-  }
-
-  .game-lobby-ready .duration-custom > span:first-child,
-  .game-lobby-ready .duration-custom > span:last-child {
-    font-size: max(var(--mp-mobile-font-floor, 0px), 14px);
-  }
-
-  .game-lobby-ready .duration-custom input {
     font-size: 16px;
   }
 
@@ -903,6 +935,14 @@
 }
 
 @media (max-width: 360px) {
+  .game-page-header:not(.is-room) {
+    gap: 8px;
+  }
+
+  .game-page-header:not(.is-room) .game-title-row h1 {
+    font-size: max(var(--mp-mobile-font-floor, 0px), clamp(1rem, 8vw, 2rem));
+  }
+
   .brand-mark {
     width: 40px;
     height: 40px;

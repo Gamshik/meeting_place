@@ -4,6 +4,7 @@ import type { WordGameMode } from '@contracts/contracts'
 import { DEFAULT_EXPLANATION_SECONDS } from '@features/games/explain-word/model/game-constants'
 import { WORD_GAME_MODES } from '@features/games/explain-word/model/word-game-mode'
 import { DurationPicker } from '@features/games/explain-word/ui/DurationPicker/DurationPicker'
+import { SettingInfoButton } from '@features/games/explain-word/ui/SettingInfoButton/SettingInfoButton'
 
 export function GameStartCard({
   blocked,
@@ -22,7 +23,15 @@ export function GameStartCard({
     <section className="game-lobby game-lobby-ready">
       <div className="game-lobby-copy">
         <fieldset className="game-mode-picker" disabled={disabled || blocked}>
-          <legend>Mode</legend>
+          <legend>
+            <span className="setting-legend-content">
+              <span>Mode</span>
+              <SettingInfoButton
+                label="About game modes"
+                text="Live call: play while talking together on another call. Recorded: record a voice clue here for your partner to answer later."
+              />
+            </span>
+          </legend>
           {WORD_GAME_MODES.map((option) => (
             <label key={option.value} data-cursor={disabled || blocked ? undefined : 'interactive'}>
               <input
@@ -41,7 +50,6 @@ export function GameStartCard({
         </fieldset>
         <DurationPicker
           disabled={disabled || blocked}
-          idPrefix="new-game"
           value={explanationDurationSeconds}
           onChange={setExplanationDurationSeconds}
         />

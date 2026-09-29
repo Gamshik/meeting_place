@@ -14,7 +14,7 @@ This repository contains the first vertical slice:
 - paginated partner lists and accessible feedback while changes are saved
 - friend-only profiles with yearly and monthly practice activity calendars
 - a turn-based “explain the word” game with Live call and Recorded practice modes, AI-generated
-  cards, creator-controlled 30–300 second explanation rounds, speech transcription, and private
+  cards, creator-selected 1–5 minute explanation rounds, speech transcription, and private
   coaching; when automatic matching rejects a synonym, the explainer makes the final scoring
   decision without AI review
 - a React interface and Hono API deployed together on Cloudflare Workers
@@ -335,8 +335,8 @@ To exercise the speaking game manually, apply the latest migration, configure th
 values above, and sign in with two accounts that have an active partnership. The first player sends
 a game request. Confirm that the other browser shows the request in **Notifications**, and that neither
 player can start a round before the second player accepts. Confirm that the invitation shows the mode
-selected by its sender. The creator chooses a 30–300 second explanation time before inviting. They
-can change it later from the game header; both players see the update immediately, while the current
+selected by its sender. The creator chooses a 1–5 minute explanation-time preset before inviting. They
+can change the preset later from the game header; both players see the update immediately, while the current
 round keeps its original timer and the new value begins with the next round. In Recorded practice,
 the first player chooses a topic, records an
 explanation, and sends it. While recording, confirm that the second browser sees the synchronized

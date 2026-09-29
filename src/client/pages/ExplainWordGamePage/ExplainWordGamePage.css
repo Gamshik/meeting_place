@@ -7,6 +7,39 @@
   margin-bottom: 28px;
 }
 
+.game-page-header:not(.is-room) {
+  align-items: center;
+}
+
+.game-page-header:not(.is-room) .game-page-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.game-page-header:not(.is-room) .game-back-link {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
+  padding: 0;
+  place-items: center;
+}
+
+.game-page-header:not(.is-room) .game-back-link .room-control-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.game-page-header:not(.is-room) .game-title-row h1 {
+  margin-top: 0;
+  white-space: nowrap;
+}
+
 .game-page-header.is-active {
   align-items: center;
   margin-bottom: 18px;

@@ -1980,8 +1980,7 @@ const activeGame: WordGame = {
   round: null,
 }
 
-test('keeps the mobile game setup heading aligned', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+test('keeps the game setup heading on one row at responsive widths', async ({ page }) => {
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
@@ -2002,24 +2001,42 @@ test('keeps the mobile game setup heading aligned', async ({ page }) => {
   const home = page.getByRole('link', { name: 'Lobby' })
   const title = page.getByRole('heading', { name: 'Explain the word' })
   const info = page.getByRole('button', { name: 'How to play' })
-  const [homeBox, titleBox, infoBox] = await Promise.all([
-    home.boundingBox(),
-    title.boundingBox(),
-    info.boundingBox(),
-  ])
 
-  expect(homeBox).not.toBeNull()
-  expect(titleBox).not.toBeNull()
-  expect(infoBox).not.toBeNull()
-  expect(
-    Math.abs(homeBox!.y + homeBox!.height / 2 - (titleBox!.y + titleBox!.height / 2)),
-  ).toBeLessThan(3)
-  expect(
-    Math.abs(infoBox!.y + infoBox!.height / 2 - (titleBox!.y + titleBox!.height / 2)),
-  ).toBeLessThan(3)
-  expect(infoBox!.x).toBeGreaterThan(titleBox!.x + titleBox!.width)
-  await expect(home).toHaveCSS('width', '48px')
-  await expect(title).toHaveCSS('white-space', 'nowrap')
+  for (const width of [1800, 1024, 760, 700, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 })
+    const [homeBox, homeIconBox, titleBox, infoBox] = await Promise.all([
+      home.boundingBox(),
+      home.locator('svg').boundingBox(),
+      title.boundingBox(),
+      info.boundingBox(),
+    ])
+
+    expect(homeBox).not.toBeNull()
+    expect(homeIconBox).not.toBeNull()
+    expect(titleBox).not.toBeNull()
+    expect(infoBox).not.toBeNull()
+    expect(
+      Math.abs(homeBox!.y + homeBox!.height / 2 - (titleBox!.y + titleBox!.height / 2)),
+    ).toBeLessThan(3)
+    expect(
+      Math.abs(infoBox!.y + infoBox!.height / 2 - (titleBox!.y + titleBox!.height / 2)),
+    ).toBeLessThan(3)
+    expect(
+      Math.abs(homeBox!.x + homeBox!.width / 2 - (homeIconBox!.x + homeIconBox!.width / 2)),
+      `${width}px home alignment: ${JSON.stringify({ homeBox, homeIconBox })}`,
+    ).toBeLessThanOrEqual(1)
+    expect(
+      Math.abs(homeBox!.y + homeBox!.height / 2 - (homeIconBox!.y + homeIconBox!.height / 2)),
+    ).toBeLessThanOrEqual(1)
+    expect(homeBox!.x + homeBox!.width).toBeLessThan(titleBox!.x)
+    expect(
+      infoBox!.x,
+      `${width}px layout: ${JSON.stringify({ homeBox, infoBox, titleBox })}`,
+    ).toBeGreaterThan(titleBox!.x + titleBox!.width)
+    await expect(home).toHaveCSS('width', '48px')
+    await expect(title).toHaveCSS('white-space', 'nowrap')
+  }
+
   await info.click()
   const stepArrows = page.locator('.rules-step-arrow')
   await expect(stepArrows).toHaveCount(3)
@@ -2030,7 +2047,7 @@ test('keeps the mobile game setup heading aligned', async ({ page }) => {
 })
 
 test('dashboard opens mode selection before sending one invitation', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
+  await page.setViewportSize({ width: 320, height: 844 })
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
@@ -2066,6 +2083,37 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   await expect(page).toHaveURL(`/games/explain-word/${relationshipId}?new=1`)
   expect(requests).toBe(0)
   await expect(page.getByRole('radio', { name: /Live call/ })).toBeChecked()
+  await expect(page.getByRole('spinbutton')).toHaveCount(0)
+  const modeInfo = page.getByRole('button', { name: 'About game modes' })
+  await modeInfo.focus()
+  await expect(page.getByRole('tooltip')).toHaveText(
+    'Live call: play while talking together on another call. Recorded: record a voice clue here for your partner to answer later.',
+  )
+  const modeTooltipBox = await page.getByRole('tooltip').boundingBox()
+  expect(modeTooltipBox).not.toBeNull()
+  expect(modeTooltipBox!.x).toBeGreaterThanOrEqual(0)
+  expect(modeTooltipBox!.x + modeTooltipBox!.width).toBeLessThanOrEqual(320)
+  const modeInfoBox = await modeInfo.boundingBox()
+  expect(modeInfoBox).not.toBeNull()
+  expect(modeInfoBox!.width).toBe(22)
+  expect(modeInfoBox!.height).toBe(22)
+  await expect(modeInfo).toHaveCSS('min-height', '22px')
+  await expect(modeInfo).toHaveCSS('border-radius', '6px 6px 6px 2px')
+  await expect(modeInfo).not.toHaveCSS('box-shadow', 'none')
+  const timeInfo = page.getByRole('button', { name: 'About explanation time' })
+  await timeInfo.focus()
+  await expect(page.getByRole('tooltip')).toHaveText('Time to explain each word.')
+  const timeTooltipBox = await page.getByRole('tooltip').boundingBox()
+  expect(timeTooltipBox).not.toBeNull()
+  expect(timeTooltipBox!.x).toBeGreaterThanOrEqual(0)
+  expect(timeTooltipBox!.x + timeTooltipBox!.width).toBeLessThanOrEqual(320)
+  const timeInfoBox = await timeInfo.boundingBox()
+  expect(timeInfoBox).not.toBeNull()
+  expect(timeInfoBox!.width).toBe(22)
+  expect(timeInfoBox!.height).toBe(22)
+  await expect(timeInfo).toHaveCSS('min-height', '22px')
+  await expect(timeInfo).toHaveCSS('border-radius', '6px 6px 6px 2px')
+  await expect(timeInfo).not.toHaveCSS('box-shadow', 'none')
   await page.getByRole('button', { name: '3 min' }).click()
   await expect(page.getByRole('button', { name: 'Back to results' })).toHaveCount(0)
   const recordedModeCard = page.getByRole('radio', { name: 'Recorded' }).locator('..')
@@ -2074,6 +2122,45 @@ test('dashboard opens mode selection before sending one invitation', async ({ pa
   await expect(recordedModeCard).toHaveCSS('cursor', 'none')
   for (const width of [947, 760, 640, 601, 390]) {
     await page.setViewportSize({ width, height: 844 })
+    const responsiveInfoBox = await modeInfo.boundingBox()
+    const expectedInfoSize = width <= 700 ? 22 : 24
+    expect(responsiveInfoBox).not.toBeNull()
+    expect(responsiveInfoBox!.width).toBe(expectedInfoSize)
+    expect(responsiveInfoBox!.height).toBe(expectedInfoSize)
+    await expect(modeInfo).toHaveCSS('min-height', `${expectedInfoSize}px`)
+    const titleGaps = await page.evaluate(() => {
+      const textBounds = (element: Element) => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        return range.getBoundingClientRect()
+      }
+      const modeLegend = textBounds(
+        document.querySelector('.game-mode-picker legend .setting-legend-content > span')!,
+      )
+      const modeCards = document.querySelector('.game-mode-picker label')!.getBoundingClientRect()
+      const durationLegend = textBounds(
+        document.querySelector('.duration-picker legend .setting-legend-content > span')!,
+      )
+      const durationButtons = document
+        .querySelector('.duration-presets button')!
+        .getBoundingClientRect()
+      return {
+        duration: durationButtons.top - durationLegend.bottom,
+        durationPadding: getComputedStyle(document.querySelector('.duration-picker legend')!)
+          .paddingBottom,
+        mode: modeCards.top - modeLegend.bottom,
+        modePadding: getComputedStyle(document.querySelector('.game-mode-picker legend')!)
+          .paddingBottom,
+      }
+    })
+    expect(titleGaps.modePadding).toBe('16px')
+    expect(titleGaps.durationPadding).toBe(titleGaps.modePadding)
+    expect(
+      Math.abs(titleGaps.mode - titleGaps.duration),
+      `${width}px gaps: ${JSON.stringify(titleGaps)}`,
+    ).toBeLessThanOrEqual(2)
+    expect(titleGaps.mode).toBeGreaterThanOrEqual(15)
+    expect(titleGaps.duration).toBeGreaterThanOrEqual(15)
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
       `mode selection should fit a ${width}px viewport`,
@@ -2116,6 +2203,9 @@ test('the game creator can change the next round explanation time', async ({ pag
   await page.getByRole('button', { name: 'Close explanation time' }).click()
   await expect(page.getByRole('button', { name: 'Close explanation time' })).toBeHidden()
   await page.locator('summary[aria-label="Change explanation time"]').click()
+  await expect(page.getByRole('spinbutton')).toHaveCount(0)
+  await page.getByRole('button', { name: 'About explanation time' }).focus()
+  await expect(page.getByRole('tooltip')).toHaveText('Time to explain each word.')
   await page.getByRole('button', { name: '3 min' }).click()
   await page.getByRole('button', { name: 'Save for next round' }).click()
 

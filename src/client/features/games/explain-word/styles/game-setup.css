@@ -67,7 +67,8 @@
 
 .game-mode-picker {
   display: grid;
-  gap: 9px;
+  column-gap: 9px;
+  row-gap: 0;
   max-width: 640px;
   margin: 24px 0 0;
   padding: 0;
@@ -75,12 +76,90 @@
 }
 
 .game-mode-picker legend {
-  margin-bottom: 9px;
+  margin-bottom: 0;
+  padding-bottom: 16px;
   color: var(--mp-muted);
   font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.setting-legend-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-info {
+  position: relative;
+  display: inline-grid;
+  color: var(--mp-ink);
+  font-size: 16px;
+  font-style: normal;
+  letter-spacing: normal;
+  line-height: 1;
+  text-transform: none;
+}
+
+.setting-info-button {
+  position: relative;
+  display: grid;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid var(--mp-ink);
+  border-radius: 7px 7px 7px 2px;
+  background: var(--mp-lilac);
+  color: var(--mp-ink);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  font:
+    italic 800 16px/1 Georgia,
+    serif;
+  transition:
+    box-shadow 120ms,
+    transform 120ms;
+}
+
+.setting-info-button:hover,
+.setting-info-button:focus-visible {
+  box-shadow: none;
+  transform: translate(2px, 2px);
+}
+
+.setting-info-tooltip {
+  position: absolute;
+  z-index: 20;
+  top: 50%;
+  left: calc(100% + 10px);
+  width: max-content;
+  max-width: min(230px, calc(100vw - 100px));
+  padding: 8px 10px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 8px 8px 8px 3px;
+  background: var(--mp-card);
+  box-shadow: 3px 3px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font-family: inherit;
+  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: normal;
+  line-height: 1.25;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: none;
+  transform: translateY(-50%);
+  visibility: hidden;
+}
+
+.setting-info:has(.setting-info-button:hover) .setting-info-tooltip,
+.setting-info:has(.setting-info-button:focus) .setting-info-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .game-mode-picker label {
@@ -179,7 +258,7 @@ html:not(.touch-input) .game-mode-picker label:hover {
 
 .duration-picker {
   display: grid;
-  gap: 9px;
+  gap: 0;
   max-width: 640px;
   margin: 20px 0 0;
   padding: 0;
@@ -187,7 +266,8 @@ html:not(.touch-input) .game-mode-picker label:hover {
 }
 
 .duration-picker legend {
-  margin-bottom: 1px;
+  margin-bottom: 0;
+  padding-bottom: 16px;
   color: var(--mp-muted);
   font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
   font-weight: 800;
@@ -220,44 +300,6 @@ html:not(.touch-input) .duration-presets button:hover:not(:disabled) {
   border-color: #725ba6;
   background: var(--mp-acid);
   box-shadow: 0 0 0 2px #dfff82;
-}
-
-.duration-custom {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 48px;
-  padding: 8px 12px;
-  border: 1px solid var(--mp-line);
-  border-radius: 13px;
-  background: #fffdf8;
-  color: var(--mp-muted);
-  font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
-  font-weight: 700;
-}
-
-.duration-custom > span:last-child {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.duration-custom input {
-  width: 76px;
-  min-height: 32px;
-  border: 1px solid #cfc6d2;
-  border-radius: 9px;
-  background: white;
-  color: var(--mp-ink);
-  font: inherit;
-  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
-  text-align: center;
-}
-
-.duration-custom input:focus-visible {
-  outline: 2px solid #7357b2;
-  outline-offset: 2px;
 }
 
 .duration-picker > small {

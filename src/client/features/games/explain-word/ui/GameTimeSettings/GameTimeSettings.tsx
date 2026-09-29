@@ -4,6 +4,7 @@ import type { WordGame } from '@contracts/contracts'
 import { formatDuration } from '@features/games/explain-word/lib/game-time'
 import { DurationPicker } from '@features/games/explain-word/ui/DurationPicker/DurationPicker'
 import { RoomControlIcon } from '@features/games/explain-word/ui/RoomControlIcon/RoomControlIcon'
+import { SettingInfoButton } from '@features/games/explain-word/ui/SettingInfoButton/SettingInfoButton'
 
 export function GameTimeSettings({
   disabled,
@@ -42,7 +43,10 @@ export function GameTimeSettings({
       </summary>
       <div className="game-time-settings-popover">
         <div className="game-time-settings-heading">
-          <strong className="game-time-settings-title">Explanation time</strong>
+          <div className="game-time-settings-title-row">
+            <strong className="game-time-settings-title">Explanation time</strong>
+            <SettingInfoButton label="About explanation time" text="Time to explain each word." />
+          </div>
           <button
             type="button"
             className="game-time-settings-close"
@@ -55,13 +59,7 @@ export function GameTimeSettings({
             ×
           </button>
         </div>
-        <DurationPicker
-          compact
-          disabled={disabled}
-          idPrefix="active-game"
-          value={value}
-          onChange={setValue}
-        />
+        <DurationPicker compact disabled={disabled} value={value} onChange={setValue} />
         {value !== game.explanationDurationSeconds ? (
           <button
             type="button"
