@@ -1200,7 +1200,7 @@ test('shows the other player an immediate choice when a word game finishes', asy
   )
   await expect(dialog.locator('#finished-game-title')).toHaveClass(/sr-only/)
   await expect(dialog.locator('p')).toHaveCount(1)
-  await expect(page.getByText('Record your explanation', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible()
   await expect(page.locator('.session-finished-card')).toHaveCount(0)
   await expect(page.locator('.rounds-section')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Stop recording' })).toHaveCount(0)
