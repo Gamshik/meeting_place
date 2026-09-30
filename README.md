@@ -22,6 +22,12 @@ This repository contains the first vertical slice:
 
 ## Interface
 
+Recorded rounds use a compact microphone button that becomes Stop with a countdown while recording.
+After recording, players can preview, record again, or send their clue using icon controls.
+The controls have accessible labels, keyboard-focus tooltips, and reduced-motion support.
+After sending a clue, the explainer sees a compact headphone avatar with orbiting clue tiles while
+waiting for an answer. The decorative animation pauses with the game and respects reduced motion.
+
 Practice is the home screen. It is deliberately partner-first: the current activity is selected
 automatically, and people with a game to join or resume rise to the top. One action opens the game
 room, whether the user is starting, joining, or returning to a session. The UI makes the resulting
