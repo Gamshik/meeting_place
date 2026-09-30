@@ -1,0 +1,88 @@
+.guess-waiting-stage {
+  display: grid;
+  justify-items: center;
+  width: min(100%, 760px);
+  margin: clamp(24px, 5vh, 48px) auto 0;
+  gap: 8px;
+}
+
+.guess-waiting-stage h2 {
+  max-width: 100%;
+  font-size: clamp(30px, 4vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -0.055em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.clue-orbit {
+  width: min(100%, 360px);
+  height: auto;
+  overflow: visible;
+  fill: none;
+  stroke: var(--mp-ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.clue-orbit-track {
+  stroke: var(--mp-ink);
+  opacity: 0.2;
+  stroke-dasharray: 4 7;
+}
+.clue-orbit-avatar > rect {
+  fill: var(--mp-lilac);
+}
+.clue-orbit .clue-orbit-shadow {
+  fill: var(--mp-ink);
+}
+.clue-orbit-avatar text {
+  fill: var(--mp-ink);
+  stroke: none;
+  font-size: 34px;
+  font-weight: 900;
+}
+.clue-orbit-avatar .clue-earcup {
+  fill: var(--mp-coral);
+}
+.clue-headphones {
+  stroke-width: 5px;
+}
+.clue-question-tile {
+  fill: var(--mp-acid);
+}
+.clue-wave-tile {
+  fill: var(--mp-coral);
+}
+.clue-question,
+.clue-wave-lines {
+  stroke-width: 3px;
+}
+
+.clue-orbit-satellite {
+  offset-path: path('M136 0 A136 76 0 1 1 -136 0 A136 76 0 1 1 136 0');
+  offset-anchor: 0px 0px;
+  offset-rotate: 0deg;
+  animation: clue-orbit-loop 4s linear infinite;
+}
+.clue-orbit-satellite.is-wave {
+  animation-delay: -2s;
+  offset-distance: 50%;
+}
+
+@keyframes clue-orbit-loop {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+.guess-waiting-stage[data-frozen] .clue-orbit-satellite {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clue-orbit-satellite {
+    animation: none;
+  }
+}

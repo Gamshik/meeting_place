@@ -1,0 +1,290 @@
+.recorded-clue-stage > .live-round-clock {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: row;
+  align-items: center;
+  justify-self: center;
+  gap: 18px;
+  margin-inline: auto;
+  padding: 9px 10px 9px 14px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-ink);
+}
+
+.recorded-clue-stage > .live-round-clock > div {
+  min-width: 0;
+}
+
+.recorded-clue-stage > .live-round-clock p {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: var(--mp-font-size-body);
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.recorded-clue-stage > .live-round-clock p::before {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border: 2px solid var(--mp-ink);
+  border-radius: 50%;
+  background: var(--mp-coral);
+  content: '';
+}
+
+.recorded-clue-stage > .live-round-clock > strong {
+  min-width: 78px;
+  flex: 0 0 auto;
+  padding: 7px 9px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 8px 8px 8px 3px;
+  background: var(--mp-coral);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (max-width: 430px) {
+  .recorded-clue-stage > .live-round-clock {
+    gap: 10px;
+    padding-left: 10px;
+  }
+}
+
+.recorded-clue-stage > .mic-recorder {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 14px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 12px auto 0;
+  padding: 12px 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mic-recorder-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mic-control {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  padding: 12px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-lilac);
+  color: var(--mp-ink);
+  box-shadow: 4px 4px 0 var(--mp-ink);
+  transition:
+    transform 150ms,
+    box-shadow 150ms;
+}
+
+.mic-control svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.mic-control.mic-main {
+  width: 88px;
+  height: 88px;
+  padding: 24px;
+  border-radius: 50%;
+  box-shadow: 5px 6px 0 var(--mp-ink);
+}
+
+.mic-main:not(:disabled):not(.mic-stop) svg {
+  animation: mic-invite 2.8s ease-in-out infinite;
+}
+
+.mic-control.mic-stop {
+  background: var(--mp-coral);
+}
+
+.mic-stop-square {
+  fill: currentColor;
+}
+
+.mic-control.mic-send {
+  background: var(--mp-acid);
+}
+
+.mic-control:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+}
+
+.mic-control:active:not(:disabled) {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
+
+.mic-control:focus-visible {
+  outline: 3px solid var(--mp-ink);
+  outline-offset: 6px;
+}
+
+.mic-control:focus-visible::after {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  padding: 5px 8px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 6px;
+  background: var(--mp-card);
+  color: var(--mp-ink);
+  font-size: var(--mp-font-size-body);
+  content: attr(aria-label);
+  z-index: 1;
+}
+
+.mic-control:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mic-countdown {
+  padding: 4px 12px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px;
+  background: var(--mp-card);
+  font-size: var(--mp-font-size-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.mic-wave {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 44px;
+}
+
+.mic-wave i {
+  width: 5px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--mp-coral);
+  animation: mic-wave 850ms ease-in-out infinite alternate;
+}
+
+.mic-wave i:nth-child(2n) {
+  height: 30px;
+  animation-delay: -300ms;
+}
+.mic-wave i:nth-child(3) {
+  height: 42px;
+  animation-delay: -600ms;
+}
+
+.mic-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--mp-ink);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: mic-spin 900ms linear infinite;
+}
+
+.mic-recorder .audio-recorder-preview {
+  width: 270px;
+  min-width: 0;
+  min-height: 64px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+  box-shadow: 4px 4px 0 var(--mp-ink);
+}
+
+.mic-recorder .custom-audio-volume,
+.mic-recorder .custom-audio-speed {
+  display: none;
+}
+
+.mic-recorder .custom-audio-time {
+  font-size: var(--mp-font-size-body);
+}
+
+.mic-recorder .audio-recorder-error {
+  max-width: 420px;
+  font-size: var(--mp-font-size-body);
+  text-align: center;
+}
+
+@keyframes mic-invite {
+  0%,
+  65%,
+  100% {
+    transform: rotate(0);
+  }
+  75% {
+    transform: rotate(-10deg);
+  }
+  85% {
+    transform: rotate(10deg);
+  }
+}
+@keyframes mic-wave {
+  to {
+    transform: scaleY(0.45);
+  }
+}
+@keyframes mic-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .mic-recorder-controls {
+    gap: 9px;
+  }
+  .mic-control:not(.mic-main) {
+    width: 44px;
+    height: 48px;
+    padding: 9px;
+  }
+  .mic-recorder .audio-recorder-preview {
+    width: 210px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-main:not(:disabled):not(.mic-stop) svg,
+  .mic-wave i,
+  .mic-spinner {
+    animation: none;
+  }
+  .mic-control {
+    transition: none;
+  }
+}

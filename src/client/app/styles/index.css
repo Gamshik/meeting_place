@@ -26,6 +26,8 @@
 @import '../../features/games/explain-word/ui/RulesDialog/RulesDialog.css';
 @import '../../pages/LoginPage/LoginPage.css';
 @import '../../features/games/explain-word/ui/LiveCallRound/LiveCallRound.css';
+@import '../../features/games/explain-word/ui/RecordedRound/RecordedRound.css';
+@import '../../features/games/explain-word/ui/RecordedWaitingStage/RecordedWaitingStage.css';
 @import '../../pages/ExplainWordGamePage/RoomShell.css';
 @import '../../features/profile/Profile.css';
 @import '../../features/games/history/ui/HistoryView/HistoryTally.css';

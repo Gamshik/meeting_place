@@ -713,7 +713,9 @@ test.describe('mobile profile layout', () => {
   }
 })
 
-test('starts a word game and submits a browser recording for transcription', async ({ page }) => {
+test('starts a word game and submits a browser recording for transcription', async ({
+  page,
+}, testInfo) => {
   await signIn(page)
   await page.addInitScript(() => {
     const fakeTrack = { stop() {} }
@@ -895,10 +897,64 @@ test('starts a word game and submits a browser recording for transcription', asy
   })
   await page.getByRole('button', { name: 'Give me a word' }).click()
   await expect(page.getByText('passport', { exact: true }).first()).toBeVisible()
+  const recordedStage = page.locator('.recorded-clue-stage')
+  const wordPanel = recordedStage.locator(':scope > .live-explain-card')
+  const recordingPanel = recordedStage.locator(':scope > .audio-recorder')
+  await expect(wordPanel).toBeVisible()
+  await expect(recordingPanel).toBeVisible()
+  await expect(wordPanel.locator('.audio-recorder')).toHaveCount(0)
+  const wordPanelBox = await wordPanel.boundingBox()
+  const recordingPanelBox = await recordingPanel.boundingBox()
+  expect(recordingPanelBox!.y).toBeGreaterThan(wordPanelBox!.y + wordPanelBox!.height)
+  await page.screenshot({
+    path: testInfo.outputPath('recorded-word-and-recorder-panels.png'),
+    animations: 'disabled',
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(wordPanel).toBeInViewport()
+  await expect(recordingPanel).toBeInViewport()
+  await page.screenshot({
+    path: testInfo.outputPath('recorded-word-and-recorder-panels-mobile.png'),
+    animations: 'disabled',
+  })
+  await page.setViewportSize({ width: 1280, height: 720 })
+  const recordedGame = game
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const recordedSize = await wordPanel.evaluate((element) => ({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    }))
+    game = {
+      ...recordedGame,
+      mode: 'live_call',
+      round: {
+        ...recordedGame.round!,
+        secretWord: 'cat',
+        forbiddenWords: ['kitten'],
+        createdAt: new Date().toISOString(),
+      },
+    }
+    await page.reload()
+    const liveWordPanel = page.locator('.live-round > .live-explain-card')
+    await expect(liveWordPanel).toBeVisible()
+    const liveSize = await liveWordPanel.evaluate((element) => ({
+      width: element.clientWidth,
+      height: element.clientHeight,
+    }))
+    expect(liveSize.height).toBe(recordedSize.height)
+    expect(liveSize.width).toBeLessThan(600)
+    expect(recordedSize.width).toBeLessThan(600)
+    game = recordedGame
+    await page.reload()
+    await expect(wordPanel).toBeVisible()
+  }
+  await page.setViewportSize({ width: 1280, height: 720 })
   await expect(page.getByRole('heading', { name: 'Rounds' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Start recording' }).click()
   await expect(page.getByText('1:00 remaining')).toBeVisible()
   await expect(page.getByText(/0:5[89] remaining/)).toBeVisible({ timeout: 2_500 })
+  await page.screenshot({ path: testInfo.outputPath('mic-recording.png'), animations: 'disabled' })
   pauseSession = true
   await expect(page.getByText('Game paused', { exact: true })).toBeVisible({ timeout: 6_000 })
   const pauseCard = page.locator('.session-pause-card')
@@ -909,8 +965,32 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page.getByText('Game paused', { exact: true })).toHaveCount(0, { timeout: 6_000 })
   await page.getByRole('button', { name: 'Stop recording' }).click()
   await expect(page.getByRole('button', { name: 'Play Your recorded explanation' })).toBeVisible()
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.getByRole('button', { name: 'Record again' })).toBeInViewport()
+    await expect(page.getByRole('button', { name: 'Send explanation' })).toBeInViewport()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(`mic-preview-${width}.png`),
+      animations: 'disabled',
+    })
+  }
+  await page.getByRole('button', { name: 'Record again' }).click()
+  await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible()
+  await page.getByRole('button', { name: 'Stop recording' }).click()
+  await expect(page.getByRole('button', { name: 'Play Your recorded explanation' })).toBeVisible()
+  await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByRole('button', { name: 'Send explanation' }).click()
-  await expect(page.getByText('Your explanation is ready.')).toBeVisible()
+  await expect(page.locator('.clue-orbit')).toBeVisible()
+  for (const width of [1280, 320]) {
+    await page.setViewportSize({ width, height: 844 })
+    await expect(page.locator('.clue-orbit')).toBeInViewport()
+    await page.screenshot({ path: testInfo.outputPath(`clue-orbit-${width}.png`) })
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.locator('.clue-orbit-satellite').first()).toHaveCSS('animation-name', 'none')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.setViewportSize({ width: 1280, height: 720 })
   await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
   await page.getByRole('button', { name: 'End game' }).click()
   const endDialog = page.getByRole('dialog', { name: 'End game?' })
@@ -1407,7 +1487,7 @@ test('gives both live-call players a final 30-second guessing phase', async ({ b
   await guesserContext.close()
 })
 
-test('shows the guesser synchronized Recorded timers', async ({ page }) => {
+test('shows the guesser synchronized Recorded timers', async ({ page }, testInfo) => {
   await signIn(page)
   const now = new Date().toISOString()
   let game: WordGame = {
@@ -1455,10 +1535,67 @@ test('shows the guesser synchronized Recorded timers', async ({ page }) => {
     return route.fulfill({ json: { data: game } })
   })
 
+  game = { ...game, round: { ...game.round!, recordingStartedAt: null } }
   await page.goto(`/games/explain-word/${relationshipId}`)
-  await expect(page.getByText('Recording in progress')).toBeVisible()
+  const scoreboard = page.locator('.game-scoreboard')
+  await page.waitForTimeout(700)
+  const scoreboardStyles = await scoreboard.evaluate((element) => {
+    const styles = getComputedStyle(element)
+    return {
+      boxShadow: styles.boxShadow,
+      marginTop: styles.marginTop,
+    }
+  })
+  await scoreboard.hover()
+  await expect
+    .poll(() =>
+      scoreboard.evaluate((element) => {
+        const styles = getComputedStyle(element)
+        return {
+          boxShadow: styles.boxShadow,
+          marginTop: styles.marginTop,
+        }
+      }),
+    )
+    .toEqual(scoreboardStyles)
+  await expect(page.locator('.custom-cursor')).toHaveCSS('opacity', '1')
+  await expect(page.locator('.recorded-waiting-pingpong')).toBeVisible()
+  await expect(page.locator('.recorded-waiting-mic')).toHaveCount(0)
+  await page.screenshot({
+    path: testInfo.outputPath('waiting-pingpong-desktop.png'),
+    animations: 'disabled',
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({
+    path: testInfo.outputPath('waiting-pingpong-mobile.png'),
+    animations: 'disabled',
+  })
+  await expect(page.locator('.recorded-waiting-pingpong')).toBeInViewport()
+  await page.setViewportSize({ width: 1280, height: 720 })
+  const recordingTime = new Date().toISOString()
+  game = {
+    ...game,
+    serverTime: recordingTime,
+    round: { ...game.round!, recordingStartedAt: recordingTime },
+  }
+  await expect(page.getByText('Recording in progress')).toBeVisible({ timeout: 6_000 })
+  await expect(page.locator('.recorded-waiting-pingpong')).toHaveCount(0)
+  await expect(page.locator('.recorded-waiting-mic')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Bob: Recording now' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
+  await expect(page.getByText('You’ll listen when it’s ready.')).toHaveCount(0)
   await expect(page.getByRole('timer')).toHaveText(/(0:59|1:00)/)
   await expect(page.getByLabel('Your answer')).toHaveCount(0)
+
+  await page.screenshot({
+    path: testInfo.outputPath('recording-timer-desktop.png'),
+    animations: 'disabled',
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({
+    path: testInfo.outputPath('recording-timer-mobile.png'),
+    animations: 'disabled',
+  })
 
   const explainedAt = new Date().toISOString()
   game = {

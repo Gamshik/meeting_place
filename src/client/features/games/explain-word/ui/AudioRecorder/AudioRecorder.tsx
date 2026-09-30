@@ -5,11 +5,7 @@ import {
   convertRecordingToWav,
   preferredMimeType,
 } from '@features/games/explain-word/lib/audio-recording'
-import {
-  formatCountdown,
-  formatDuration,
-  useServerNow,
-} from '@features/games/explain-word/lib/game-time'
+import { formatCountdown, useServerNow } from '@features/games/explain-word/lib/game-time'
 
 export function AudioRecorder({
   disabled,
@@ -40,6 +36,8 @@ export function AudioRecorder({
   const [isRecording, setIsRecording] = useState(false)
   const [secondsRemaining, setSecondsRemaining] = useState(durationSeconds)
   const [isPreparing, setIsPreparing] = useState(false)
+  const [isStarting, setIsStarting] = useState(false)
+  const [isSending, setIsSending] = useState(false)
   const [audio, setAudio] = useState<Blob | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -75,6 +73,8 @@ export function AudioRecorder({
   }, [forceStop])
 
   async function startRecording() {
+    if (isStarting || isPreparing || isSending || disabled) return
+    setIsStarting(true)
     recordingBlocked.current = false
     discardOnStop.current = false
     setError(null)
@@ -85,6 +85,7 @@ export function AudioRecorder({
     })
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
       setError('Audio recording is not supported in this browser.')
+      setIsStarting(false)
       return
     }
     try {
@@ -146,9 +147,25 @@ export function AudioRecorder({
         setSecondsRemaining((current) => Math.max(0, current - 1))
       }, 1_000)
     } catch {
+      stream.current?.getTracks().forEach((track) => track.stop())
       if (!recordingBlocked.current) {
         setError('Allow microphone access to record your explanation.')
       }
+    } finally {
+      setIsStarting(false)
+    }
+  }
+
+  async function sendRecording() {
+    if (!audio || isSending || disabled) return
+    setIsSending(true)
+    setError(null)
+    try {
+      await onSubmit(audio)
+    } catch {
+      setError('Could not send the recording. Try again.')
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -161,45 +178,102 @@ export function AudioRecorder({
   }
 
   return (
-    <div className="audio-recorder">
-      <div className="audio-recorder-heading">
-        <span aria-hidden="true">
-          <i />
-        </span>
-        <div>
-          <p>Record your explanation</p>
-          <small>Up to {formatDuration(durationSeconds)} · Speak clearly and naturally</small>
-        </div>
-      </div>
-      <div className="audio-recorder-actions">
+    <div
+      className={`audio-recorder mic-recorder ${isRecording ? 'is-recording' : ''} ${audio ? 'has-recording' : ''}`}
+    >
+      <div className="mic-recorder-controls">
+        {isRecording ? (
+          <span className="mic-wave" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        ) : null}
         {!isRecording ? (
           <button
             type="button"
-            className="button button-primary"
-            disabled={disabled || isPreparing}
+            className={`mic-control ${audio ? 'mic-again' : 'mic-main'}`}
+            disabled={disabled || isPreparing || isStarting || isSending}
+            aria-label={
+              isStarting
+                ? 'Starting recording'
+                : isPreparing
+                  ? 'Preparing recording'
+                  : audio
+                    ? 'Record again'
+                    : 'Start recording'
+            }
+            title={audio ? 'Record again' : 'Start recording'}
             onClick={() => void startRecording()}
           >
-            {isPreparing ? 'Preparing…' : audio ? 'Record again' : 'Start recording'}
+            {isPreparing || isStarting ? (
+              <span className="mic-spinner" aria-hidden="true" />
+            ) : (
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                {audio ? (
+                  <path d="M6 12a11 11 0 1 1 0 10M6 5v7h7" />
+                ) : (
+                  <>
+                    <rect x="12" y="3" width="8" height="17" rx="4" />
+                    <path d="M7 14v3a9 9 0 0 0 18 0v-3M16 26v4M11 30h10" />
+                  </>
+                )}
+              </svg>
+            )}
           </button>
         ) : (
-          <button type="button" className="button button-danger" onClick={stopRecording}>
-            Stop recording
+          <button
+            type="button"
+            className="mic-control mic-main mic-stop"
+            aria-label="Stop recording"
+            title="Stop recording"
+            onClick={stopRecording}
+          >
+            <svg viewBox="0 0 32 32" aria-hidden="true">
+              <rect className="mic-stop-square" x="7" y="7" width="18" height="18" rx="2" />
+            </svg>
           </button>
         )}
+        {isRecording ? (
+          <span className="mic-wave" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
+            <i />
+          </span>
+        ) : null}
+        {audioUrl ? (
+          <AudioPlayer
+            className="audio-recorder-preview"
+            src={audioUrl}
+            label="Your recorded explanation"
+          />
+        ) : null}
         {audio ? (
           <button
             type="button"
-            className="button button-accent"
-            disabled={disabled}
-            onClick={() => void onSubmit(audio)}
+            className="mic-control mic-send"
+            disabled={disabled || isSending}
+            aria-label={isSending ? 'Transcribing' : 'Send explanation'}
+            title="Send explanation"
+            onClick={() => void sendRecording()}
           >
-            {disabled ? 'Transcribing…' : 'Send explanation'}
+            {isSending ? (
+              <span className="mic-spinner" aria-hidden="true" />
+            ) : (
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                <path d="m4 4 25 12L4 28l5-12-5-12ZM9 16h20" />
+              </svg>
+            )}
           </button>
         ) : null}
       </div>
       {isRecording ? (
-        <div role="status" aria-live="polite" className="audio-recorder-status">
-          <span>● Recording</span>
+        <div className="mic-countdown">
+          <span className="sr-only">Recording</span>
           <strong>
             {formatCountdown(
               recordingStartedAt
@@ -211,22 +285,23 @@ export function AudioRecorder({
                   )
                 : secondsRemaining,
             )}{' '}
-            remaining
+            <span className="sr-only">remaining</span>
           </strong>
         </div>
       ) : null}
-      {isPreparing ? (
-        <p role="status" className="audio-recorder-message">
-          Preparing the recording…
-        </p>
-      ) : null}
-      {audioUrl ? (
-        <AudioPlayer
-          className="audio-recorder-preview"
-          src={audioUrl}
-          label="Your recorded explanation"
-        />
-      ) : null}
+      <span role="status" className="sr-only">
+        {isSending
+          ? 'Sending and transcribing your recording'
+          : isStarting
+            ? 'Waiting for microphone access'
+            : isPreparing
+              ? 'Preparing the recording'
+              : isRecording
+                ? 'Recording started'
+                : audio
+                  ? 'Recording ready to review and send'
+                  : ''}
+      </span>
       {error ? (
         <p role="alert" className="audio-recorder-error">
           {error}

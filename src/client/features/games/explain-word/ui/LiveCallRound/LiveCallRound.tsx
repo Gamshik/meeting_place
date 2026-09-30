@@ -9,7 +9,7 @@ import { useServerNow } from '@features/games/explain-word/lib/game-time'
 import { GuessCard } from '@features/games/explain-word/ui/GuessCard/GuessCard'
 import {
   RoundClock,
-  SecretWordBrief,
+  SecretWordCard,
 } from '@features/games/explain-word/ui/RoundPlayShared/RoundPlayShared'
 
 export function LiveCallRound({
@@ -83,19 +83,7 @@ export function LiveCallRound({
       />
 
       {isExplainer ? (
-        <section className="game-surface secret-surface explain-card live-explain-card">
-          <div className="explain-card-topbar">
-            <button
-              type="button"
-              className="explain-skip-control"
-              disabled={disabled || isExpired}
-              onClick={() => void onSkip()}
-            >
-              Skip word
-            </button>
-          </div>
-          <SecretWordBrief round={round} />
-        </section>
+        <SecretWordCard disabled={disabled || isExpired} round={round} onSkip={onSkip} />
       ) : isPreparing ? (
         <section
           className="live-ready-cue"

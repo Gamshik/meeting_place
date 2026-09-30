@@ -4,10 +4,11 @@ import type { WordGame } from '@contracts/contracts'
 import { RECORDED_GUESS_MS } from '@features/games/explain-word/model/game-constants'
 import { parseTimestamp, useServerNow } from '@features/games/explain-word/lib/game-time'
 import { GuessCard } from '@features/games/explain-word/ui/GuessCard/GuessCard'
+import { GuessWaitingStage } from '@features/games/explain-word/ui/GuessWaitingStage/GuessWaitingStage'
+import { RecordedWaitingStage } from '@features/games/explain-word/ui/RecordedWaitingStage/RecordedWaitingStage'
 import { WaitingCard } from '@features/games/explain-word/ui/WaitingCard/WaitingCard'
 import {
   ExplainCard,
-  PhaseNotice,
   RoundClock,
 } from '@features/games/explain-word/ui/RoundPlayShared/RoundPlayShared'
 
@@ -58,7 +59,7 @@ export function RecordedRound({
 
   if (round.status === 'explaining') {
     return (
-      <div className="recorded-round">
+      <div className="recorded-round recorded-clue-stage">
         {!isExplainer && recordingStartedAt > 0 && recordingFinishedAt === 0 ? (
           <RoundClock
             description={
@@ -68,12 +69,6 @@ export function RecordedRound({
             }
             remainingMs={recordingEndsAt - now}
             title={now < recordingEndsAt ? 'Recording in progress' : 'Preparing the recording'}
-          />
-        ) : null}
-        {!isExplainer && recordingFinishedAt > 0 ? (
-          <PhaseNotice
-            description="The clue is being converted, transcribed, and sent to you."
-            title="Preparing the recording"
           />
         ) : null}
         {isExplainer ? (
@@ -87,14 +82,14 @@ export function RecordedRound({
             onSubmit={onSubmit}
           />
         ) : (
-          <WaitingCard
+          <RecordedWaitingStage
             name={game.partner.displayName}
-            message={
+            state={
               recordingFinishedAt > 0
-                ? 'They finished speaking. Their recording is being prepared.'
+                ? 'processing'
                 : recordingStartedAt > 0
-                  ? 'They are recording an explanation.'
-                  : 'They are getting ready to record an explanation.'
+                  ? 'recording'
+                  : 'preparing'
             }
           />
         )}
@@ -118,15 +113,10 @@ export function RecordedRound({
         remainingMs={remainingMs}
         title={isExpired ? 'Time’s up' : 'Listen and guess'}
       />
-      {isExplainer || isExpired ? (
-        <WaitingCard
-          name={isExpired ? 'the next round' : game.partner.displayName}
-          message={
-            isExpired
-              ? 'No guess was submitted before time ran out.'
-              : 'Your explanation is ready. They have up to 90 seconds to answer.'
-          }
-        />
+      {isExpired ? (
+        <WaitingCard name="the next round" message="No guess was submitted before time ran out." />
+      ) : isExplainer ? (
+        <GuessWaitingStage name={game.partner.displayName} frozen={frozen} />
       ) : (
         <GuessCard
           disabled={disabled}

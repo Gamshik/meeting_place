@@ -21,7 +21,33 @@ export function ExplainCard({
 }) {
   const round = game.round!
   return (
-    <section className="game-surface secret-surface explain-card">
+    <>
+      <SecretWordCard disabled={disabled} round={round} onSkip={onSkip} />
+      <AudioRecorder
+        disabled={disabled}
+        forceStop={forceStop}
+        durationSeconds={round.explanationDurationSeconds}
+        recordingStartedAt={round.recordingStartedAt}
+        serverTime={game.serverTime}
+        onStart={onRecordingStart}
+        onStop={onRecordingStop}
+        onSubmit={onSubmit}
+      />
+    </>
+  )
+}
+
+export function SecretWordCard({
+  disabled,
+  onSkip,
+  round,
+}: {
+  disabled: boolean
+  onSkip: () => Promise<unknown>
+  round: NonNullable<WordGame['round']>
+}) {
+  return (
+    <section className="game-surface secret-surface explain-card live-explain-card">
       <div className="explain-card-topbar">
         <button
           type="button"
@@ -33,16 +59,6 @@ export function ExplainCard({
         </button>
       </div>
       <SecretWordBrief round={round} />
-      <AudioRecorder
-        disabled={disabled}
-        forceStop={forceStop}
-        durationSeconds={round.explanationDurationSeconds}
-        recordingStartedAt={round.recordingStartedAt}
-        serverTime={game.serverTime}
-        onStart={onRecordingStart}
-        onStop={onRecordingStop}
-        onSubmit={onSubmit}
-      />
     </section>
   )
 }
@@ -75,18 +91,6 @@ export function RoundClock({
         <span className="sr-only">{description}</span>
       </div>
       <strong role="timer">{formatCountdown(secondsRemaining)}</strong>
-    </section>
-  )
-}
-
-export function PhaseNotice({ description, title }: { description: string; title: string }) {
-  return (
-    <section className="live-round-clock phase-notice" role="status">
-      <div>
-        <p>{title}</p>
-        <span>{description}</span>
-      </div>
-      <strong aria-hidden="true">•••</strong>
     </section>
   )
 }
