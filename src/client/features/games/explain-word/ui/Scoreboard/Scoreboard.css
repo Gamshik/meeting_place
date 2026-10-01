@@ -1,0 +1,134 @@
+/* Shared broadcast strip; room styles retain ownership of toolbar positioning. */
+.game-scoreboard.score-broadcast,
+.game-page-header.is-room .game-scoreboard.score-broadcast {
+  grid-template-columns: max-content 8px minmax(0, max-content);
+  align-items: stretch;
+  gap: 0;
+  width: fit-content;
+  max-width: min(420px, calc(100% - 6px));
+  min-height: 58px;
+  padding: 0;
+  border: 2px solid var(--mp-ink);
+  border-radius: 8px 8px 8px 3px;
+  background: var(--mp-ink);
+  box-shadow: 5px 5px 0 var(--mp-ink);
+  overflow: hidden;
+}
+
+.game-scoreboard.score-broadcast > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.game-page-header.is-room .game-scoreboard.score-broadcast p,
+.game-scoreboard.score-broadcast p {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--mp-acid);
+  color: var(--mp-ink);
+  font-size: calc(var(--mp-font-size-body) + 2px);
+  font-weight: 850;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.game-page-header.is-room .game-scoreboard.score-broadcast .is-partner p,
+.game-scoreboard.score-broadcast .is-partner p {
+  background: var(--mp-coral);
+}
+
+.game-page-header.is-room .game-scoreboard.score-broadcast strong,
+.game-scoreboard.score-broadcast strong {
+  display: grid;
+  place-items: center;
+  width: auto;
+  min-width: 44px;
+  height: auto;
+  margin: 0;
+  padding: 8px;
+  background: var(--mp-ink);
+  color: var(--mp-card);
+  font-size: 32px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  animation: none;
+}
+
+.game-scoreboard.score-broadcast strong::before,
+.game-scoreboard.score-broadcast strong::after {
+  display: none;
+}
+
+.game-page-header.is-room .game-scoreboard.score-broadcast > span,
+.game-scoreboard.score-broadcast > span {
+  align-self: stretch;
+  margin-right: 2px;
+  background: var(--mp-card);
+  color: transparent;
+  font-size: 0;
+  animation: none;
+}
+
+/* The centered desktop score must not compete with the right-hand controls. */
+@media (min-width: 801px) and (max-width: 1150px) {
+  .game-page-header.is-room.is-active {
+    grid-template-areas: none;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    gap: 14px 12px;
+  }
+
+  .game-page-header.is-room.is-active .game-page-heading,
+  .game-page-header.is-room.is-active .game-header-tools {
+    display: contents;
+  }
+
+  .game-page-header.is-room.is-active .game-back-link {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .game-page-header.is-room.is-active .game-time-settings,
+  .game-page-header.is-room.is-active .game-time-readout {
+    grid-row: 1;
+    grid-column: 3;
+  }
+
+  .game-page-header.is-room.is-active .game-icon-button {
+    grid-row: 1;
+    grid-column: 4;
+  }
+
+  .game-page-header.is-room.is-active .game-end-control,
+  .game-page-header.is-room.is-active .game-header-tools > .button {
+    grid-row: 1;
+    grid-column: 5;
+  }
+
+  .game-page-header.is-room.is-active .game-scoreboard.score-broadcast {
+    position: static;
+    grid-row: 2;
+    grid-column: 1 / -1;
+    transform: none;
+    animation-name: room-scoreboard-arrive-static;
+  }
+}
+
+@media (max-width: 1150px) {
+  .game-page-header.is-room .game-scoreboard.score-broadcast,
+  .game-page-header.is-room.is-active .game-scoreboard.score-broadcast {
+    width: fit-content;
+    justify-self: center;
+  }
+
+  .game-page-header.is-room .game-scoreboard.score-broadcast p {
+    padding-inline: 8px;
+  }
+}

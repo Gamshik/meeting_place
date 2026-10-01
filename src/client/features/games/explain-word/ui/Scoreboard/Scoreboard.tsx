@@ -2,7 +2,7 @@ import type { WordGame } from '@contracts/contracts'
 
 export function Scoreboard({ game }: { game: WordGame }) {
   return (
-    <div className="game-scoreboard" aria-label="Score" aria-live="polite">
+    <div className="game-scoreboard score-broadcast" aria-label="Score" aria-live="polite">
       <div className="is-you">
         <p>You</p>
         <strong key={`you-${game.scores.you}`}>{game.scores.you}</strong>
