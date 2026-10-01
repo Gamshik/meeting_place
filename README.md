@@ -22,9 +22,18 @@ This repository contains the first vertical slice:
 
 ## Interface
 
+Incoming game invitations are handled through the notification toast or notification panel, not a
+full-page room card. Opening a room with an unaccepted invitation does not redirect or accept it;
+the recipient can leave using Lobby to access notifications. Senders keep their waiting screen.
+
+Both game modes share a compact broadcast-style score strip with colored player names beside dark
+score cells, and wrapping names on narrow screens.
+
 Recorded rounds use a compact microphone button that becomes Stop with a countdown while recording.
 After recording, players can preview, record again, or send their clue using icon controls.
 The controls have accessible labels, keyboard-focus tooltips, and reduced-motion support.
+When guessing in Recorded mode, the audio player sits above the answer field. The transcript is
+hidden by default and can be opened below the field without moving the answer controls.
 After sending a clue, the explainer sees a compact headphone avatar with orbiting clue tiles while
 waiting for an answer. The decorative animation pauses with the game and respects reduced motion.
 
