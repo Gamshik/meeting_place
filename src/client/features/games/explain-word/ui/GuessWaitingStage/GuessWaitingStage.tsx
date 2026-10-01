@@ -3,8 +3,9 @@ import './GuessWaitingStage.css'
 export function GuessWaitingStage({ name, frozen }: { name: string; frozen: boolean }) {
   return (
     <section className="guess-waiting-stage" data-frozen={frozen || undefined} aria-live="polite">
-      <h2>Waiting for {name}</h2>
-      <p className="sr-only">Your explanation is ready. They have up to 90 seconds to answer.</p>
+      <p className="sr-only">
+        Waiting for {name}. Your explanation is ready. They have up to 90 seconds to answer.
+      </p>
       <svg className="clue-orbit" viewBox="0 0 360 240" aria-hidden="true">
         <ellipse className="clue-orbit-track" cx="180" cy="120" rx="136" ry="76" />
         <g className="clue-orbit-avatar">

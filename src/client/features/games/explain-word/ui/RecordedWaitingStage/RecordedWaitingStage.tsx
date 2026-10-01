@@ -31,7 +31,7 @@ export function RecordedWaitingStage({
       aria-live="polite"
       aria-label={`${name}: ${copy.accessibleLabel}`}
     >
-      <h2>Waiting for {name}</h2>
+      {state === 'preparing' ? <h2>Waiting for {name}</h2> : null}
 
       {state === 'preparing' ? (
         <svg className="recorded-waiting-pingpong" viewBox="0 0 360 240" aria-hidden="true">

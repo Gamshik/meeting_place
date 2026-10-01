@@ -23,19 +23,9 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  font-size: var(--mp-font-size-body);
+  font-size: 18px;
   font-weight: 900;
-  line-height: 1.25;
-}
-
-.recorded-clue-stage > .live-round-clock p::before {
-  width: 10px;
-  height: 10px;
-  flex: 0 0 auto;
-  border: 2px solid var(--mp-ink);
-  border-radius: 50%;
-  background: var(--mp-coral);
-  content: '';
+  letter-spacing: -0.025em;
 }
 
 .recorded-clue-stage > .live-round-clock > strong {
@@ -47,8 +37,38 @@
   background: var(--mp-coral);
   box-shadow: 2px 2px 0 var(--mp-ink);
   color: var(--mp-ink);
-  font-size: 28px;
+  font-size: 27px;
   font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.recorded-round > .live-round-clock.is-compact {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 0;
+  flex-direction: row;
+  gap: 18px;
+  padding: 9px 10px 9px 14px;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--mp-card);
+}
+
+.recorded-round > .live-round-clock.is-compact p {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.recorded-round > .live-round-clock.is-compact > strong {
+  min-width: 70px;
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 9px 9px 9px 3px;
+  background: var(--mp-lilac);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  color: var(--mp-ink);
+  font-size: 27px;
   text-align: center;
 }
 
