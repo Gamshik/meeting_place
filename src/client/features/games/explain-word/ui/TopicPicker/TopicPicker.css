@@ -38,6 +38,10 @@
   line-height: 1.2;
 }
 
+.topic-label-short {
+  display: none;
+}
+
 .topic-icon {
   width: 42px;
   height: 42px;
@@ -334,6 +338,16 @@ html:not(.touch-input) .topic-picker label:hover .topic-code-cursor {
     height: 30px;
     flex-basis: 30px;
     padding: 4px;
+  }
+}
+
+@media (max-width: 349px) {
+  .topic-label-long {
+    display: none;
+  }
+
+  .topic-label-short {
+    display: inline;
   }
 }
 

@@ -21,12 +21,20 @@ export function NewRoundCard({
               type="radio"
               name="word-topic"
               value={option}
+              aria-label={option}
               checked={topic === option}
               onChange={(event) => setTopic(event.target.value)}
             />
             <span>
               <TopicIcon topic={option} />
-              <strong>{option}</strong>
+              <strong className={option === 'Technology' ? 'topic-label-long' : undefined}>
+                {option}
+              </strong>
+              {option === 'Technology' ? (
+                <strong className="topic-label-short" aria-hidden="true">
+                  Tech.
+                </strong>
+              ) : null}
             </span>
           </label>
         ))}

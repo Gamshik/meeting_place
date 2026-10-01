@@ -189,6 +189,8 @@ html:not(.touch-input) .topic-picker label:hover span {
 
 .waiting-compact-copy {
   min-width: 0;
+  width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .game-waiting.is-compact .waiting-compact-copy h2 {
@@ -206,7 +208,7 @@ html:not(.touch-input) .topic-picker label:hover span {
 }
 
 .waiting-turn-label {
-  display: inline-flex;
+  display: inline-block;
   max-width: 100%;
   width: fit-content;
   padding: 6px 10px;
@@ -217,10 +219,8 @@ html:not(.touch-input) .topic-picker label:hover span {
   font-size: max(var(--mp-mobile-font-floor, 0px), 11px);
   font-weight: 900;
   letter-spacing: 0.08em;
-  overflow: hidden;
-  text-overflow: ellipsis;
   text-transform: uppercase;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .waiting-compact-progress {
