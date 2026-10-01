@@ -373,15 +373,17 @@ export function ExplainWordGamePage() {
       {showModeSelection ? (
         <GameStartCard disabled={isBusy} blocked={hasOtherOngoingGame} onStart={startGame} />
       ) : game.status === 'pending' ? (
-        <GameInvitation
-          game={game}
-          userId={session.user.id}
-          disabled={isBusy}
-          acceptBlocked={hasOtherOngoingGame}
-          onAccept={() => run(() => api.acceptWordGame(partnershipId))}
-          onCancel={() => closeGameInvitation(() => api.cancelWordGame(partnershipId))}
-          onDecline={() => closeGameInvitation(() => api.declineWordGame(partnershipId))}
-        />
+        game.requestedById === session.user.id ? (
+          <GameInvitation
+            game={game}
+            userId={session.user.id}
+            disabled={isBusy}
+            acceptBlocked={hasOtherOngoingGame}
+            onAccept={() => run(() => api.acceptWordGame(partnershipId))}
+            onCancel={() => closeGameInvitation(() => api.cancelWordGame(partnershipId))}
+            onDecline={() => closeGameInvitation(() => api.declineWordGame(partnershipId))}
+          />
+        ) : null
       ) : (
         <GameBoard
           game={game}
