@@ -2,3 +2,17 @@
 :focus:not(:focus-visible) {
   outline: none;
 }
+
+/* Text fields use an inset ink edge instead of a colored outer halo. */
+input:not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='range'],
+    [type='button'],
+    [type='submit']
+  ):focus,
+textarea:focus,
+select:focus {
+  outline: 1px solid var(--mp-ink);
+  outline-offset: -4px;
+}

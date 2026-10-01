@@ -128,8 +128,8 @@ body {
 
 .input:focus,
 .game-select:focus {
-  outline: 3px solid var(--mp-coral);
-  outline-offset: 3px;
+  outline: 1px solid var(--mp-ink);
+  outline-offset: -4px;
   box-shadow: 1px 1px 0 var(--mp-lilac);
   transform: translate(3px, 3px);
 }
