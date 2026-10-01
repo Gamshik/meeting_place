@@ -62,6 +62,13 @@
   }
 }
 
+/* Preserve the resting tilt against the global touch hover reset. */
+@media (hover: none), (pointer: coarse) {
+  button.archive-replay:not(:active):hover {
+    transform: rotate(-4deg) !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .archive-replay,
   .archive-replay-icon {
