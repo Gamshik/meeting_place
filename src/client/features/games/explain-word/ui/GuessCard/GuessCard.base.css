@@ -168,8 +168,8 @@
 /* A round ends with a brief result moment, not another persistent panel. */
 .round-outcome {
   position: relative;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   width: min(100%, 760px);
   align-items: center;
   gap: 28px;
@@ -240,8 +240,10 @@
 .round-outcome-words {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  display: flex;
+  flex: 1 1 420px;
+  flex-wrap: wrap;
+  min-width: 0;
   align-items: center;
   gap: 12px;
   animation: round-words-reveal 420ms 180ms ease-out both;
@@ -249,7 +251,9 @@
 
 .round-outcome-words > div {
   display: grid;
+  flex: 1 1 max-content;
   min-width: 0;
+  max-width: 100%;
   gap: 3px;
   padding: 12px 14px;
   border: 2px solid var(--mp-ink);
@@ -260,7 +264,8 @@
 
 .round-outcome-words strong {
   font-size: clamp(17px, 2vw, 22px);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 
 .round-outcome-arrow {
@@ -405,7 +410,8 @@
 
 @media (max-width: 680px) {
   .round-outcome {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
     gap: 14px;
     margin: 18px auto 4px;
     padding: 0;
@@ -436,8 +442,8 @@
   }
 
   .round-outcome-words {
-    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
-    gap: 0;
+    flex: 0 1 auto;
+    gap: 4px;
     padding: 4px;
     border: 2px solid var(--mp-ink);
     border-radius: 14px 14px 14px 5px;
@@ -468,10 +474,6 @@
     color: var(--mp-ink);
     font-size: 18px;
     line-height: 1;
-  }
-
-  .round-outcome-skipped .round-outcome-words {
-    grid-template-columns: 1fr;
   }
 
   .round-outcome-skipped .round-outcome-arrow,

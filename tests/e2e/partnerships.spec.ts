@@ -1430,6 +1430,29 @@ test('lets the explainer approve an inexact guess without automatic checking', a
   await expect(page.getByText('travel document', { exact: true })).toBeVisible()
   await expect(page.getByText('passport', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Score')).toContainText('You1:Bob0')
+  for (const mode of ['live_call', 'recorded'] as const) {
+    game = {
+      ...game,
+      mode,
+      round: { ...game.round!, status: 'skipped', secretWord: 'accommodation' },
+    }
+    for (const width of [1280, 900, 760, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.reload()
+      const word = page.locator('.round-outcome-words strong').first()
+      await expect(word).toHaveText('accommodation')
+      const size = await word.evaluate((element) => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        return {
+          lines: range.getClientRects().length,
+          fits: element.scrollWidth <= element.clientWidth,
+          pageFits: document.documentElement.scrollWidth <= window.innerWidth,
+        }
+      })
+      expect(size).toEqual({ lines: 1, fits: true, pageFits: true })
+    }
+  }
 })
 
 test('gives both live-call players a final 30-second guessing phase', async ({ browser }) => {
