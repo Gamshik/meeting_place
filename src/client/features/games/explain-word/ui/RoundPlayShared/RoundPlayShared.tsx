@@ -48,17 +48,7 @@ export function SecretWordCard({
 }) {
   return (
     <section className="game-surface secret-surface explain-card live-explain-card">
-      <div className="explain-card-topbar">
-        <button
-          type="button"
-          className="explain-skip-control"
-          disabled={disabled}
-          onClick={() => void onSkip()}
-        >
-          Skip word
-        </button>
-      </div>
-      <SecretWordBrief round={round} />
+      <SecretWordBrief round={round} disabled={disabled} onSkip={onSkip} />
     </section>
   )
 }
@@ -95,7 +85,15 @@ export function RoundClock({
   )
 }
 
-export function SecretWordBrief({ round }: { round: NonNullable<WordGame['round']> }) {
+export function SecretWordBrief({
+  round,
+  disabled,
+  onSkip,
+}: {
+  round: NonNullable<WordGame['round']>
+  disabled: boolean
+  onSkip: () => Promise<unknown>
+}) {
   const secretWord = round.secretWord?.trim().toLocaleLowerCase()
   const visibleForbiddenWords = round.forbiddenWords?.filter(
     (word) => word.trim().toLocaleLowerCase() !== secretWord,
@@ -104,7 +102,21 @@ export function SecretWordBrief({ round }: { round: NonNullable<WordGame['round'
   return (
     <div className="explain-brief">
       <div className="secret-word-block">
-        <span>Your secret word</span>
+        <div className="secret-word-heading">
+          <span>Your secret word</span>
+          <button
+            type="button"
+            className="explain-skip-control"
+            aria-label="Skip word"
+            disabled={disabled}
+            onClick={() => void onSkip()}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m5 5 10 7-10 7ZM19 5v14" />
+            </svg>
+            Skip
+          </button>
+        </div>
         <h2>{round.secretWord}</h2>
       </div>
       {visibleForbiddenWords?.length ? (

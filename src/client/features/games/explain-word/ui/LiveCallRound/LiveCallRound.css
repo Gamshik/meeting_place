@@ -142,9 +142,19 @@
   gap: 14px;
 }
 
-.live-explain-card .explain-card-topbar {
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--mp-ink);
+.live-explain-card .secret-word-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.live-explain-card .secret-word-heading > span {
+  min-width: 0;
+  font-size: var(--mp-font-size-supporting);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .live-explain-card .explain-brief {
@@ -211,8 +221,13 @@
 }
 
 .live-explain-card .explain-skip-control {
-  min-height: 38px;
-  padding-inline: 13px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding-inline: 10px;
+  font-size: var(--mp-font-size-body);
   border: 2px solid var(--mp-ink);
   border-radius: 10px 10px 10px 3px;
   background: var(--mp-card);
@@ -223,6 +238,21 @@
     box-shadow 150ms,
     transform 150ms,
     background 150ms;
+}
+
+.live-explain-card .explain-skip-control svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.live-explain-card .explain-skip-control:focus-visible {
+  outline: 3px solid var(--mp-ink);
+  outline-offset: 4px;
 }
 
 .live-explain-card .explain-skip-control:hover:not(:disabled) {
@@ -255,10 +285,6 @@
 
   .live-explain-card.explain-card {
     gap: 10px;
-  }
-
-  .live-explain-card .explain-card-topbar {
-    padding-bottom: 8px;
   }
 
   .live-explain-card .explain-brief {
