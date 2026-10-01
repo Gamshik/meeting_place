@@ -901,6 +901,10 @@ test('starts a word game and submits a browser recording for transcription', asy
   const wordPanel = recordedStage.locator(':scope > .live-explain-card')
   const recordingPanel = recordedStage.locator(':scope > .audio-recorder')
   await expect(wordPanel).toBeVisible()
+  await expect(
+    wordPanel.locator('.secret-word-heading').getByRole('button', { name: 'Skip word' }),
+  ).toBeVisible()
+  await expect(wordPanel.locator('.explain-card-topbar')).toHaveCount(0)
   await expect(recordingPanel).toBeVisible()
   await expect(wordPanel.locator('.audio-recorder')).toHaveCount(0)
   const wordPanelBox = await wordPanel.boundingBox()
@@ -982,6 +986,25 @@ test('starts a word game and submits a browser recording for transcription', asy
   await page.setViewportSize({ width: 1280, height: 720 })
   await page.getByRole('button', { name: 'Send explanation' }).click()
   await expect(page.locator('.clue-orbit')).toBeVisible()
+  const orbitLoops = await page.locator('.clue-orbit-satellite').evaluateAll((tiles) =>
+    tiles.map((tile) => {
+      const animation = tile.getAnimations()[0]!
+      animation.pause()
+      const positionAt = (time: number) => {
+        animation.currentTime = time
+        const rect = tile.getBoundingClientRect()
+        return { x: rect.x, y: rect.y }
+      }
+      const jumps = [2000, 4000].map((boundary) => {
+        const before = positionAt(boundary - 1)
+        const after = positionAt(boundary + 1)
+        return Math.hypot(after.x - before.x, after.y - before.y)
+      })
+      animation.play()
+      return Math.max(...jumps)
+    }),
+  )
+  for (const distance of orbitLoops) expect(distance).toBeLessThan(2)
   for (const width of [1280, 320]) {
     await page.setViewportSize({ width, height: 844 })
     await expect(page.locator('.clue-orbit')).toBeInViewport()
@@ -991,7 +1014,7 @@ test('starts a word game and submits a browser recording for transcription', asy
   await expect(page.locator('.clue-orbit-satellite').first()).toHaveCSS('animation-name', 'none')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.setViewportSize({ width: 1280, height: 720 })
-  await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toHaveCount(0)
   await page.getByRole('button', { name: 'End game' }).click()
   const endDialog = page.getByRole('dialog', { name: 'End game?' })
   await expect(endDialog).toBeVisible()
@@ -1582,7 +1605,7 @@ test('shows the guesser synchronized Recorded timers', async ({ page }, testInfo
   await expect(page.locator('.recorded-waiting-pingpong')).toHaveCount(0)
   await expect(page.locator('.recorded-waiting-mic')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Bob: Recording now' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Waiting for Bob' })).toHaveCount(0)
   await expect(page.getByText('You’ll listen when it’s ready.')).toHaveCount(0)
   await expect(page.getByRole('timer')).toHaveText(/(0:59|1:00)/)
   await expect(page.getByLabel('Your answer')).toHaveCount(0)
@@ -1615,9 +1638,9 @@ test('shows the guesser synchronized Recorded timers', async ({ page }, testInfo
   await expect(page.getByLabel('Your answer')).toBeVisible()
 })
 
-test('shows the partner both the recording and transcript before their answer', async ({
+test('shows Recorded audio above the answer and a collapsible transcript below', async ({
   page,
-}) => {
+}, testInfo) => {
   await signIn(page)
   const roundId = '55555555-5555-4555-8555-555555555555'
   const game: WordGame = {
@@ -1682,10 +1705,8 @@ test('shows the partner both the recording and transcript before their answer', 
 
   await page.goto(`/games/explain-word/${relationshipId}`)
 
-  await expect(page.locator('blockquote')).toContainText(
-    'You need this document to cross a border.',
-  )
-  await expect(page.getByText('Listen to their explanation')).toBeVisible()
+  await expect(page.locator('blockquote')).not.toBeVisible()
+  await expect(page.locator('.guess-flow-art')).toHaveCount(0)
   await expect(page.getByText('Listen and guess')).toBeVisible()
   await expect(page.getByRole('timer')).toHaveText(/(1:29|1:30)/)
   await expect(page.locator('audio')).toHaveAttribute(
@@ -1705,6 +1726,112 @@ test('shows the partner both the recording and transcript before their answer', 
   await expect(answerInput).toBeVisible()
   await expect(answerInput).toHaveAttribute('autocomplete', 'off')
   await expect(answerInput).toHaveAttribute('name', `word-guess-${roundId}`)
+  await answerInput.fill('passport')
+  await expect(page.locator('.score-broadcast')).toBeVisible()
+  await expect(answerInput).toHaveCSS('outline-width', '1px')
+  await expect(answerInput).toHaveCSS('outline-offset', '-4px')
+  expect(await answerInput.evaluate((element) => getComputedStyle(element).outlineColor)).toBe(
+    await answerInput.evaluate((element) => getComputedStyle(element).borderTopColor),
+  )
+  for (const width of [1280, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    expect(
+      await page.locator('.score-broadcast').evaluate((element) => element.clientWidth),
+    ).toBeLessThan(260)
+    const toggle = page.locator('.guess-transcript summary')
+    await toggle.focus()
+    await page.evaluate(async () => {
+      await Promise.all(
+        document
+          .getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => undefined)),
+      )
+    })
+    const before = await answerInput.boundingBox()
+    await expect(toggle).toHaveText('Show transcript', { useInnerText: true })
+    await toggle.focus()
+    await page.keyboard.press('Enter')
+    await expect(toggle).toHaveText('Hide transcript', { useInnerText: true })
+    await expect(page.locator('.guess-transcript-reveal')).toHaveCSS(
+      'animation-name',
+      'transcript-open',
+    )
+    await page.locator('.guess-transcript-reveal').evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished))
+    })
+    await expect(page.locator('blockquote')).toBeVisible()
+    await expect(page.locator('blockquote')).toContainText(
+      'You need this document to cross a border.',
+    )
+    const after = await answerInput.boundingBox()
+    expect(Math.abs(after!.y - before!.y)).toBeLessThan(1)
+    const transcriptBox = await page.locator('.guess-transcript').boundingBox()
+    expect(transcriptBox!.y).toBeGreaterThan(after!.y + after!.height)
+    await expect(answerInput).toHaveValue('passport')
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    ).toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath(`guess-transcript-${width}.png`),
+      fullPage: true,
+    })
+    await toggle.press('Space')
+    await expect(page.locator('blockquote')).not.toBeVisible()
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.locator('.guess-transcript summary').click()
+  await expect(page.locator('.guess-transcript-reveal')).toHaveCSS('animation-name', 'none')
+  await expect(page.locator('blockquote')).toBeVisible()
+  for (const guess of ['se', 'supercalifragilisticexpialidocious'.repeat(2)]) {
+    game.partner.displayName = 'Alexandra Morrison'
+    game.scores = { you: 12, partner: 10 }
+    game.round!.guess = guess
+    for (const width of [1280, 1150, 1024, 900, 807, 800, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.reload()
+      const review = page.locator('.guess-review-card.is-guesser')
+      await expect(review).toBeVisible()
+      const scoreboard = page.getByLabel('Score', { exact: true })
+      await expect(scoreboard).toContainText('Alexandra Morrison')
+      const scoreBox = await scoreboard.boundingBox()
+      for (const control of [
+        page.locator('.game-time-readout, .game-time-settings'),
+        page.getByRole('button', { name: 'How to play' }),
+        page.getByRole('button', { name: 'End game', exact: true }),
+      ]) {
+        const controlBox = await control.boundingBox()
+        expect(controlBox).not.toBeNull()
+        expect(
+          scoreBox!.x + scoreBox!.width + 5 <= controlBox!.x ||
+            controlBox!.x + controlBox!.width <= scoreBox!.x ||
+            scoreBox!.y >= controlBox!.y + controlBox!.height + 5 ||
+            scoreBox!.y + scoreBox!.height + 5 <= controlBox!.y,
+        ).toBe(true)
+      }
+      expect(
+        await scoreboard.evaluate((element) => element.scrollWidth <= element.clientWidth),
+      ).toBe(true)
+      const scores = await scoreboard
+        .locator('strong')
+        .evaluateAll((elements) => elements.map((element) => element.getBoundingClientRect().y))
+      expect(scores[0]).toBe(scores[1])
+      await page.screenshot({
+        path: testInfo.outputPath(`broadcast-${width}-${guess.length}.png`),
+        animations: 'disabled',
+      })
+      await expect(review.locator('strong')).toHaveText(guess)
+      const box = await review.boundingBox()
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      expect(await review.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+        true,
+      )
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true)
+      if (guess === 'se' && width === 807) expect(box!.width).toBeLessThan(400)
+    }
+  }
   await expect(page.getByRole('table')).toHaveCount(0)
 })
 
@@ -2350,7 +2477,9 @@ test('the game creator can change the next round explanation time', async ({ pag
   await expect(page.getByText(/It will apply from the next round/)).toBeVisible()
 })
 
-test('joining directly from notifications accepts before entering the game', async ({ page }) => {
+test('pending recipients stay in the room until leaving to join from notifications', async ({
+  page,
+}) => {
   await signIn(page)
   await page.route('**/api/partnerships**', (route) =>
     route.fulfill({ json: { data: [relationship('incoming', 'active')], nextCursor: null } }),
@@ -2374,9 +2503,30 @@ test('joining directly from notifications accepts before entering the game', asy
   )
   await page.route(`**/api/games/explain-word/${relationshipId}**`, (route) => {
     if (route.request().url().endsWith('/accept')) accepted = true
-    return route.fulfill({ json: { data: activeGame } })
+    return route.fulfill({
+      json: {
+        data: accepted
+          ? activeGame
+          : {
+              ...activeGame,
+              status: 'pending',
+              requestedById: partnerId,
+              acceptedAt: null,
+              round: null,
+              rounds: [],
+            },
+      },
+    })
   })
-  await page.goto('/')
+  await page.goto(`/games/explain-word/${relationshipId}`)
+  await expect(page.getByRole('link', { name: 'Lobby' })).toBeVisible()
+  await expect(page.locator('.game-invitation-card')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Accept and play' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Game invitation' })).toHaveCount(0)
+  await expect(page).toHaveURL(`/games/explain-word/${relationshipId}`)
+  expect(accepted).toBe(false)
+  await page.getByRole('link', { name: 'Lobby' }).click()
+  await expect(page).toHaveURL('/')
   const gameRequest = page.getByRole('region', { name: 'Game invitation' })
   await expect(gameRequest).toBeVisible()
   await expect(gameRequest.getByRole('button', { name: 'Join game' })).toBeVisible()
