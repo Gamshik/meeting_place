@@ -241,6 +241,25 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      start_my_ai_usage: {
+        Args: { p_id: string; p_job_id: string; p_token: string; p_receipt: Json }
+        Returns: boolean
+      }
+      record_my_ai_usage: {
+        Args: { p_id: string; p_token: string; p_receipt: Json }
+        Returns: boolean
+      }
+      list_my_ai_usage: {
+        Args: { p_from: string; p_to: string; p_before_created_at?: string; p_before_id?: string }
+        Returns: {
+          id: string
+          requester_id: string
+          game_id: string
+          operation: string
+          created_at: string
+          receipt: Json
+        }[]
+      }
       reserve_my_game_ai: {
         Args: {
           p_game_id: string

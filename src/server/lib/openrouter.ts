@@ -1,3 +1,4 @@
+import type { UsageRecorder } from './ai-usage'
 import { z } from 'zod'
 
 import { wordTranscriptSchema } from '../../shared/contracts'
@@ -47,7 +48,8 @@ const chatCompletionSchema = z.object({
 export class OpenRouterError extends Error {
   constructor(
     message: string,
-    readonly kind: 'not_configured' | 'request_failed' | 'invalid_response',
+    readonly kind: 'not_configured' | 'request_failed' | 'invalid_response' | 'rate_limited',
+    readonly retryAfter?: number,
   ) {
     super(message)
     this.name = 'OpenRouterError'
@@ -55,6 +57,7 @@ export class OpenRouterError extends Error {
 }
 
 type OpenRouterConfiguration = {
+  usage?: UsageRecorder
   apiKey: string | undefined
   siteUrl?: string
   textModel: string | undefined
@@ -139,29 +142,35 @@ export async function transcribeExplanation(
 
   const requestSignal = providerSignal(signal)
   requestSignal.throwIfAborted()
-  const response = await fetch(`${OPENROUTER_URL}/audio/transcriptions`, {
-    signal: requestSignal,
-    method: 'POST',
-    headers: openRouterHeaders(configuration),
-    body: JSON.stringify({
-      model: TRANSCRIPTION_MODEL,
-      input_audio: { data: audioData, format },
-      language: 'en',
-      temperature: 0,
-      response_format: 'verbose_json',
-      timestamp_granularities: ['word'],
-      provider: {
-        options: {
-          azure: {
-            enhancedMode: { modelOptions: { transcribeStyle: 'verbatim' } },
+  const { response, body } = await trackedRequest(
+    configuration,
+    TRANSCRIPTION_MODEL,
+    `${OPENROUTER_URL}/audio/transcriptions`,
+    {
+      signal: requestSignal,
+      method: 'POST',
+      headers: openRouterHeaders(configuration),
+      body: JSON.stringify({
+        model: TRANSCRIPTION_MODEL,
+        input_audio: { data: audioData, format },
+        language: 'en',
+        temperature: 0,
+        response_format: 'verbose_json',
+        timestamp_granularities: ['word'],
+        provider: {
+          options: {
+            azure: {
+              enhancedMode: { modelOptions: { transcribeStyle: 'verbatim' } },
+            },
           },
         },
-      },
-    }),
-  })
+      }),
+    },
+  )
 
   if (!response.ok) {
-    const providerError = providerErrorSchema.safeParse(await readProviderJson(response))
+    if (response.status === 429) throw providerBusyError(response)
+    const providerError = providerErrorSchema.safeParse(body)
     console.error('OpenRouter transcription failed', {
       status: response.status,
       code: providerError.success ? providerError.data.error?.code : undefined,
@@ -169,7 +178,7 @@ export async function transcribeExplanation(
     })
     throw new OpenRouterError('The explanation could not be transcribed.', 'request_failed')
   }
-  const parsed = transcriptionSchema.safeParse(await readProviderJson(response))
+  const parsed = transcriptionSchema.safeParse(body)
   if (!parsed.success) {
     throw new OpenRouterError('The transcription response was invalid.', 'invalid_response')
   }
@@ -192,29 +201,35 @@ async function createStructuredCompletion(
   }
   const requestSignal = providerSignal(input.signal)
   requestSignal.throwIfAborted()
-  const response = await fetch(`${OPENROUTER_URL}/chat/completions`, {
-    signal: requestSignal,
-    method: 'POST',
-    headers: openRouterHeaders(configuration),
-    body: JSON.stringify({
-      model: configuration.textModel,
-      temperature: input.temperature ?? 0.4,
-      messages: [
-        { role: 'system', content: input.system },
-        { role: 'user', content: input.user },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: { name: input.name, strict: true, schema: input.schema },
-      },
-    }),
-  })
+  const { response, body } = await trackedRequest(
+    configuration,
+    configuration.textModel,
+    `${OPENROUTER_URL}/chat/completions`,
+    {
+      signal: requestSignal,
+      method: 'POST',
+      headers: openRouterHeaders(configuration),
+      body: JSON.stringify({
+        model: configuration.textModel,
+        temperature: input.temperature ?? 0.4,
+        messages: [
+          { role: 'system', content: input.system },
+          { role: 'user', content: input.user },
+        ],
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: input.name, strict: true, schema: input.schema },
+        },
+      }),
+    },
+  )
 
   if (!response.ok) {
+    if (response.status === 429) throw providerBusyError(response)
     console.error('OpenRouter text request failed', { status: response.status })
     throw new OpenRouterError('Word generation is temporarily unavailable.', 'request_failed')
   }
-  const parsed = chatCompletionSchema.safeParse(await readProviderJson(response))
+  const parsed = chatCompletionSchema.safeParse(body)
   const content = parsed.success ? parsed.data.choices[0]?.message.content : undefined
   if (!content)
     throw new OpenRouterError('The text model response was invalid.', 'invalid_response')
@@ -228,6 +243,22 @@ async function createStructuredCompletion(
 function providerSignal(signal: AbortSignal | undefined) {
   const timeout = AbortSignal.timeout(60_000)
   return signal ? AbortSignal.any([signal, timeout]) : timeout
+}
+
+function providerBusyError(response: Response) {
+  console.error('OpenRouter provider rate limited', { status: 429 })
+  const header = response.headers.get('Retry-After')
+  const seconds =
+    header && /^\d+$/.test(header)
+      ? Number(header)
+      : header
+        ? Math.ceil((Date.parse(header) - Date.now()) / 1000)
+        : NaN
+  return new OpenRouterError(
+    'The AI provider is temporarily busy.',
+    'rate_limited',
+    Number.isFinite(seconds) && seconds >= 0 ? Math.max(1, seconds) : undefined,
+  )
 }
 
 function openRouterHeaders(configuration: OpenRouterConfiguration) {
@@ -256,4 +287,26 @@ async function readProviderJson(response: Response): Promise<unknown> {
     // An interrupted body is an uncertain network failure, not a completed response.
     throw error
   }
+}
+
+async function trackedRequest(
+  configuration: OpenRouterConfiguration,
+  model: string,
+  url: string,
+  init: RequestInit,
+) {
+  await configuration.usage?.start(model)
+  init.signal?.throwIfAborted()
+  const response = await fetch(url, init)
+  let body: unknown
+  try {
+    body = await readProviderJson(response)
+  } catch (error) {
+    // Preserve the generation header even when the body is lost.
+    await configuration.usage?.finish(response, null)
+    throw error
+  }
+  // Capture charges even for rejected responses or unusable model output.
+  await configuration.usage?.finish(response, body)
+  return { response, body }
 }

@@ -295,3 +295,28 @@ the game route. Active sessions are reopened instead of restarted. The shared no
 uses the same snapshot and can accept invitations without a route change when the player is free.
 Notifications have no separate persistent store or push service; the bell marks currently pending
 incoming invitations.
+
+## AI usage ledger
+
+Paid provider dispatch writes an initial unknown-cost event through `start_my_ai_usage`, after
+checking the live reservation's actor and private token. Completion updates that same event through
+`record_my_ai_usage`; the token is not returned by list operations. This update remains possible
+after lease expiry so late responses can still be accounted for. One token can start only one event.
+The ledger has no game foreign-key cascade, so accounting survives game deletion; account deletion
+removes its events. No prompts, transcripts, or audio are copied to this ledger.
+
+OpenRouter usage metadata is captured before domain-response validation. Thus invalid cards,
+provider errors, and later game-save failures do not erase known charges. Network ambiguity or
+missing metadata remains null rather than zero. Final-save retries are idempotent; a failed save
+leaves the signed initial unknown event. Cached game results never enter provider dispatch and
+therefore never add another usage row. There are no quotas or model-price tables.
+
+The user-authenticated RPC boundary cannot itself attest that metadata originated at OpenRouter.
+The Worker signs receipts under a distinct HMAC domain and verifies their actor, event, game, and
+operation bindings before reporting them. Browser-forged receipts are excluded and counted as
+unverified. `AI_USAGE_SIGNING_KEY` optionally supplies a stable key; otherwise the existing
+OpenRouter key is used. Preserve the signing value during provider-key rotation. SQL inspection
+alone does not verify signatures. The `/api/ai-usage` route reports only the current actor's verified
+entries using stable descending date/ID pagination. Its totals are explicitly per page, with
+separate transcription and shared-card costs, unknown costs, and unverifiable counts. Decimal costs
+are stored in signed payloads at 12 places and summed with integer arithmetic.

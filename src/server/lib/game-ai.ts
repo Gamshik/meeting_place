@@ -1,3 +1,4 @@
+import { createUsageRecorder, type UsageRecorder } from './ai-usage'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../../shared/database.types'
 import { z } from 'zod'
@@ -29,8 +30,9 @@ export async function runGameAi<T>(
     fingerprint: string
   },
   schema: z.ZodType<T>,
-  work: (signal: AbortSignal) => Promise<T>,
+  work: (signal: AbortSignal, usage: UsageRecorder) => Promise<T>,
   signingKey: string | undefined,
+  usageSigningKey = signingKey,
 ): Promise<T> {
   if (!signingKey) throw new OpenRouterError('OpenRouter is not configured.', 'not_configured')
   const signal = AbortSignal.timeout(90_000)
@@ -60,7 +62,18 @@ export async function runGameAi<T>(
   let result: T
   try {
     signal.throwIfAborted()
-    result = schema.parse(await work(signal))
+    result = schema.parse(
+      await work(
+        signal,
+        createUsageRecorder(supabase, usageSigningKey!, {
+          userId: input.requesterId,
+          gameId: input.gameId,
+          operation: input.operation,
+          jobId: reservation.id,
+          token,
+        }),
+      ),
+    )
     signal.throwIfAborted()
   } catch (error) {
     // A provider response confirms completion/failure. A timeout or network error

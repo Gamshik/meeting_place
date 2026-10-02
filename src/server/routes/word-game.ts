@@ -214,14 +214,15 @@ wordGameRoutes.post('/:partnershipId/rounds', async (context) => {
         fingerprint: parsed.data.topic,
       },
       generatedWordSchema.array().min(1).max(20),
-      (signal) =>
+      (signal, usage) =>
         generateGameWords(
-          openRouterConfiguration(context.env),
+          { ...openRouterConfiguration(context.env), usage },
           parsed.data.topic,
           exclusions ?? [],
           signal,
         ),
       context.env.OPENROUTER_API_KEY,
+      context.env.AI_USAGE_SIGNING_KEY ?? context.env.OPENROUTER_API_KEY,
     )
     await cacheGeneratedCards(
       context.env.WORD_CARD_DATABASE_URL,
@@ -319,20 +320,21 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (cont
         fingerprint,
       },
       transcriptionSchema,
-      async (signal) => {
+      async (signal, usage) => {
         const { error: uploadError } = await supabase.storage
           .from(RECORDING_BUCKET)
           .upload(`${game.id}/${roundId}.wav`, audio, { contentType: 'audio/wav', upsert: true })
         if (uploadError) throw new GameAiError('upload_failed')
         signal.throwIfAborted()
         return transcribeExplanation(
-          openRouterConfiguration(context.env),
+          { ...openRouterConfiguration(context.env), usage },
           toBase64(audioBuffer),
           format,
           signal,
         )
       },
       context.env.OPENROUTER_API_KEY,
+      context.env.AI_USAGE_SIGNING_KEY ?? context.env.OPENROUTER_API_KEY,
     )
   } catch (error) {
     return openRouterErrorResponse(context, error)
@@ -620,6 +622,15 @@ function gameDatabaseError(
 }
 
 function openRouterErrorResponse(context: Parameters<typeof errorResponse>[0], error: unknown) {
+  if (error instanceof OpenRouterError && error.kind === 'rate_limited') {
+    if (error.retryAfter !== undefined) context.header('Retry-After', String(error.retryAfter))
+    return errorResponse(
+      context,
+      503,
+      'ai_provider_busy',
+      'The AI service is busy. Please try again shortly.',
+    )
+  }
   if (error instanceof GameAiError) {
     if (error.retryAfter) context.header('Retry-After', String(error.retryAfter))
     if (error.kind === 'processing')

@@ -45,6 +45,47 @@ const env = {
   OPENROUTER_TEXT_MODEL: 'test/text-model',
 }
 
+it.each([
+  ['45', '45'],
+  [null, null],
+])('reports provider throttling with its retry header %s', async (header, expected) => {
+  mocks.rpc.mockResolvedValue({
+    data: game({
+      round: round({
+        recordingStartedAt: '2026-09-11T12:00:00Z',
+        recordingFinishedAt: '2026-09-11T12:00:30Z',
+      }),
+    }),
+    error: null,
+  })
+  const provider = vi.fn().mockResolvedValue(
+    Response.json(
+      { error: { code: 429 } },
+      {
+        status: 429,
+        headers: header ? { 'Retry-After': header } : {},
+      },
+    ),
+  )
+  vi.stubGlobal('fetch', provider)
+  const body = new FormData()
+  body.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+  const response = await app.request(
+    `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
+    {
+      method: 'POST',
+      headers: { Authorization: 'Bearer token' },
+      body,
+    },
+    env,
+  )
+  expect(response.status).toBe(503)
+  expect(await response.json()).toMatchObject({ error: { code: 'ai_provider_busy' } })
+  expect(response.headers.get('Retry-After')).toBe(expected)
+  expect(provider).toHaveBeenCalledOnce()
+  expect(mocks.rpc).not.toHaveBeenCalledWith('submit_word_game_transcript', expect.anything())
+})
+
 it.each(['processing', 'conflict', 'unavailable'] as const)(
   'blocks recording work when reservation is %s',
   async (kind) => {
@@ -196,7 +237,7 @@ beforeEach(() => {
   mocks.runGameAi
     .mockReset()
     .mockImplementation((...args: Parameters<typeof runGameAi>) =>
-      args[3](AbortSignal.timeout(90_000)),
+      args[3](AbortSignal.timeout(90_000), { start: async () => {}, finish: async () => {} }),
     )
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: { id: userId } }, error: null })
   mocks.cacheGeneratedCards.mockReset().mockResolvedValue(undefined)

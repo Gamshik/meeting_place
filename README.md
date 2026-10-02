@@ -307,6 +307,24 @@ If the RPC migration or Supabase API is unavailable, paid work fails closed with
 `503 ai_reservation_unavailable`. Already pooled cards remain playable. Apply the migration
 before deploying; old Workers do not honor reservations, so retire the old version during rollout.
 
+## AI usage accounting
+
+Each actual OpenRouter attempt records a signed receipt with the triggering account, operation,
+model, provider request ID, reported cost, token counts, and audio duration when available.
+There are no usage quotas or manually maintained prices. Cached retries and pooled cards do not
+add another charge. Unknown costs remain null and are counted separately from confirmed zero.
+
+Apply `202610020004_track_ai_usage.sql` with `npm run db:push`, then restart development or deploy
+the updated Worker. Accounting uses the existing authenticated Supabase connection. No new secret
+is required. Optional `AI_USAGE_SIGNING_KEY` provides a stable signing key independent of OpenRouter
+key rotation; set it before first use, or preserve the previous signing value when rotating keys.
+The read-only `GET /api/ai-usage` endpoint reports the signed-in account's verified entries and
+page subtotals, defaulting to the current UTC month. It supports `from`, `to`, `beforeCreatedAt`,
+and `beforeId` parameters. Costs use decimal strings; unknown and unverifiable rows are explicit.
+
+See [the usage accounting check guide](docs/ai-usage-testing.md) for browser steps, examples,
+repeat-submission checks, tests, pagination, and failure/reconciliation limitations.
+
 ## Configure Google sign-in
 
 1. In Google Cloud Console, create or select a project.

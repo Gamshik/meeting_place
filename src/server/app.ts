@@ -1,3 +1,4 @@
+import { aiUsageRoutes } from './routes/ai-usage'
 import { Hono } from 'hono'
 import { secureHeaders } from 'hono/secure-headers'
 
@@ -27,6 +28,7 @@ app.get('/api/health', (context) =>
 )
 
 app.use('/api/*', requireAuthentication)
+app.route('/api/ai-usage', aiUsageRoutes)
 app.route('/api/me', meRoutes)
 app.route('/api/partnerships', partnershipRoutes)
 app.route('/api/profiles', profileRoutes)

@@ -139,6 +139,81 @@ describe('database authorization and lifecycle', () => {
     ).toEqual([{ result: true }])
     expect((await reserve(bob)).rows[0]!.result.status).toBe('reserved')
   })
+  it('records one usage event per attempt, keeps it after lease expiry, and hides it from other users', async () => {
+    const gameId = await aiGame()
+    await asUser(alice)
+    const reserved = await db.query<{ result: { id: string } }>(
+      "select public.reserve_my_game_ai($1,null,'cards','Travel',$2) result",
+      [gameId, alice],
+    )
+    const jobId = reserved.rows[0]!.result.id
+    const start = () =>
+      rows('select public.start_my_ai_usage($1,$2,$3,$4) result', [
+        eve,
+        jobId,
+        alice,
+        { payload: 'initial', signature: 'test' },
+      ])
+    expect(await start()).toEqual([{ result: true }])
+    expect(await start()).toEqual([{ result: true }])
+    const list = () =>
+      rows("select * from public.list_my_ai_usage(now()-interval '1 day',now()+interval '1 day')")
+    expect(await list()).toHaveLength(1)
+    expect((await list())[0]).not.toHaveProperty('token')
+    await asUser(bob)
+    expect(await list()).toHaveLength(0)
+    expect(
+      await rows('select public.record_my_ai_usage($1,$2,$3) result', [eve, alice, {}]),
+    ).toEqual([{ result: false }])
+    await db.exec('reset role')
+    await rows(
+      "update private.game_ai_jobs set expires_at=clock_timestamp()-interval '1 second' where id=$1",
+      [jobId],
+    )
+    await asUser(alice)
+    expect(await rows('select public.record_my_ai_usage($1,$2,$3) result', [eve, bob, {}])).toEqual(
+      [{ result: false }],
+    )
+    expect(
+      await rows('select public.record_my_ai_usage($1,$2,$3) result', [
+        eve,
+        alice,
+        { payload: 'final', signature: 'test' },
+      ]),
+    ).toEqual([{ result: true }])
+    const retry = await db.query<{ result: { id: string } }>(
+      "select public.reserve_my_game_ai($1,null,'cards','Travel',$2) result",
+      [gameId, bob],
+    )
+    expect(
+      await rows('select public.start_my_ai_usage($1,$2,$3,$4) result', [
+        bob,
+        retry.rows[0]!.result.id,
+        bob,
+        {},
+      ]),
+    ).toEqual([{ result: true }])
+    expect(await list()).toHaveLength(2)
+    expect(
+      await rows(
+        "select * from public.list_my_ai_usage(now()+interval '1 day',now()+interval '2 days')",
+      ),
+    ).toHaveLength(0)
+  })
+  it('rejects accounting writes without a live owned reservation', async () => {
+    const gameId = await aiGame()
+    await asUser(alice)
+    expect(
+      await rows('select public.start_my_ai_usage($1,$2,$3,$4) result', [eve, gameId, alice, {}]),
+    ).toEqual([{ result: false }])
+    await expect(rows('select * from private.ai_usage_events')).rejects.toThrow(/permission denied/)
+  })
+  it('denies anonymous accounting RPC access', async () => {
+    await db.exec('set local role anon')
+    await expect(
+      rows("select * from public.list_my_ai_usage(now()-interval '1 day',now())"),
+    ).rejects.toThrow(/permission denied/)
+  })
   it('does not allow authenticated outsiders to reserve another game', async () => {
     const id = await aiGame()
     await asUser(eve)
