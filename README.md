@@ -208,6 +208,54 @@ Apply it with a coordinated deployment of the current Worker and frontend; do no
 application version against the updated RPC contracts. Always apply new migrations rather than
 editing previously deployed ones.
 
+## Configure the backend card writer
+
+The migration `202610020001_restrict_shared_card_writes.sql` removes browser access to shared
+card writes and creates the `word_card_writer` PostgreSQL login without a password. The Worker
+uses that login only to execute `private.cache_word_game_cards`; it has no direct application
+table access. All ordinary API operations continue to use the signed-in user's JWT.
+
+After applying the migrations, connect as the database administrator using `psql` and set a
+unique password interactively (do not commit it or include it in a SQL migration):
+
+```text
+\password word_card_writer
+```
+
+Set `WORD_CARD_DATABASE_URL` in `.dev.vars` for development and as a Cloudflare Worker secret:
+
+```sh
+npx wrangler secret put WORD_CARD_DATABASE_URL
+```
+
+For hosted Supabase, copy the project's **transaction pooler** connection string from its Connect
+dialog. Replace the username with `word_card_writer.PROJECT_REF` and use that role's password,
+percent-encoded. Keep the actual pooler host shown by Supabase and require TLS verification:
+
+```text
+postgresql://word_card_writer.PROJECT_REF:ENCODED_PASSWORD@YOUR_POOLER_HOST:6543/postgres?sslmode=verify-full
+```
+
+For local Supabase, use:
+
+```text
+postgresql://word_card_writer:ENCODED_PASSWORD@127.0.0.1:54322/postgres
+```
+
+Never substitute the `postgres` login or grant `word_card_writer` to `authenticated`, `anon`,
+or `authenticator`. Never put this URL in a `VITE_` variable. The Worker makes a short-lived,
+parameterized connection through `pg` and closes it after each generated batch; transaction
+pooling avoids retaining an edge connection between requests. See the official
+[Supabase connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres)
+and [Cloudflare PostgreSQL guide](https://developers.cloudflare.com/workers/tutorials/postgres/).
+
+Deploy this change by applying the forward migration, setting the role password and Worker
+secret, and then deploying the updated Worker. Existing stored cards still work without the
+writer secret; generation is skipped until it is configured. If no stored fallback exists,
+the API returns `503 word_card_store_unavailable`. The old Worker cannot replenish the pool
+after the migration, so coordinate the rollout. To rotate the credential, change the role
+password and replace the Worker secret; check the pooler's password cache behavior when rotating.
+
 ## Configure Google sign-in
 
 1. In Google Cloud Console, create or select a project.
@@ -318,7 +366,8 @@ returns to Supabase's `/auth/v1/callback`, and Supabase returns to this applicat
 ## Security notes
 
 - Never expose or commit the Supabase service-role key.
-- Browser and Worker database access uses the current user's JWT and the publishable/anon key.
+- Ordinary browser and Worker database access uses the current user's JWT and the publishable/anon
+  key. Shared card insertion alone uses the restricted backend login described above.
 - Invitations are created by a `security definer` database function that performs an exact username
   lookup; authenticated users cannot enumerate every profile.
 - Partnership changes are performed by database functions with participant checks.

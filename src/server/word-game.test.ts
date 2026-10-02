@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  cacheGeneratedCards: vi.fn(),
   createSignedUrl: vi.fn(),
   getUser: vi.fn(),
   rpc: vi.fn(),
@@ -16,7 +17,13 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }))
 
+vi.mock('./lib/word-card-store', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/word-card-store')>()),
+  cacheGeneratedCards: mocks.cacheGeneratedCards,
+}))
+
 import { app } from './app'
+import { WordCardStoreError } from './lib/word-card-store'
 import type { AppEnvironment } from './types'
 
 const userId = '11111111-1111-4111-8111-111111111111'
@@ -25,6 +32,7 @@ const partnershipId = '33333333-3333-4333-8333-333333333333'
 const gameId = '44444444-4444-4444-8444-444444444444'
 const roundId = '55555555-5555-4555-8555-555555555555'
 const env = {
+  WORD_CARD_DATABASE_URL: 'postgresql://word_card_writer:private-password@localhost/postgres',
   SUPABASE_URL: 'https://example.supabase.co',
   SUPABASE_ANON_KEY: 'test-key',
   OPENROUTER_API_KEY: 'openrouter-key',
@@ -93,6 +101,7 @@ function jsonRequest(
 
 beforeEach(() => {
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: { id: userId } }, error: null })
+  mocks.cacheGeneratedCards.mockReset().mockResolvedValue(undefined)
   mocks.rpc.mockReset()
   mocks.storageUpload
     .mockReset()
@@ -526,7 +535,6 @@ describe('explain-word game API', () => {
       .mockResolvedValueOnce({ data: game(), error: null })
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({ data: [], error: null })
-      .mockResolvedValueOnce({ data: 2, error: null })
       .mockResolvedValueOnce({ data: game({ round: round() }), error: null })
     const providerFetch = vi.fn().mockResolvedValue(
       Response.json({
@@ -556,11 +564,14 @@ describe('explain-word game API', () => {
 
     const response = await jsonRequest(`/api/games/explain-word/${partnershipId}/rounds`, 'POST', {
       topic: 'Travel',
+      requesterId: partnerId,
+      cards: [{ word: 'forged card' }],
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.rpc).toHaveBeenCalledWith('cache_word_game_cards', {
-      p_cards: [
+    expect(mocks.cacheGeneratedCards).toHaveBeenCalledWith(env.WORD_CARD_DATABASE_URL, {
+      requesterId: userId,
+      cards: [
         {
           word: 'passport',
           acceptedAnswers: ['passport', 'passports'],
@@ -572,9 +583,9 @@ describe('explain-word game API', () => {
           forbiddenWords: ['suitcase', 'suitcases'],
         },
       ],
-      p_game_id: gameId,
-      p_source_model: 'test/text-model',
-      p_topic: 'Travel',
+      gameId: gameId,
+      sourceModel: 'test/text-model',
+      topic: 'Travel',
     })
     expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
       p_allow_seen: false,
@@ -590,7 +601,50 @@ describe('explain-word game API', () => {
       temperature: 0.85,
       response_format: { json_schema: { name: 'explain_word_batch' } },
     })
-    expect(await response.text()).not.toContain('openrouter-key')
+    const responseBody = await response.text()
+    expect(responseBody).not.toContain('openrouter-key')
+    expect(responseBody).not.toContain('private-password')
+    expect(mocks.rpc).not.toHaveBeenCalledWith('cache_word_game_cards', expect.anything())
+  })
+
+  it('uses the stored-card fallback when the restricted writer fails', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game(), error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: game({ round: round() }), error: null })
+    mocks.cacheGeneratedCards.mockRejectedValue(new WordCardStoreError())
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        Response.json({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  cards: [
+                    {
+                      word: 'passport',
+                      acceptedAnswers: ['passport'],
+                      forbiddenWords: ['passport'],
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      ),
+    )
+    const response = await jsonRequest(`/api/games/explain-word/${partnershipId}/rounds`, 'POST', {
+      topic: 'Travel',
+    })
+    expect(response.status).toBe(201)
+    expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
+      p_allow_seen: true,
+      p_game_id: gameId,
+      p_topic: 'Travel',
+    })
   })
 
   it('reports missing AI configuration before generating a word', async () => {
@@ -603,10 +657,34 @@ describe('explain-word game API', () => {
       `/api/games/explain-word/${partnershipId}/rounds`,
       'POST',
       { topic: 'Travel' },
-      { SUPABASE_URL: env.SUPABASE_URL, SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY },
+      {
+        WORD_CARD_DATABASE_URL: env.WORD_CARD_DATABASE_URL,
+        SUPABASE_URL: env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY,
+      },
     )
     expect(response.status).toBe(503)
     await expect(response.json()).resolves.toMatchObject({ error: { code: 'ai_not_configured' } })
+  })
+
+  it('does not spend on AI when the dedicated writer is not configured', async () => {
+    mocks.rpc
+      .mockResolvedValueOnce({ data: game(), error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: null, error: null })
+    const providerFetch = vi.fn()
+    vi.stubGlobal('fetch', providerFetch)
+    const response = await jsonRequest(
+      `/api/games/explain-word/${partnershipId}/rounds`,
+      'POST',
+      { topic: 'Travel', requesterId: partnerId, cards: [] },
+      { ...env, WORD_CARD_DATABASE_URL: undefined },
+    )
+    expect(response.status).toBe(503)
+    expect(await response.json()).toMatchObject({ error: { code: 'word_card_store_unavailable' } })
+    expect(providerFetch).not.toHaveBeenCalled()
+    expect(mocks.cacheGeneratedCards).not.toHaveBeenCalled()
   })
 
   it('falls back to a stored card when the AI is unavailable', async () => {
@@ -620,7 +698,11 @@ describe('explain-word game API', () => {
       `/api/games/explain-word/${partnershipId}/rounds`,
       'POST',
       { topic: 'Travel' },
-      { SUPABASE_URL: env.SUPABASE_URL, SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY },
+      {
+        WORD_CARD_DATABASE_URL: env.WORD_CARD_DATABASE_URL,
+        SUPABASE_URL: env.SUPABASE_URL,
+        SUPABASE_ANON_KEY: env.SUPABASE_ANON_KEY,
+      },
     )
 
     expect(response.status).toBe(201)
@@ -657,7 +739,6 @@ describe('explain-word game API', () => {
       .mockResolvedValueOnce({ data: game(), error: null })
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({ data: ['passport'], error: null })
-      .mockResolvedValueOnce({ data: 0, error: null })
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({
         data: game({ round: round({ secretWord: 'passport' }) }),

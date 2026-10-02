@@ -632,6 +632,94 @@ describe('database authorization and lifecycle', () => {
     )
   })
 
+  it('denies direct shared-card writes and limits the backend role', async () => {
+    for (const role of ['anon', 'authenticated']) {
+      await db.exec(`reset role; set local role ${role}`)
+      for (const sql of [
+        "select public.cache_word_game_cards(null, 'Travel', 'forged', '[]')",
+        "select public.store_word_game_cards('Travel', 'forged', '[]')",
+        "select private.cache_word_game_cards(null, null, 'Travel', 'forged', '[]')",
+      ]) {
+        await db.exec('savepoint denied_card_write')
+        await expect(rows(sql)).rejects.toThrow(/permission denied/)
+        await db.exec('rollback to savepoint denied_card_write')
+      }
+    }
+    await db.exec('reset role')
+    expect(
+      await rows("select pg_has_role('authenticated', 'word_card_writer', 'MEMBER') member"),
+    ).toEqual([{ member: false }])
+    await db.exec('reset role; set local role word_card_writer')
+    for (const sql of [
+      'select * from public.profiles',
+      'select * from public.word_game_cards',
+      "select public.store_word_game_cards('Travel', 'forged', '[]')",
+      "select public.cache_word_game_cards(null, 'Travel', 'forged', '[]')",
+      "insert into public.word_game_cards(topic) values ('Travel')",
+    ]) {
+      await db.exec('savepoint denied_writer_access')
+      await expect(rows(sql)).rejects.toThrow(/permission denied/)
+      await db.exec('rollback to savepoint denied_writer_access')
+    }
+  })
+
+  it.each([
+    'outsider',
+    'wrong turn',
+    'missing identity',
+    'open round',
+    'paused',
+    'ended partnership',
+  ])('rejects a backend card save for %s', async (state) => {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const gameId = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [gameId])
+    await asUser(alice)
+    if (state === 'open round')
+      await rows('select public.create_word_game_round_from_pool($1,$2,false)', [gameId, 'Travel'])
+    if (state === 'ended partnership')
+      await rows('select public.end_partnership($1)', [invitation.partnershipId])
+    await db.exec('reset role')
+    if (state === 'paused')
+      await db.query(
+        "update public.word_games set status='paused', paused_at=now(), reconnect_deadline=now()+interval '5 minutes', disconnected_player_id=$2 where id=$1",
+        [gameId, bob],
+      )
+    await db.exec('set local role word_card_writer')
+    await expect(
+      rows('select private.cache_word_game_cards($1,$2,$3,$4,$5)', [
+        state === 'outsider'
+          ? eve
+          : state === 'wrong turn'
+            ? bob
+            : state === 'missing identity'
+              ? null
+              : alice,
+        gameId,
+        'Travel',
+        'test-model',
+        JSON.stringify([
+          {
+            word: 'audit example',
+            acceptedAnswers: ['audit example'],
+            forbiddenWords: ['audit example'],
+          },
+        ]),
+      ]),
+    ).rejects.toThrow(
+      state === 'open round' ? 'word_game_round_in_progress' : 'word_game_turn_not_available',
+    )
+  })
+
   it('keeps only genuinely new cards from a generated batch', async () => {
     await asUser(alice)
     const invitation = await invite('bob')
@@ -659,13 +747,14 @@ describe('database authorization and lifecycle', () => {
         forbiddenWords: ['travel adapter', 'travel adapters'],
       },
     ]
+    await db.exec('reset role; set local role word_card_writer')
     const first = await db.query<{ result: number }>(
-      'select public.cache_word_game_cards($1,$2,$3,$4) result',
-      [gameId, 'Travel', 'test-model', JSON.stringify(batch)],
+      'select private.cache_word_game_cards($1,$2,$3,$4,$5) result',
+      [alice, gameId, 'Travel', 'test-model', JSON.stringify(batch)],
     )
     const second = await db.query<{ result: number }>(
-      'select public.cache_word_game_cards($1,$2,$3,$4) result',
-      [gameId, 'Travel', 'test-model', JSON.stringify(batch)],
+      'select private.cache_word_game_cards($1,$2,$3,$4,$5) result',
+      [alice, gameId, 'Travel', 'test-model', JSON.stringify(batch)],
     )
 
     expect(first.rows[0]!.result).toBe(1)
@@ -1061,7 +1150,12 @@ describe('database authorization and lifecycle', () => {
     await rows('select public.end_word_game($1)', [invitation.partnershipId])
 
     await db.exec('reset role')
-    const nearMidnightUtc = '2025-10-01T22:30:00Z'
+    const fixture = await db.query<{ timestamp: string; day: string; year: number }>(`
+      select ((now() at time zone 'Europe/Minsk')::date - 1 + time '22:30')::text timestamp,
+        ((now() at time zone 'Europe/Minsk')::date)::text as "day",
+        extract(year from now() at time zone 'Europe/Minsk')::integer as "year"
+    `)
+    const nearMidnightUtc = `${fixture.rows[0]!.timestamp.replace(' ', 'T')}Z`
     await db.query(
       'update public.word_games set created_at=$2, accepted_at=$2, finished_at=$2 where id=$1',
       [gameId, nearMidnightUtc],
@@ -1072,7 +1166,7 @@ describe('database authorization and lifecycle', () => {
     )
     await asUser(alice)
 
-    const year = 2026
+    const year = fixture.rows[0]!.year
     const aliceActivity = await db.query<{
       result: {
         isOwner: boolean
@@ -1095,7 +1189,7 @@ describe('database authorization and lifecycle', () => {
       totals: { interactionCount: 5, speakingDurationSeconds: 13 },
     })
     expect(aliceActivity.rows[0]!.result.days).toEqual([
-      expect.objectContaining({ date: '2025-10-02', interactionCount: 5, intensity: 2 }),
+      expect.objectContaining({ date: fixture.rows[0]!.day, interactionCount: 5, intensity: 2 }),
     ])
 
     await asUser(bob)

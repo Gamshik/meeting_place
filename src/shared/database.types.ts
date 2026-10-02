@@ -277,15 +277,6 @@ export type Database = {
         }
         Returns: Json
       }
-      cache_word_game_cards: {
-        Args: {
-          p_cards: Json
-          p_game_id: string
-          p_source_model: string
-          p_topic: string
-        }
-        Returns: number
-      }
       create_word_game_round_from_pool: {
         Args: { p_allow_seen?: boolean; p_game_id: string; p_topic: string }
         Returns: Json

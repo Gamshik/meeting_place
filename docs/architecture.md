@@ -165,6 +165,18 @@ singular/plural variants cannot become separate cards. Existing round snapshots 
 the exposure ledger when the pool migration is applied. Ten curated cards per supported topic
 provide a cold-start fallback before the pool grows through normal play.
 
+Shared card writes use a separate backend trust boundary. Ordinary authenticated users cannot
+execute either the former public cache RPC or the low-level card insertion function. The Worker
+validates AI output and invokes `private.cache_word_game_cards` over PostgreSQL using the dedicated
+`word_card_writer` login from the `WORD_CARD_DATABASE_URL` runtime secret. This role has no direct
+application table access or membership in the user/API roles. The private function receives the
+requester ID exclusively from the Worker's verified authentication context, checks active partnership,
+active game, current turn, and absence of an open round under a game lock, and then inserts the batch
+atomically. Its empty search path prevents object shadowing. The private schema is not exposed through
+PostgREST. Normal game reads and mutations still use the user's Supabase JWT. Missing writer
+configuration skips AI generation and uses the existing stored-card fallback instead. Failed writes
+also fall back without exposing connection credentials in logs or API responses.
+
 There is never more than one word-generation request for a round. If the generated batch contains
 no unseen card or the provider is unavailable, PostgreSQL selects the card least recently seen by
 either participant. An error is returned only when the topic has no stored card at all. Increasing

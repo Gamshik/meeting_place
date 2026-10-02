@@ -1,6 +1,9 @@
 # Runtime values used by the local Hono Worker.
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your-supabase-publishable-or-anon-key
+# Dedicated word_card_writer login; never use postgres or a service-role credential.
+# Hosted: use your project's transaction pooler URL with sslmode=verify-full.
+WORD_CARD_DATABASE_URL=postgresql://word_card_writer:replace-with-local-password@127.0.0.1:54322/postgres
 OPENROUTER_API_KEY=your-openrouter-api-key
 OPENROUTER_TEXT_MODEL=openai/gpt-4o-mini
 OPENROUTER_SITE_URL=http://localhost:5173

@@ -21,6 +21,7 @@ import {
   transcribeExplanation,
 } from '../lib/openrouter'
 import type { AppEnvironment } from '../types'
+import { cacheGeneratedCards, WordCardStoreError } from '../lib/word-card-store'
 
 const MAX_AUDIO_BYTES = 8 * 1024 * 1024
 const RECORDING_BUCKET = 'word-game-recordings'
@@ -200,18 +201,19 @@ wordGameRoutes.post('/:partnershipId/rounds', async (context) => {
 
   let generationError: unknown = null
   try {
+    if (!context.env.WORD_CARD_DATABASE_URL) throw new WordCardStoreError()
     const cards = await generateGameWords(
       openRouterConfiguration(context.env),
       parsed.data.topic,
       exclusions ?? [],
     )
-    const { error: cacheError } = await supabase.rpc('cache_word_game_cards', {
-      p_game_id: game.id,
-      p_topic: parsed.data.topic,
-      p_source_model: context.env.OPENROUTER_TEXT_MODEL ?? 'unknown',
-      p_cards: cards as Json,
+    await cacheGeneratedCards(context.env.WORD_CARD_DATABASE_URL, {
+      requesterId: context.get('user').id,
+      gameId: game.id,
+      topic: parsed.data.topic,
+      sourceModel: context.env.OPENROUTER_TEXT_MODEL ?? 'unknown',
+      cards: cards as Json,
     })
-    if (cacheError) return gameDatabaseError(context, cacheError)
 
     const generatedRound = await createRoundFromPool(supabase, game.id, parsed.data.topic, false)
     if (generatedRound.error) return gameDatabaseError(context, generatedRound.error)
@@ -598,6 +600,14 @@ function gameDatabaseError(
 }
 
 function openRouterErrorResponse(context: Parameters<typeof errorResponse>[0], error: unknown) {
+  if (error instanceof WordCardStoreError) {
+    return errorResponse(
+      context,
+      503,
+      'word_card_store_unavailable',
+      'New words are temporarily unavailable. Try again shortly.',
+    )
+  }
   if (error instanceof OpenRouterError && error.kind === 'not_configured') {
     return errorResponse(context, 503, 'ai_not_configured', 'The game AI is not configured yet.')
   }

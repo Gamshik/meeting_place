@@ -3,6 +3,7 @@ import type { SupabaseClient, User } from '@supabase/supabase-js'
 import type { Database } from '../shared/database.types'
 
 export type WorkerBindings = {
+  WORD_CARD_DATABASE_URL?: string
   OPENROUTER_API_KEY?: string
   OPENROUTER_SITE_URL?: string
   OPENROUTER_TEXT_MODEL?: string
