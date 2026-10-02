@@ -75,6 +75,30 @@ test('real PostgreSQL concurrency, cooldown, and quota rules', async () => {
     ])
     await authenticated(ids[4], 'select public.respond_to_word_game($1,true) result', [game.id])
 
+    const reservations = await Promise.all(
+      Array.from({ length: 8 }, async () => {
+        const client = await pool.connect()
+        try {
+          await client.query('begin')
+          await client.query('set local role authenticated')
+          await client.query("select set_config('request.jwt.claim.sub',$1,true)", [ids[3]])
+          const result = await client.query(
+            "select public.reserve_my_game_ai($1,null,'cards','Travel',$2) result",
+            [game.id, randomUUID()],
+          )
+          await client.query('commit')
+          return result.rows[0].result
+        } catch (error) {
+          await client.query('rollback')
+          throw error
+        } finally {
+          client.release()
+        }
+      }),
+    )
+    assert.equal(reservations.filter((result) => result.status === 'reserved').length, 1)
+    assert.equal(reservations.filter((result) => result.status === 'processing').length, 7)
+
     const rounds = await Promise.allSettled([
       authenticated(ids[3], 'select public.create_word_game_round_from_pool($1,$2,false) result', [
         game.id,

@@ -4,6 +4,7 @@ import type { Database } from '../shared/database.types'
 
 export type WorkerBindings = {
   WORD_CARD_DATABASE_URL?: string
+  WORD_CARD_DATABASE_CA_CERT?: string
   OPENROUTER_API_KEY?: string
   OPENROUTER_SITE_URL?: string
   OPENROUTER_TEXT_MODEL?: string

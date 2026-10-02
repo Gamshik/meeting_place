@@ -29,6 +29,14 @@ export const requireAuthentication: MiddlewareHandler<AppEnvironment> = async (c
       persistSession: false,
     },
     global: {
+      // Bound storage/database requests so an upload cannot keep running past an AI lease.
+      fetch: (input, init) =>
+        fetch(input, {
+          ...init,
+          signal: init?.signal
+            ? AbortSignal.any([init.signal, AbortSignal.timeout(30_000)])
+            : AbortSignal.timeout(30_000),
+        }),
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

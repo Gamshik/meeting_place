@@ -177,11 +177,41 @@ PostgREST. Normal game reads and mutations still use the user's Supabase JWT. Mi
 configuration skips AI generation and uses the existing stored-card fallback instead. Failed writes
 also fall back without exposing connection credentials in logs or API responses.
 
-There is never more than one word-generation request for a round. If the generated batch contains
+Each request generates at most one batch. If the generated batch contains
 no unseen card or the provider is unavailable, PostgreSQL selects the card least recently seen by
-either participant. An error is returned only when the topic has no stored card at all. Increasing
+either participant. Reservation failures are returned without starting another action. Increasing
 model temperature and varying the requested vocabulary focus improve variety, but the database—not
 the model prompt—enforces deduplication and the terminating fallback.
+
+Before generation or recording upload, the Worker calls `public.reserve_my_game_ai` using
+the existing authenticated Supabase HTTPS client. It derives identity from `auth.uid()` and
+calls the private reservation implementation. A game-row lock serializes reservations by game,
+operation, and turn, with membership and phase checks. The Worker supplies a random ownership
+token; duplicate requests never receive or replace it. `public.finish_my_game_ai` checks both
+the authenticated owner and token. Anonymous callers cannot execute either RPC, and clients
+cannot read or mutate the private table directly.
+
+Because authenticated clients can invoke these RPCs themselves, cached output carries an
+HMAC-SHA256 signature generated with the existing server-only OpenRouter key. The signature
+binds the result to the actor, game, expected round, operation, and input fingerprint. The Worker
+rejects unsigned, modified, or replayed results before caching shared cards or submitting a
+transcript. A client may interfere with its own game by reserving it, but cannot release a live
+Worker reservation without its random token or forge trusted shared-card content. Key rotation
+invalidates pending cached results. No direct PostgreSQL connection is needed for reservations.
+
+Reservations last two minutes. Each attempt gets a new random token; only its unexpired owner
+can complete or release it through `private.finish_game_ai`. Confirmed failures release the
+reservation immediately. Ambiguous transport failures keep it until expiry. Provider requests
+are bounded to 60 seconds within a 90-second operation deadline begun before reservation;
+Supabase requests have a 30-second timeout. No provider call starts after the operation deadline.
+
+Validated results are cached before applying the game mutation, allowing the same input to be
+retried without paying again. Completed results reject different input for the same action.
+The private cache retains results for the current turn; requesting a later turn deletes earlier
+entries, and deleting the game cascades to all remaining entries. This includes a private copy
+of the current transcript, but no audio bytes. Crashes between the provider response and cache
+save can still require a paid retry after expiry; no provider-level idempotency is assumed.
+There are no usage quotas in this change.
 
 The Worker also calls
 `microsoft/mai-transcribe-2` in verbatim mode for each completed browser recording. A game begins in
@@ -189,10 +219,10 @@ the `pending` state and becomes active only when the other participant accepts. 
 recordings to mono WAV, and the Worker stores them in a private Supabase Storage bucket before
 transcription. Storage policies limit uploads to the current explainer and playback to the two active
 participants. The recording-start and explanation timestamps, transcript, word timestamps,
-recording path, and private coaching are stored on the round. The partner's normalized answer and
+and recording path are stored on the round. New submissions make no coaching call and save null
+coaching fields; historical coaching remains intact. The partner's normalized answer and
 deterministic forbidden-word detection provide the automatic result. For an inexact answer, the
-explainer's stored manual review decides the shared point; AI coaching never changes the official
-score.
+explainer's stored manual review decides the shared point.
 
 The dashboard and game page poll the canonical game state while waiting for invitations, acceptance,
 recordings, or guesses. The game page also subscribes to participant-authorized `word_games`

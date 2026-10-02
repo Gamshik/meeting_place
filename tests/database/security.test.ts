@@ -73,6 +73,177 @@ afterAll(async () => {
 })
 
 describe('database authorization and lifecycle', () => {
+  async function aiGame() {
+    await asUser(alice)
+    const invitation = await invite('bob')
+    await asUser(bob)
+    await rows('select public.respond_to_partnership($1,true)', [invitation.partnershipId])
+    await asUser(alice)
+    const game = await db.query<{ result: { id: string } }>(
+      'select public.start_word_game($1) result',
+      [invitation.partnershipId],
+    )
+    const id = game.rows[0]!.result.id
+    await asUser(bob)
+    await rows('select public.respond_to_word_game($1,true)', [id])
+    await db.exec('reset role; set local role word_card_writer')
+    return id
+  }
+  async function reserveAi(
+    gameId: string,
+    actor = alice,
+    operation = 'cards',
+    roundId: string | null = null,
+    fingerprint = 'Travel',
+  ) {
+    const result = await db.query<{
+      result: { status: string; id: string; token: string; result?: unknown; retryAfter?: number }
+    }>('select private.reserve_game_ai($1,$2,$3,$4,$5) result', [
+      actor,
+      gameId,
+      roundId,
+      operation,
+      fingerprint,
+    ])
+    return result.rows[0]!.result
+  }
+  async function finishAi(job: { id: string; token: string }, result: unknown = null) {
+    return rows('select private.finish_game_ai($1,$2,$3) result', [
+      job.id,
+      job.token,
+      result === null ? null : JSON.stringify(result),
+    ])
+  }
+  it('uses authenticated reservations without exposing or replacing the owner token', async () => {
+    const gameId = await aiGame()
+    await asUser(alice)
+    const reserve = (token: string) =>
+      db.query<{ result: { status: string; id: string; token?: string } }>(
+        "select public.reserve_my_game_ai($1,null,'cards','Travel',$2) result",
+        [gameId, token],
+      )
+    const first = (await reserve(alice)).rows[0]!.result
+    expect(first.status).toBe('reserved')
+    expect(first.token).toBeUndefined()
+    expect((await reserve(bob)).rows[0]!.result.status).toBe('processing')
+    expect(
+      await rows('select public.finish_my_game_ai($1,$2,null) result', [first.id, bob]),
+    ).toEqual([{ result: false }])
+    await asUser(bob)
+    expect(
+      await rows('select public.finish_my_game_ai($1,$2,null) result', [first.id, alice]),
+    ).toEqual([{ result: false }])
+    await asUser(alice)
+    expect(
+      await rows('select public.finish_my_game_ai($1,$2,null) result', [first.id, alice]),
+    ).toEqual([{ result: true }])
+    expect((await reserve(bob)).rows[0]!.result.status).toBe('reserved')
+  })
+  it('does not allow authenticated outsiders to reserve another game', async () => {
+    const id = await aiGame()
+    await asUser(eve)
+    expect(
+      await rows(
+        "select public.reserve_my_game_ai($1,null,'cards','Travel',$2)->>'status' status",
+        [id, eve],
+      ),
+    ).toEqual([{ status: 'conflict' }])
+  })
+  it('denies anonymous access to the HTTPS reservation RPC', async () => {
+    const id = await aiGame()
+    await db.exec('reset role; set local role anon')
+    await expect(
+      rows("select public.reserve_my_game_ai($1,null,'cards','Travel',$2)", [id, eve]),
+    ).rejects.toThrow(/permission denied/)
+  })
+  it('reserves each AI action once for two minutes, then reuses the completed result', async () => {
+    const id = await aiGame()
+    const job = await reserveAi(id)
+    expect(job.status).toBe('reserved')
+    const duplicate = await reserveAi(id, alice, 'cards', null, 'Other topic')
+    expect(duplicate.status).toBe('processing')
+    expect(duplicate.retryAfter).toBeGreaterThan(115)
+    expect(duplicate.retryAfter).toBeLessThanOrEqual(120)
+    expect(await finishAi(job, { cards: ['example'] })).toEqual([{ result: true }])
+    expect(await reserveAi(id)).toMatchObject({ status: 'cached', result: { cards: ['example'] } })
+    expect((await reserveAi(id, alice, 'cards', null, 'Other')).status).toBe('conflict')
+  })
+  it('allows immediate retry after confirmed failure and fences the old owner', async () => {
+    const id = await aiGame()
+    const old = await reserveAi(id)
+    expect(await finishAi(old)).toEqual([{ result: true }])
+    const fresh = await reserveAi(id)
+    expect(fresh.status).toBe('reserved')
+    expect(fresh.token).not.toBe(old.token)
+    expect(await finishAi(old, {})).toEqual([{ result: false }])
+    expect(await finishAi(fresh, {})).toEqual([{ result: true }])
+  })
+  it('recovers expired reservations and rejects stale completion', async () => {
+    const id = await aiGame()
+    const old = await reserveAi(id)
+    await db.exec('reset role')
+    await rows("update private.game_ai_jobs set expires_at=clock_timestamp()-interval '1 second'")
+    await db.exec('set local role word_card_writer')
+    const fresh = await reserveAi(id)
+    expect(fresh.status).toBe('reserved')
+    expect(await finishAi(old, {})).toEqual([{ result: false }])
+    expect(await finishAi(fresh, {})).toEqual([{ result: true }])
+  })
+  it('reserves recording transcription and rejects changed audio after completion', async () => {
+    const id = await aiGame()
+    await asUser(alice)
+    const created = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round_from_pool($1,$2,false) result',
+      [id, 'Travel'],
+    )
+    const roundId = created.rows[0]!.result.round.id
+    await rows('select public.start_word_game_recording($1)', [roundId])
+    await rows('select public.finish_word_game_recording($1)', [roundId])
+    await db.exec('reset role; set local role word_card_writer')
+    const job = await reserveAi(id, alice, 'transcription', roundId, 'audio-hash')
+    expect(job.status).toBe('reserved')
+    expect((await reserveAi(id, alice, 'transcription', roundId, 'different-hash')).status).toBe(
+      'processing',
+    )
+    await finishAi(job, { text: 'A document', words: [] })
+    expect((await reserveAi(id, alice, 'transcription', roundId, 'audio-hash')).status).toBe(
+      'cached',
+    )
+    expect((await reserveAi(id, alice, 'transcription', roundId, 'different-hash')).status).toBe(
+      'conflict',
+    )
+  })
+  it.each(['outsider', 'wrong turn', 'stale round', 'paused', 'unfinished recording'])(
+    'rejects AI reservations for %s',
+    async (state) => {
+      const id = await aiGame()
+      if (state === 'paused') {
+        await db.exec('reset role')
+        await rows("update public.word_games set status='paused' where id=$1", [id])
+        await db.exec('set local role word_card_writer')
+      }
+      const actor = state === 'outsider' ? eve : state === 'wrong turn' ? bob : alice
+      expect(
+        (
+          await reserveAi(
+            id,
+            actor,
+            state === 'unfinished recording' ? 'transcription' : 'cards',
+            state === 'stale round' ? eve : null,
+          )
+        ).status,
+      ).toBe('conflict')
+    },
+  )
+  it.each(['anon', 'authenticated'])('denies AI reservations to %s', async (role) => {
+    const id = await aiGame()
+    await db.exec(`reset role; set local role ${role}`)
+    await expect(reserveAi(id)).rejects.toThrow(/permission denied/)
+  })
+  it('denies direct reservation access to the Worker role', async () => {
+    await aiGame()
+    await expect(rows('delete from private.game_ai_jobs')).rejects.toThrow(/permission denied/)
+  })
   it('creates matching profiles and survives an occupied generated username', async () => {
     await db.query("update public.profiles set username='newuser_aaaaaaaa' where id=$1", [eve])
     await db.exec(

@@ -241,6 +241,20 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      reserve_my_game_ai: {
+        Args: {
+          p_game_id: string
+          p_round_id: string | null
+          p_operation: string
+          p_fingerprint: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      finish_my_game_ai: {
+        Args: { p_id: string; p_token: string; p_result: Json | null }
+        Returns: boolean
+      }
       end_partnership: {
         Args: { p_partnership_id: string }
         Returns: undefined

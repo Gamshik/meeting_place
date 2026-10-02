@@ -7,3 +7,7 @@ WORD_CARD_DATABASE_URL=postgresql://word_card_writer:replace-with-local-password
 OPENROUTER_API_KEY=your-openrouter-api-key
 OPENROUTER_TEXT_MODEL=openai/gpt-4o-mini
 OPENROUTER_SITE_URL=http://localhost:5173
+
+# Optional: PEM CA certificate downloaded from Supabase Database Settings.
+# Quoted content with \n between lines is supported; do not use a file path.
+WORD_CARD_DATABASE_CA_CERT=""

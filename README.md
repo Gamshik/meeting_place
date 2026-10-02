@@ -14,8 +14,8 @@ This repository contains the first vertical slice:
 - paginated partner lists and accessible feedback while changes are saved
 - friend-only profiles with yearly and monthly practice activity calendars
 - a turn-based “explain the word” game with Live call and Recorded practice modes, AI-generated
-  cards, creator-selected 1–5 minute explanation rounds, speech transcription, and private
-  coaching; when automatic matching rejects a synonym, the explainer makes the final scoring
+  cards, creator-selected 1–5 minute explanation rounds, and speech transcription;
+  when automatic matching rejects a synonym, the explainer makes the final scoring
   decision without AI review
 - a React interface and Hono API deployed together on Cloudflare Workers
 - PostgreSQL constraints, atomic functions, and Row Level Security in Supabase
@@ -212,7 +212,8 @@ editing previously deployed ones.
 
 The migration `202610020001_restrict_shared_card_writes.sql` removes browser access to shared
 card writes and creates the `word_card_writer` PostgreSQL login without a password. The Worker
-uses that login only to execute `private.cache_word_game_cards`; it has no direct application
+uses that login to execute `private.cache_word_game_cards`;
+it has no direct application
 table access. All ordinary API operations continue to use the signed-in user's JWT.
 
 After applying the migrations, connect as the database administrator using `psql` and set a
@@ -236,6 +237,24 @@ percent-encoded. Keep the actual pooler host shown by Supabase and require TLS v
 postgresql://word_card_writer.PROJECT_REF:ENCODED_PASSWORD@YOUR_POOLER_HOST:6543/postgres?sslmode=verify-full
 ```
 
+For a Supabase server whose certificate requires its own CA, download the certificate from
+**Database Settings → SSL Configuration**. Set `WORD_CARD_DATABASE_CA_CERT` to the full PEM
+certificate in `.dev.vars` (a quoted value with `\n` between lines is supported). This value is
+certificate content, not a local filename. The driver uses it with certificate and hostname
+verification enabled. Downloading the file alone does not configure trust.
+
+For deployment, supply the same PEM content using:
+
+```sh
+npx wrangler secret put WORD_CARD_DATABASE_CA_CERT
+```
+
+Restart the local dev server after editing `.dev.vars`. A `SELF_SIGNED_CERT_IN_CHAIN` error in
+reservation logs means the driver cannot verify the certificate chain. Never fix it by disabling
+verification. See [Supabase SSL configuration](https://supabase.com/docs/guides/platform/ssl-enforcement).
+The API deliberately returns a generic error; server logs include only recognized error codes,
+not connection strings or database messages.
+
 For local Supabase, use:
 
 ```text
@@ -244,7 +263,7 @@ postgresql://word_card_writer:ENCODED_PASSWORD@127.0.0.1:54322/postgres
 
 Never substitute the `postgres` login or grant `word_card_writer` to `authenticated`, `anon`,
 or `authenticator`. Never put this URL in a `VITE_` variable. The Worker makes a short-lived,
-parameterized connection through `pg` and closes it after each generated batch; transaction
+parameterized connection through `pg` and closes it after each operation; transaction
 pooling avoids retaining an edge connection between requests. See the official
 [Supabase connection guide](https://supabase.com/docs/guides/database/connecting-to-postgres)
 and [Cloudflare PostgreSQL guide](https://developers.cloudflare.com/workers/tutorials/postgres/).
@@ -255,6 +274,38 @@ writer secret; generation is skipped until it is configured. If no stored fallba
 the API returns `503 word_card_store_unavailable`. The old Worker cannot replenish the pool
 after the migration, so coordinate the rollout. To rotate the credential, change the role
 password and replace the Worker secret; check the pooler's password cache behavior when rotating.
+
+## AI action reservations
+
+Apply the pending migrations, including `202610020003_game_ai_over_authenticated_rpc.sql`,
+using `npm run db:push`. Restart the local dev server; for production, deploy with
+`npm run deploy`. Reservations use the existing authenticated Supabase HTTPS client. They
+need no database URL, certificate, or additional secret. The existing OpenRouter key signs
+cached results so browser users cannot forge provider output. Rotating that key invalidates
+unfinished cached results; finish or end affected games before rotation.
+
+Direct PostgreSQL access is still used by the earlier shared-card writer, only when saving
+newly generated cards. Its configuration is separate from recording transcription.
+
+The Worker reserves card generation per game turn and transcription per recording round in
+PostgreSQL before doing paid work. Overlapping requests receive `409 ai_processing` with
+`Retry-After`; they do not upload another recording or call AI. Reservations expire after two
+minutes. Confirmed failures release them immediately; an uncertain network failure or timeout
+keeps the reservation until expiry. Provider requests have a 60-second timeout within a
+90-second operation deadline. Authenticated Supabase requests, including uploads, have a
+30-second timeout so stalled storage calls cannot indefinitely occupy a reservation.
+
+Successful provider results are saved before the final game mutation. A retry with the same
+topic or recording bytes reuses the result without another AI call. A different input for an
+already completed action returns `409 ai_action_conflict`. A lost provider response cannot be
+recovered by this cache: after expiry, a retry may incur another charge. This is duplicate
+suppression, not a guarantee of exactly one provider charge under network failures.
+
+Recording submission now calls only transcription. Historical coaching data is preserved;
+new rounds save null coaching fields. This change does not introduce account usage quotas.
+If the RPC migration or Supabase API is unavailable, paid work fails closed with
+`503 ai_reservation_unavailable`. Already pooled cards remain playable. Apply the migration
+before deploying; old Workers do not honor reservations, so retire the old version during rollout.
 
 ## Configure Google sign-in
 
@@ -384,7 +435,7 @@ returns to Supabase's `/auth/v1/callback`, and Supabase returns to this applicat
   database error text or request bodies. API responses are marked `Cache-Control: no-store`.
 - Game recordings are stored in a private Supabase Storage bucket and forwarded to OpenRouter for
   transcription. Only the two active participants can request short-lived playback links.
-  Transcripts and private coaching are stored; the guessing player cannot retrieve the secret before
+  Transcripts and historical private coaching are stored; the guessing player cannot retrieve the secret before
   the round ends.
 
 ## Testing
@@ -407,8 +458,8 @@ explanation, and sends it. While recording, confirm that the second browser sees
 configured recording timer. After the explanation arrives, both players must see the 90-second
 listening timer and the guesser receives an audio player, the transcript, and the answer field. The
 secret must stay hidden from the guesser until the result; a correct guess
-awards the explainer one point, saying the secret produces no point, private AI coaching appears only
-to the explainer, and the next turn belongs to the previous guesser. In Live call, confirm that
+awards the explainer one point, saying the secret produces no point, and the next turn belongs to
+the previous guesser. Recording submission makes only a transcription AI call; no coaching is generated. In Live call, confirm that
 creating a word starts the same five-second preparation countdown in both browsers. When it ends,
 both players must see the configured explanation timer and only the guesser must receive the answer
 field. When the configured clue time ends, both see a final 30-second guessing timer and the explainer is told to

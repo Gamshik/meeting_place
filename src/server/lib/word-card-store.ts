@@ -1,4 +1,5 @@
 import { Client } from 'pg'
+import { databaseConnection } from './database-connection'
 
 import type { Json } from '../../shared/database.types'
 
@@ -12,12 +13,9 @@ export class WordCardStoreError extends Error {
 export async function cacheGeneratedCards(
   connectionString: string,
   input: { requesterId: string; gameId: string; topic: string; sourceModel: string; cards: Json },
+  caCertificate?: string,
 ) {
-  const client = new Client({
-    connectionString,
-    connectionTimeoutMillis: 5_000,
-    query_timeout: 10_000,
-  })
+  const client = new Client(databaseConnection(connectionString, caCertificate))
   try {
     await client.connect()
     await client.query('select private.cache_word_game_cards($1, $2, $3, $4, $5::jsonb)', [

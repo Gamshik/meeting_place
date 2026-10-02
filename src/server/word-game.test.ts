@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   cacheGeneratedCards: vi.fn(),
+  runGameAi: vi.fn(),
   createSignedUrl: vi.fn(),
   getUser: vi.fn(),
   rpc: vi.fn(),
@@ -22,6 +23,11 @@ vi.mock('./lib/word-card-store', async (importOriginal) => ({
   cacheGeneratedCards: mocks.cacheGeneratedCards,
 }))
 
+vi.mock('./lib/game-ai', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/game-ai')>()),
+  runGameAi: mocks.runGameAi,
+}))
+import { runGameAi, GameAiError } from './lib/game-ai'
 import { app } from './app'
 import { WordCardStoreError } from './lib/word-card-store'
 import type { AppEnvironment } from './types'
@@ -38,6 +44,93 @@ const env = {
   OPENROUTER_API_KEY: 'openrouter-key',
   OPENROUTER_TEXT_MODEL: 'test/text-model',
 }
+
+it.each(['processing', 'conflict', 'unavailable'] as const)(
+  'blocks recording work when reservation is %s',
+  async (kind) => {
+    mocks.rpc.mockResolvedValue({
+      data: game({
+        round: round({
+          recordingStartedAt: '2026-09-11T12:00:00Z',
+          recordingFinishedAt: '2026-09-11T12:00:30Z',
+        }),
+      }),
+      error: null,
+    })
+    mocks.runGameAi.mockRejectedValue(
+      new GameAiError(kind, kind === 'processing' ? 120 : undefined),
+    )
+    const provider = vi.fn()
+    vi.stubGlobal('fetch', provider)
+    const body = new FormData()
+    body.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+    const response = await app.request(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token' },
+        body,
+      },
+      env,
+    )
+    expect(response.status).toBe(kind === 'unavailable' ? 503 : 409)
+    expect(mocks.storageUpload).not.toHaveBeenCalled()
+    expect(provider).not.toHaveBeenCalled()
+    if (kind === 'processing') expect(response.headers.get('Retry-After')).toBe('120')
+  },
+)
+
+it('reuses a saved transcript after a failed game update without uploading or calling AI', async () => {
+  const open = game({
+    round: round({
+      recordingStartedAt: '2026-09-11T12:00:00Z',
+      recordingFinishedAt: '2026-09-11T12:00:30Z',
+    }),
+  })
+  mocks.rpc
+    .mockResolvedValueOnce({ data: open, error: null })
+    .mockResolvedValueOnce({ data: null, error: { code: 'unavailable', message: 'Unavailable' } })
+    .mockResolvedValueOnce({ data: open, error: null })
+    .mockResolvedValueOnce({
+      data: game({ round: round({ status: 'awaiting_guess' }) }),
+      error: null,
+    })
+  mocks.runGameAi.mockResolvedValue({ text: 'A travel document.', words: [] })
+  const provider = vi.fn()
+  vi.stubGlobal('fetch', provider)
+  async function submit() {
+    const body = new FormData()
+    body.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+    return app.request(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token' },
+        body,
+      },
+      env,
+    )
+  }
+  expect((await submit()).status).toBe(500)
+  expect((await submit()).status).toBe(200)
+  expect(mocks.storageUpload).not.toHaveBeenCalled()
+  expect(provider).not.toHaveBeenCalled()
+  expect(mocks.runGameAi.mock.calls[0]?.[1]).toEqual(mocks.runGameAi.mock.calls[1]?.[1])
+})
+
+it('does not create a fallback round while another generation is processing', async () => {
+  mocks.rpc
+    .mockResolvedValueOnce({ data: game(), error: null })
+    .mockResolvedValueOnce({ data: null, error: null })
+    .mockResolvedValueOnce({ data: [], error: null })
+  mocks.runGameAi.mockRejectedValue(new GameAiError('processing', 120))
+  const response = await jsonRequest(`/api/games/explain-word/${partnershipId}/rounds`, 'POST', {
+    topic: 'Travel',
+  })
+  expect(response.status).toBe(409)
+  expect(mocks.rpc).toHaveBeenCalledTimes(3)
+  expect(mocks.cacheGeneratedCards).not.toHaveBeenCalled()
+})
 
 function game(overrides: Record<string, unknown> = {}) {
   return {
@@ -100,6 +193,11 @@ function jsonRequest(
 }
 
 beforeEach(() => {
+  mocks.runGameAi
+    .mockReset()
+    .mockImplementation((...args: Parameters<typeof runGameAi>) =>
+      args[3](AbortSignal.timeout(90_000)),
+    )
   mocks.getUser.mockReset().mockResolvedValue({ data: { user: { id: userId } }, error: null })
   mocks.cacheGeneratedCards.mockReset().mockResolvedValue(undefined)
   mocks.rpc.mockReset()
@@ -569,24 +667,28 @@ describe('explain-word game API', () => {
     })
 
     expect(response.status).toBe(201)
-    expect(mocks.cacheGeneratedCards).toHaveBeenCalledWith(env.WORD_CARD_DATABASE_URL, {
-      requesterId: userId,
-      cards: [
-        {
-          word: 'passport',
-          acceptedAnswers: ['passport', 'passports'],
-          forbiddenWords: ['passport', 'passports'],
-        },
-        {
-          word: 'suitcase',
-          acceptedAnswers: ['suitcase', 'suitcases'],
-          forbiddenWords: ['suitcase', 'suitcases'],
-        },
-      ],
-      gameId: gameId,
-      sourceModel: 'test/text-model',
-      topic: 'Travel',
-    })
+    expect(mocks.cacheGeneratedCards).toHaveBeenCalledWith(
+      env.WORD_CARD_DATABASE_URL,
+      {
+        requesterId: userId,
+        cards: [
+          {
+            word: 'passport',
+            acceptedAnswers: ['passport', 'passports'],
+            forbiddenWords: ['passport', 'passports'],
+          },
+          {
+            word: 'suitcase',
+            acceptedAnswers: ['suitcase', 'suitcases'],
+            forbiddenWords: ['suitcase', 'suitcases'],
+          },
+        ],
+        gameId: gameId,
+        sourceModel: 'test/text-model',
+        topic: 'Travel',
+      },
+      undefined,
+    )
     expect(mocks.rpc).toHaveBeenLastCalledWith('create_word_game_round_from_pool', {
       p_allow_seen: false,
       p_game_id: gameId,
@@ -793,34 +895,18 @@ describe('explain-word game API', () => {
             transcriptWords: [{ word: 'You', start: 0, end: 0.2 }],
             audioAvailable: true,
             usedForbiddenWord: false,
-            coachScore: 91,
-            coachFeedback: 'Clear description. Add one more identifying detail.',
+            coachScore: null,
+            coachFeedback: null,
           }),
         }),
         error: null,
       })
-    const providerFetch = vi
-      .fn()
-      .mockResolvedValueOnce(
-        Response.json({
-          text: 'You need this document to cross a border.',
-          words: [{ word: 'You', start: 0, end: 0.2 }],
-        }),
-      )
-      .mockResolvedValueOnce(
-        Response.json({
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  score: 91,
-                  feedback: 'Clear description. Add one more identifying detail.',
-                }),
-              },
-            },
-          ],
-        }),
-      )
+    const providerFetch = vi.fn().mockResolvedValueOnce(
+      Response.json({
+        text: 'You need this document to cross a border.',
+        words: [{ word: 'You', start: 0, end: 0.2 }],
+      }),
+    )
     vi.stubGlobal('fetch', providerFetch)
     const form = new FormData()
     form.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
@@ -836,6 +922,7 @@ describe('explain-word game API', () => {
       contentType: 'audio/wav',
       upsert: true,
     })
+    expect(providerFetch).toHaveBeenCalledTimes(1)
     const transcriptionBody = JSON.parse(
       (providerFetch.mock.calls[0]![1] as RequestInit).body as string,
     )
@@ -849,8 +936,8 @@ describe('explain-word game API', () => {
       p_round_id: roundId,
       p_transcript: 'You need this document to cross a border.',
       p_transcript_words: [{ word: 'You', start: 0, end: 0.2 }],
-      p_coach_score: 91,
-      p_coach_feedback: 'Clear description. Add one more identifying detail.',
+      p_coach_score: null,
+      p_coach_feedback: null,
     })
   })
 

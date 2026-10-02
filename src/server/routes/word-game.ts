@@ -1,3 +1,4 @@
+import { GameAiError, runGameAi } from '../lib/game-ai'
 import { Hono } from 'hono'
 
 import {
@@ -15,7 +16,8 @@ import {
 import type { Json } from '../../shared/database.types'
 import { errorResponse } from '../lib/responses'
 import {
-  coachExplanation,
+  generatedWordSchema,
+  transcriptionSchema,
   generateGameWords,
   OpenRouterError,
   transcribeExplanation,
@@ -202,23 +204,42 @@ wordGameRoutes.post('/:partnershipId/rounds', async (context) => {
   let generationError: unknown = null
   try {
     if (!context.env.WORD_CARD_DATABASE_URL) throw new WordCardStoreError()
-    const cards = await generateGameWords(
-      openRouterConfiguration(context.env),
-      parsed.data.topic,
-      exclusions ?? [],
+    const cards = await runGameAi(
+      supabase,
+      {
+        requesterId: context.get('user').id,
+        gameId: game.id,
+        roundId: game.round?.id ?? null,
+        operation: 'cards',
+        fingerprint: parsed.data.topic,
+      },
+      generatedWordSchema.array().min(1).max(20),
+      (signal) =>
+        generateGameWords(
+          openRouterConfiguration(context.env),
+          parsed.data.topic,
+          exclusions ?? [],
+          signal,
+        ),
+      context.env.OPENROUTER_API_KEY,
     )
-    await cacheGeneratedCards(context.env.WORD_CARD_DATABASE_URL, {
-      requesterId: context.get('user').id,
-      gameId: game.id,
-      topic: parsed.data.topic,
-      sourceModel: context.env.OPENROUTER_TEXT_MODEL ?? 'unknown',
-      cards: cards as Json,
-    })
+    await cacheGeneratedCards(
+      context.env.WORD_CARD_DATABASE_URL,
+      {
+        requesterId: context.get('user').id,
+        gameId: game.id,
+        topic: parsed.data.topic,
+        sourceModel: context.env.OPENROUTER_TEXT_MODEL ?? 'unknown',
+        cards: cards as Json,
+      },
+      context.env.WORD_CARD_DATABASE_CA_CERT,
+    )
 
     const generatedRound = await createRoundFromPool(supabase, game.id, parsed.data.topic, false)
     if (generatedRound.error) return gameDatabaseError(context, generatedRound.error)
     if (generatedRound.data) return gameResponse(context, generatedRound.data, 201)
   } catch (error) {
+    if (error instanceof GameAiError) return openRouterErrorResponse(context, error)
     generationError = error
   }
 
@@ -281,49 +302,48 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (cont
     return errorResponse(context, 400, 'unsupported_audio', 'Use a WAV recording.')
   }
 
-  const audioPath = `${game.id}/${roundId}.wav`
-  const { error: uploadError } = await supabase.storage
-    .from(RECORDING_BUCKET)
-    .upload(audioPath, audio, { contentType: 'audio/wav', upsert: true })
-  if (uploadError) {
-    console.error('Word-game recording upload failed', { status: uploadError.statusCode })
-    return errorResponse(
-      context,
-      503,
-      'audio_storage_unavailable',
-      'The recording could not be saved. Try again.',
-    )
-  }
-
+  const audioBuffer = await audio.arrayBuffer()
+  const fingerprint = Array.from(
+    new Uint8Array(await crypto.subtle.digest('SHA-256', audioBuffer)),
+    (byte) => byte.toString(16).padStart(2, '0'),
+  ).join('')
   let transcription
   try {
-    transcription = await transcribeExplanation(
-      openRouterConfiguration(context.env),
-      toBase64(await audio.arrayBuffer()),
-      format,
+    transcription = await runGameAi(
+      supabase,
+      {
+        requesterId: context.get('user').id,
+        gameId: game.id,
+        roundId,
+        operation: 'transcription',
+        fingerprint,
+      },
+      transcriptionSchema,
+      async (signal) => {
+        const { error: uploadError } = await supabase.storage
+          .from(RECORDING_BUCKET)
+          .upload(`${game.id}/${roundId}.wav`, audio, { contentType: 'audio/wav', upsert: true })
+        if (uploadError) throw new GameAiError('upload_failed')
+        signal.throwIfAborted()
+        return transcribeExplanation(
+          openRouterConfiguration(context.env),
+          toBase64(audioBuffer),
+          format,
+          signal,
+        )
+      },
+      context.env.OPENROUTER_API_KEY,
     )
   } catch (error) {
     return openRouterErrorResponse(context, error)
-  }
-
-  let coaching: { score: number; feedback: string } | null = null
-  try {
-    coaching = await coachExplanation(openRouterConfiguration(context.env), {
-      secretWord: round.secretWord,
-      transcript: transcription.text,
-    })
-  } catch (error) {
-    console.error('Word-game coaching unavailable', {
-      kind: error instanceof OpenRouterError ? error.kind : 'unexpected',
-    })
   }
 
   const { data, error } = await supabase.rpc('submit_word_game_transcript', {
     p_round_id: roundId,
     p_transcript: transcription.text,
     p_transcript_words: transcription.words as Json,
-    p_coach_score: coaching?.score ?? null,
-    p_coach_feedback: coaching?.feedback ?? null,
+    p_coach_score: null,
+    p_coach_feedback: null,
   })
   if (error) return gameDatabaseError(context, error)
   return gameResponse(context, data)
@@ -600,6 +620,36 @@ function gameDatabaseError(
 }
 
 function openRouterErrorResponse(context: Parameters<typeof errorResponse>[0], error: unknown) {
+  if (error instanceof GameAiError) {
+    if (error.retryAfter) context.header('Retry-After', String(error.retryAfter))
+    if (error.kind === 'processing')
+      return errorResponse(
+        context,
+        409,
+        'ai_processing',
+        'This action is already being processed. Wait a moment before trying again.',
+      )
+    if (error.kind === 'conflict')
+      return errorResponse(
+        context,
+        409,
+        'ai_action_conflict',
+        'This action has changed or already finished. Refresh the game.',
+      )
+    if (error.kind === 'upload_failed')
+      return errorResponse(
+        context,
+        503,
+        'audio_storage_unavailable',
+        'The recording could not be saved. Try again.',
+      )
+    return errorResponse(
+      context,
+      503,
+      'ai_reservation_unavailable',
+      'The game AI is temporarily unavailable. Try again shortly.',
+    )
+  }
   if (error instanceof WordCardStoreError) {
     return errorResponse(
       context,
