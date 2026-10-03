@@ -1,0 +1,124 @@
+.friend-seat-invitation {
+  position: relative;
+  display: block;
+  width: min(400px, 100%);
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mp-ink);
+  border-radius: 8px;
+}
+
+.friend-seat-label {
+  position: absolute;
+  left: 73.25%;
+  top: 56.5%;
+  transform: translate(-50%, -50%);
+  color: var(--mp-ink);
+  font-size: var(--mp-font-size-body);
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  pointer-events: none;
+}
+
+.friend-seat-invitation svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+@media (min-width: 761px) {
+  .friend-seat-label {
+    font-size: calc(var(--mp-font-size-body) + 3px);
+  }
+}
+
+.friend-seat-lines {
+  stroke: var(--mp-ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.friend-seat-ground,
+.friend-seat-purple {
+  fill: var(--mp-lilac, #b7a0ff);
+}
+
+.friend-seat-lime {
+  fill: var(--mp-acid);
+}
+
+.friend-seat-cream {
+  fill: var(--mp-paper);
+}
+
+.friend-seat-ink {
+  fill: var(--mp-ink);
+}
+
+.friend-seat-coral {
+  fill: var(--mp-coral);
+}
+
+.friend-seat-head {
+  transform-origin: 104px 108px;
+  animation: friend-seat-nod 5s ease-in-out infinite;
+}
+
+.friend-seat-eyes {
+  transform-origin: 104px 77px;
+  animation: friend-seat-blink 5s ease-in-out infinite;
+}
+
+.friend-seat-plus {
+  transition: transform 160ms ease;
+}
+
+.friend-seat-invitation:is(:hover, :focus-visible) .friend-seat-plus {
+  transform: translate(2px, 3px);
+}
+
+.friend-seat-invitation:active .friend-seat-plus {
+  transform: translate(4px, 5px);
+}
+
+@keyframes friend-seat-nod {
+  0%,
+  8%,
+  24%,
+  40%,
+  100% {
+    transform: rotate(0deg);
+  }
+  16%,
+  32% {
+    transform: rotate(4deg);
+  }
+}
+
+@keyframes friend-seat-blink {
+  0%,
+  65%,
+  71%,
+  100% {
+    transform: scaleY(1);
+  }
+  68% {
+    transform: scaleY(0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friend-seat-head,
+  .friend-seat-eyes {
+    animation: none;
+  }
+
+  .friend-seat-plus {
+    transition: none;
+  }
+}

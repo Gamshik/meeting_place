@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { Partnership } from '@contracts/contracts'
 import type { GameSession } from '@features/community/model/CommunityContext'
 import { useAuth } from '@features/auth/model/AuthContext'
 import type { GameDefinition } from '@features/games/catalog/model/games'
+import { FriendSeatInvitation } from './FriendSeatInvitation'
 
 export function GameWorkspace({
   game,
@@ -135,16 +135,7 @@ export function GameWorkspace({
           </div>
         </>
       ) : (
-        <div className="quick-empty">
-          <span className="quick-empty-icon" aria-hidden="true">
-            +1
-          </span>
-          <h3>Your first round starts with a friend</h3>
-          <p>Invite someone by username. As soon as they accept, they appear right here.</p>
-          <Link className="button button-accent" to="/?view=friends&add=1">
-            Invite your first friend
-          </Link>
-        </div>
+        <FriendSeatInvitation />
       )}
     </section>
   )

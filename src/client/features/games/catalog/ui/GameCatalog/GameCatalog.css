@@ -44,13 +44,13 @@
 
 .game-choice {
   position: relative;
-  min-height: 250px;
+  min-height: 210px;
   display: grid;
   grid-template-columns: minmax(150px, 0.7fr) minmax(240px, 1.3fr);
   align-items: center;
   gap: clamp(10px, 2vw, 26px);
   width: 100%;
-  padding: clamp(22px, 3vw, 34px);
+  padding: 22px clamp(22px, 3vw, 34px);
   overflow: hidden;
   border: 2px solid var(--mp-ink);
   border-radius: 22px 22px 22px 7px;
@@ -103,7 +103,7 @@
 
 .game-choice-art svg {
   display: block;
-  width: min(100%, 210px);
+  width: min(100%, 180px);
   overflow: visible;
   stroke: var(--mp-ink);
   stroke-linecap: round;
@@ -196,7 +196,7 @@
 
 .future-game {
   position: relative;
-  min-height: 250px;
+  min-height: 210px;
   display: grid;
   align-content: center;
   justify-items: center;

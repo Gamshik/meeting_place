@@ -53,7 +53,10 @@ mouse hover. Touch screens keep the sticker still while scrolling; reduced-motio
 disable its animation.
 
 Friends manages connections only. **Invite** is also available from the global header and Practice
-screen, so a missing partner never becomes a navigation dead end. The compact form uses exact
+screen, so a missing partner never becomes a navigation dead end. When there are no friends,
+Practice shows a standalone illustration of a seated person beside an empty chair. Select the
+illustration to invite a friend without leaving Practice; its animation respects reduced-motion preferences.
+The compact form uses exact
 username lookup and explains that invitations are private. After sending, the Invitations list
 shows the pending request, with actions to accept, decline, or cancel. Search covers all loaded
 partnership pages, and refreshing does not drop older friends. Friend removal is under the friend's

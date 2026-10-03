@@ -2216,9 +2216,12 @@ for (const width of [320, 360, 390, 1440]) {
       ).toBeInViewport()
       await page.getByRole('link', { name: 'Practice', exact: true }).click()
     }
-    await page.getByRole('link', { name: 'Invite your first friend', exact: true }).click()
+    const practiceUrl = page.url()
+    await page.getByRole('button', { name: 'Invite first friend', exact: true }).click()
     const inviteDialog = page.getByRole('dialog', { name: 'Invite a friend' })
     await expect(inviteDialog).toBeVisible()
+    await expect(page).toHaveURL(practiceUrl)
+    await expect(page.getByRole('heading', { name: 'Choose a game' })).toBeVisible()
     if (width <= 360) {
       await expect(page.locator('html')).toHaveCSS('overflow', 'hidden')
       await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
@@ -2239,6 +2242,8 @@ for (const width of [320, 360, 390, 1440]) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.keyboard.press('Escape')
     await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page).toHaveURL(practiceUrl)
+    await page.getByRole('link', { name: 'Friends', exact: true }).click()
     await page.getByRole('button', { name: 'Invitations', exact: true }).click()
     await expect(page.getByText('No pending invitations.')).toBeVisible()
     if (width === 1440) {
