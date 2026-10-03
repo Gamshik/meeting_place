@@ -1,3 +1,4 @@
+import { assertAiCredits, AiLimitError } from './ai-limits'
 import { createUsageRecorder, type UsageRecorder } from './ai-usage'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database, Json } from '../../shared/database.types'
@@ -13,7 +14,8 @@ const reservationSchema = z.discriminatedUnion('status', [
 
 export class GameAiError extends Error {
   constructor(
-    readonly kind: 'processing' | 'conflict' | 'unavailable' | 'upload_failed',
+    readonly kind:
+      'processing' | 'conflict' | 'unavailable' | 'upload_failed' | 'credits_exhausted',
     readonly retryAfter?: number,
   ) {
     super('The AI action could not be completed.')
@@ -65,13 +67,18 @@ export async function runGameAi<T>(
     result = schema.parse(
       await work(
         signal,
-        createUsageRecorder(supabase, usageSigningKey!, {
-          userId: input.requesterId,
-          gameId: input.gameId,
-          operation: input.operation,
-          jobId: reservation.id,
-          token,
-        }),
+        createUsageRecorder(
+          supabase,
+          usageSigningKey!,
+          {
+            userId: input.requesterId,
+            gameId: input.gameId,
+            operation: input.operation,
+            jobId: reservation.id,
+            token,
+          },
+          () => assertAiCredits(supabase, usageSigningKey!, input.requesterId),
+        ),
       ),
     )
     signal.throwIfAborted()
@@ -79,6 +86,7 @@ export async function runGameAi<T>(
     // A provider response confirms completion/failure. A timeout or network error
     // does not: keep that lease until expiry rather than immediately duplicating work.
     if (
+      error instanceof AiLimitError ||
       error instanceof OpenRouterError ||
       (error instanceof GameAiError && error.kind === 'upload_failed')
     ) {
@@ -89,6 +97,10 @@ export async function runGameAi<T>(
           () => undefined,
         )
     }
+    if (error instanceof AiLimitError)
+      throw new GameAiError(
+        error.kind === 'credits_exhausted' ? 'credits_exhausted' : 'unavailable',
+      )
     throw error
   }
   // Do not mark failed if saving is uncertain: it may have committed successfully.

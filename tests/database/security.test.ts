@@ -1530,3 +1530,101 @@ describe('single-owner admin reporting', () => {
     ).toHaveLength(0)
   })
 })
+
+describe('profile spending limits', () => {
+  it('copies defaults once and edits the same profile columns', async () => {
+    const newcomer = '99999999-9999-4999-8999-999999999999'
+    await rows('update private.ai_limit_defaults set monthly_usd=0.50,lifetime_usd=1.00 where id')
+    await rows('insert into auth.users values($1,$2,$3)', [newcomer, 'new@example.test', {}])
+    expect(
+      await rows('select monthly_limit_usd::text as monthly from public.profiles where id=$1', [
+        bob,
+      ]),
+    ).toEqual([{ monthly: '0.20' }])
+    expect(
+      await rows('select monthly_limit_usd::text as monthly from public.profiles where id=$1', [
+        newcomer,
+      ]),
+    ).toEqual([{ monthly: '0.50' }])
+    await rows('update public.profiles set is_admin=true where id=$1', [alice])
+    await asUser(alice)
+    await rows("select public.admin_set_ai_limits($1,'2',null)", [newcomer])
+    expect(await rows('select public.admin_get_ai_limits($1) as limits', [newcomer])).toEqual([
+      { limits: { monthlyUsd: '2', lifetimeUsd: null } },
+    ])
+    await db.exec('reset role')
+    await rows('update private.ai_limit_defaults set monthly_usd=9 where id')
+    await rows("update public.profiles set display_name='Updated' where id=$1", [newcomer])
+    expect(
+      await rows(
+        'select monthly_limit_usd::text as monthly,lifetime_limit_usd from public.profiles where id=$1',
+        [newcomer],
+      ),
+    ).toEqual([{ monthly: '2', lifetime_limit_usd: null }])
+  })
+  it.each(['monthly_limit_usd', 'lifetime_limit_usd'])(
+    'hides %s from ordinary profile reads',
+    async (column) => {
+      await asUser(bob)
+      await expect(rows(`select ${column} from public.profiles`)).rejects.toThrow(
+        /permission denied/,
+      )
+    },
+  )
+  it('prevents self-editing limits', async () => {
+    await asUser(bob)
+    await expect(
+      rows('update public.profiles set monthly_limit_usd=10 where id=$1', [bob]),
+    ).rejects.toThrow(/permission denied/)
+  })
+  it('denies non-admin RPC reads', async () => {
+    await asUser(bob)
+    await expect(rows('select public.admin_get_ai_limits($1)', [bob])).rejects.toThrow(
+      /admin_required/,
+    )
+  })
+  it('denies non-admin RPC writes', async () => {
+    await asUser(bob)
+    await expect(rows("select public.admin_set_ai_limits($1,'9','9')", [bob])).rejects.toThrow(
+      /admin_required/,
+    )
+  })
+  it('checks lifetime then monthly, allowing null and blocking zero', async () => {
+    await asUser(bob)
+    expect(await rows("select public.check_my_ai_credits('0.19','0.19') as allowed")).toEqual([
+      { allowed: true },
+    ])
+    expect(await rows("select public.check_my_ai_credits('0.20','0') as allowed")).toEqual([
+      { allowed: false },
+    ])
+    expect(await rows("select public.check_my_ai_credits('0.10','0.20') as allowed")).toEqual([
+      { allowed: false },
+    ])
+    await db.exec('reset role')
+    await rows(
+      'update public.profiles set monthly_limit_usd=null,lifetime_limit_usd=null where id=$1',
+      [bob],
+    )
+    await asUser(bob)
+    expect(await rows("select public.check_my_ai_credits('900','900') as allowed")).toEqual([
+      { allowed: true },
+    ])
+    await db.exec('reset role')
+    await rows('update public.profiles set monthly_limit_usd=0 where id=$1', [bob])
+    await asUser(bob)
+    expect(await rows("select public.check_my_ai_credits('0','0') as allowed")).toEqual([
+      { allowed: false },
+    ])
+  })
+  it('rejects negative limits', async () => {
+    await expect(
+      rows('update public.profiles set monthly_limit_usd=-1 where id=$1', [bob]),
+    ).rejects.toThrow(/check constraint/)
+  })
+  it('denies ordinary access to default values', async () => {
+    await asUser(bob)
+    await expect(rows('select * from private.ai_limit_defaults')).rejects.toThrow(
+      /permission denied/,
+    )
+  })
+})

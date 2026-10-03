@@ -211,3 +211,68 @@ it('returns an error instead of partial totals when a later batch fails or acces
   expect(response.status).toBe(403)
   expect(await response.json()).not.toHaveProperty('data')
 })
+
+it('restricts limit reads and changes to the admin', async () => {
+  mocks.rpc.mockResolvedValue({ data: false })
+  for (const method of ['GET', 'PATCH']) {
+    const response = await app.request(
+      `/api/admin/users/${user}/limits`,
+      { method, headers: { Authorization: 'Bearer token' } },
+      env,
+    )
+    expect(response.status).toBe(403)
+  }
+  expect(mocks.rpc.mock.calls.every(([name]) => name === 'is_current_user_admin')).toBe(true)
+})
+it('saves profile limits and returns them only through the admin endpoint', async () => {
+  const limits = { monthlyUsd: '1.5', lifetimeUsd: '5' }
+  mocks.rpc.mockResolvedValueOnce({ data: true }).mockResolvedValueOnce({ data: true })
+  const response = await app.request(
+    `/api/admin/users/${user}/limits`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+      body: JSON.stringify(limits),
+    },
+    env,
+  )
+  expect(response.status).toBe(200)
+  expect(mocks.rpc).toHaveBeenLastCalledWith('admin_set_ai_limits', {
+    p_user_id: user,
+    p_monthly_usd: '1.5',
+    p_lifetime_usd: '5',
+  })
+  mocks.rpc.mockResolvedValueOnce({ data: true }).mockResolvedValueOnce({ data: limits })
+  const read = await app.request(
+    `/api/admin/users/${user}/limits`,
+    { headers: { Authorization: 'Bearer token' } },
+    env,
+  )
+  expect(await read.json()).toEqual({ data: limits })
+})
+it.each([-1, '-1', 'NaN', '1e3', '0.0000000000001'])('rejects invalid limit %s', async (amount) => {
+  const response = await app.request(
+    `/api/admin/users/${user}/limits`,
+    {
+      method: 'PATCH',
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ monthlyUsd: amount, lifetimeUsd: null }),
+    },
+    env,
+  )
+  expect(response.status).toBe(400)
+  expect(mocks.rpc).toHaveBeenCalledOnce()
+})
+
+it('returns copied signup amounts only through the admin endpoint', async () => {
+  mocks.rpc
+    .mockResolvedValueOnce({ data: true })
+    .mockResolvedValueOnce({ data: { monthlyUsd: '0.20', lifetimeUsd: '0.20' } })
+  const response = await app.request(
+    `/api/admin/users/${user}/limits`,
+    { headers: { Authorization: 'Bearer token' } },
+    env,
+  )
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ data: { monthlyUsd: '0.20', lifetimeUsd: '0.20' } })
+})

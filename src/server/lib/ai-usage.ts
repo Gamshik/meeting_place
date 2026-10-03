@@ -35,10 +35,12 @@ export function createUsageRecorder(
     jobId: string
     token: string
   },
+  beforeStart?: () => Promise<void>,
 ): UsageRecorder {
   let receipt: UsageReceipt | undefined
   return {
     async start(model) {
+      await beforeStart?.()
       receipt = {
         id: crypto.randomUUID(),
         userId: context.userId,

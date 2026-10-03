@@ -145,3 +145,92 @@ test('a regular user cannot open the admin UI or trigger its report request', as
   await expect(page.getByRole('table')).toHaveCount(0)
   expect(requested).toBe(false)
 })
+
+test('the admin can save zero limits and restore unlimited defaults', async ({ page }) => {
+  await setup(page)
+  let limits: { monthlyUsd: string | null; lifetimeUsd: string | null } = {
+    monthlyUsd: null,
+    lifetimeUsd: null,
+  }
+  await page.route('**/api/admin/users?**', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          users: [
+            {
+              id,
+              username: 'learner',
+              displayName: 'Learner',
+              knownCostUsd: '0.000000000000',
+              knownTokens: '0',
+              knownAudioSeconds: 0,
+              unknownCostCount: 0,
+              unknownTokenCount: 0,
+              unknownAudioDurationCount: 0,
+              unverifiedCount: 0,
+            },
+          ],
+          nextCursor: null,
+          from: '1970-01-01T00:00:00Z',
+          to: '2026-10-03T12:00:00Z',
+          currency: 'USD',
+        },
+      },
+    }),
+  )
+  await page.route(`**/api/admin/users/${id}/limits`, (route) => {
+    if (route.request().method() === 'PATCH') limits = route.request().postDataJSON()
+    return route.fulfill({ json: { data: limits } })
+  })
+  await page.goto('/admin')
+  await page.getByRole('button', { name: 'Spending limits', exact: true }).click()
+  await expect(page.getByLabel('Lifetime spending limit (USD)')).toBeEnabled()
+  await expect(page.getByLabel('Monthly spending limit (USD)')).toHaveValue('')
+  await page.getByLabel('Lifetime spending limit (USD)').fill('0')
+  await page.getByLabel('Monthly spending limit (USD)').fill('2.5')
+  await page.getByRole('button', { name: 'Save limits', exact: true }).click()
+  await expect(page.getByRole('status')).toHaveText('Limits saved.')
+  expect(limits).toEqual({ monthlyUsd: '2.5', lifetimeUsd: '0' })
+  await page.getByLabel('Lifetime spending limit (USD)').fill('')
+  await page.getByLabel('Monthly spending limit (USD)').fill('')
+  await page.getByRole('button', { name: 'Save limits', exact: true }).click()
+  await expect(page.getByRole('status')).toHaveText('Limits saved.')
+  expect(limits).toEqual({ monthlyUsd: null, lifetimeUsd: null })
+})
+
+test('exhausted credits show only the existing soft notification during a paid game action', async ({
+  page,
+}) => {
+  await setup(page, false)
+  const partnership = '22222222-2222-4222-8222-222222222222'
+  const game = {
+    id: '33333333-3333-4333-8333-333333333333',
+    partnershipId: partnership,
+    mode: 'live_call',
+    status: 'active',
+    requestedById: id,
+    explanationDurationSeconds: 60,
+    acceptedAt: '2026-10-03T12:00:00Z',
+    currentPlayerId: id,
+    partner: { id: partnership, username: 'bob', displayName: 'Bob', avatarUrl: null },
+    scores: { you: 0, partner: 0 },
+    round: null,
+  }
+  await page.route('**/api/games/explain-word/**', (route) => {
+    if (new URL(route.request().url()).pathname.endsWith('/rounds'))
+      return route.fulfill({
+        status: 403,
+        json: { error: { code: 'credits_exhausted', message: 'You’ve run out of credits.' } },
+      })
+    return route.fulfill({ json: { data: game } })
+  })
+  await page.goto(`/games/explain-word/${partnership}`)
+  await page.getByRole('button', { name: 'Give me a word' }).click()
+  const notice = page.locator('.toast').filter({ hasText: 'You’ve run out of credits.' })
+  await expect(notice).toHaveAttribute('role', 'status')
+  await expect(notice).not.toHaveClass(/toast-error/)
+  await expect(page.getByText(/monthly spending|lifetime spending|USD/i)).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Give me a word' })).toBeEnabled()
+  await notice.getByRole('button', { name: 'Dismiss notification' }).click()
+  await expect(notice).toHaveCount(0)
+})

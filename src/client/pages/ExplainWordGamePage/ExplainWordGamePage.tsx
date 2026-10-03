@@ -33,6 +33,7 @@ export function ExplainWordGamePage() {
   const [isBusy, setIsBusy] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [showEndConfirmation, setShowEndConfirmation] = useState(false)
+  const [creditsNotice, setCreditsNotice] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null)
   const pendingGame = useRef<{ partnershipId: string; id: string } | null>(null)
@@ -219,7 +220,9 @@ export function ExplainWordGamePage() {
       receiveGame(response?.data ?? null)
       return true
     } catch (actionError) {
-      setError(messageFromError(actionError))
+      if (actionError instanceof ApiError && actionError.code === 'credits_exhausted')
+        setCreditsNotice(true)
+      else setError(messageFromError(actionError))
       return false
     } finally {
       gameMutationInFlight.current = false
@@ -241,7 +244,9 @@ export function ExplainWordGamePage() {
       await api.endWordGame(partnershipId)
       navigate('/', { replace: true })
     } catch (actionError) {
-      setError(messageFromError(actionError))
+      if (actionError instanceof ApiError && actionError.code === 'credits_exhausted')
+        setCreditsNotice(true)
+      else setError(messageFromError(actionError))
       setShowEndConfirmation(false)
       setIsBusy(false)
     }
@@ -255,7 +260,9 @@ export function ExplainWordGamePage() {
       await action()
       navigate('/', { replace: true })
     } catch (actionError) {
-      setError(messageFromError(actionError))
+      if (actionError instanceof ApiError && actionError.code === 'credits_exhausted')
+        setCreditsNotice(true)
+      else setError(messageFromError(actionError))
       setIsBusy(false)
     }
   }
@@ -365,6 +372,13 @@ export function ExplainWordGamePage() {
         </div>
       </header>
 
+      {creditsNotice ? (
+        <Notice
+          neutral
+          message="You’ve run out of credits."
+          onClose={() => setCreditsNotice(false)}
+        />
+      ) : null}
       {error ? <Notice error message={error} onClose={() => setError(null)} /> : null}
       {settingsNotice ? (
         <Notice message={settingsNotice} onClose={() => setSettingsNotice(null)} />

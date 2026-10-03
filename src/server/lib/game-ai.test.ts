@@ -51,6 +51,7 @@ it('reuses authentic cached results without calling the provider', async () => {
   work.mockClear()
   await expect(runGameAi(client, input, schema, work, key)).resolves.toEqual(value)
   expect(work).not.toHaveBeenCalled()
+  expect(rpc).toHaveBeenCalledOnce()
 })
 it.each(['forged', 'other user', 'other round'])('rejects %s cached content', async (variation) => {
   await runGameAi(client, input, schema, work, key)
@@ -88,3 +89,40 @@ it('rejects expired completion', async () => {
   rpc.mockResolvedValue({ data: false, error: null })
   await expect(runGameAi(client, input, schema, work, key)).rejects.toBeInstanceOf(GameAiError)
 })
+
+it.each(['cards', 'transcription'] as const)(
+  'blocks paid %s dispatch and releases the reservation when credits are exhausted',
+  async (operation) => {
+    rpc.mockReset().mockImplementation(async (name: string) => ({
+      data:
+        name === 'reserve_my_game_ai'
+          ? { status: 'reserved', id }
+          : name === 'list_my_ai_usage'
+            ? []
+            : name === 'check_my_ai_credits'
+              ? false
+              : true,
+      error: null,
+    }))
+    const provider = vi.fn()
+    await expect(
+      runGameAi(
+        client,
+        { ...input, operation },
+        schema,
+        async (_signal, usage) => {
+          await usage.start('test')
+          provider()
+          return value
+        },
+        key,
+      ),
+    ).rejects.toMatchObject({ kind: 'credits_exhausted' })
+    expect(provider).not.toHaveBeenCalled()
+    expect(rpc.mock.calls.some(([name]) => name === 'start_my_ai_usage')).toBe(false)
+    expect(rpc).toHaveBeenLastCalledWith(
+      'finish_my_game_ai',
+      expect.objectContaining({ p_result: null }),
+    )
+  },
+)

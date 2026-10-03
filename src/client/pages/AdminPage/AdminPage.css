@@ -90,3 +90,34 @@
   background: #fff0af;
   border: 2px solid #242422;
 }
+
+.admin-limits {
+  margin-top: 1rem;
+  font-weight: 400;
+}
+.admin-limits form {
+  margin-top: 1rem;
+}
+.admin-limits fieldset {
+  display: grid;
+  gap: 0.75rem;
+  border: 2px solid var(--mp-ink);
+  padding: 0.75rem;
+  min-width: 0;
+}
+.admin-limits label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+}
+.admin-limits input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem;
+  border: 2px solid var(--mp-ink);
+  border-radius: 3px;
+  background: white;
+}
+.admin-limits p {
+  font-size: var(--mp-font-size-supporting);
+}

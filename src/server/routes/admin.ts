@@ -3,8 +3,64 @@ import { adminQuerySchema, type AdminReport, type AdminUser } from '../../shared
 import { sumCosts, verifyUsage } from '../lib/ai-usage'
 import { errorResponse } from '../lib/responses'
 import type { AppEnvironment } from '../types'
+import { z } from 'zod'
+import { aiLimitsSchema } from '../../shared/ai-limits'
 
 export const adminRoutes = new Hono<AppEnvironment>()
+
+adminRoutes.on(['GET', 'PATCH'], '/users/:userId/limits', async (context) => {
+  const db = context.get('supabase')
+  const access = await db.rpc('is_current_user_admin')
+  if (access.error)
+    return errorResponse(context, 503, 'limits_unavailable', 'Spending limits are unavailable.')
+  if (access.data !== true)
+    return errorResponse(
+      context,
+      403,
+      'admin_required',
+      'This page is available only to the administrator.',
+    )
+  const id = z.uuid().safeParse(context.req.param('userId'))
+  if (!id.success) return errorResponse(context, 400, 'invalid_user', 'Choose a valid user.')
+  try {
+    if (context.req.method === 'PATCH') {
+      const parsed = aiLimitsSchema.safeParse(await context.req.json().catch(() => null))
+      if (!parsed.success)
+        return errorResponse(
+          context,
+          400,
+          'invalid_limits',
+          'Enter a nonnegative USD amount or leave the limit unlimited.',
+        )
+      const result = await db.rpc('admin_set_ai_limits', {
+        p_user_id: id.data,
+        p_monthly_usd: parsed.data.monthlyUsd,
+        p_lifetime_usd: parsed.data.lifetimeUsd,
+      })
+      if (result.error || result.data !== true) throw result.error
+      return context.json({ data: parsed.data })
+    }
+    const result = await db.rpc('admin_get_ai_limits', { p_user_id: id.data })
+    if (result.error) throw result.error
+    return context.json({ data: aiLimitsSchema.parse(result.data) })
+  } catch (error) {
+    const code = typeof error === 'object' && error !== null && 'code' in error ? error.code : null
+    if (code === '42501')
+      return errorResponse(context, 403, 'admin_required', 'Administrator access is required.')
+    if (code === 'P0002')
+      return errorResponse(context, 404, 'profile_not_found', 'This user no longer exists.')
+    console.error('Admin spending limits failed', {
+      code: typeof code === 'string' ? code : 'invalid_limit_response',
+      operation: context.req.method,
+    })
+    return errorResponse(
+      context,
+      503,
+      'limits_unavailable',
+      'Spending limits could not be loaded or saved.',
+    )
+  }
+})
 
 adminRoutes.get('/users', async (context) => {
   const db = context.get('supabase')

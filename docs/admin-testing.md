@@ -1,6 +1,6 @@
 # Owner admin setup and testing
 
-The read-only `/admin` page lists all profiles, including accounts with no usage, with verified
+The `/admin` page lists all profiles, including accounts with no usage, with verified
 word-token totals, transcription duration in seconds, and combined AI spending in USD. It defaults to All time; This month uses UTC boundaries.
 Only one profile can be an administrator. An Admin navigation link appears only for that account.
 
@@ -82,3 +82,68 @@ receipt batches, missing metadata, zero-usage users, user pagination, and UTC pe
 PostgreSQL security suite applies all migrations and tests database authorization and constraints.
 `npm run db:reset` additionally requires a running local Supabase/Docker environment and resets
 that local database; it is not needed against your hosted project.
+
+## Spending limit setup and database checks
+
+Apply migrations through `202610030003_repair_profile_limit_schema.sql`. New profiles receive the current defaults once, initially $0.20 monthly and
+$0.20 lifetime. Existing profiles are not backfilled and remain unlimited until edited.
+
+Inspect or change defaults for future registrations in Supabase SQL Editor:
+
+```sql
+select * from private.ai_limit_defaults;
+
+update private.ai_limit_defaults
+set monthly_usd = 0.50, lifetime_usd = 1.00
+where id = true;
+```
+
+Inspect actual per-user limits directly on profiles:
+
+```sql
+select id, username, monthly_limit_usd, lifetime_limit_usd
+from public.profiles
+order by created_at desc;
+```
+
+Change one user's actual limits through Admin → Spending limits, or SQL Editor:
+
+```sql
+update public.profiles
+set monthly_limit_usd = 0.50, lifetime_limit_usd = 2.00
+where id = 'USER_UUID'::uuid;
+```
+
+NULL means unlimited; zero blocks paid requests. Admin edits and SQL edits affect the same two
+columns. There are no policy, encryption, or signup-limit tables for individual users. Ordinary
+users cannot read or update these columns. Keep the single defaults row; removing it blocks new
+registrations rather than silently allowing unlimited usage.
+
+1. Register A. Change defaults, then register B. Confirm only B receives the changed values.
+   Profile edits, logins, and month rollover must not overwrite A's limits.
+2. In Admin, set a test user's lifetime limit to 0. A transcription or word-generation attempt
+   requiring paid work must show only “You’ve run out of credits.” in the neutral toast, with
+   no paid provider call or new usage receipt. Pooled words and cached results remain usable.
+3. Repeat with lifetime unlimited and monthly 0. Restore both to unlimited and retry; a denied
+   action must not retain its reservation for two minutes.
+4. Check positive lifetime and monthly thresholds against known spending. Both operations count
+   in USD, independent of tokens or audio seconds. Monthly boundaries use UTC; lifetime is first.
+5. Confirm normal profile reads and edits still work, but direct reads/writes of either limit
+   column and non-admin calls to admin_get_ai_limits/admin_set_ai_limits fail.
+6. Missing costs and unverifiable receipts are excluded; concurrent or final paid work can exceed
+   the limit. Changing limits does not reset accounting history.
+
+`npm run check` covers registration copying, existing-user preservation, default changes, admin
+edits, column permissions, thresholds, ledger pagination, forgery exclusions, cached work and
+reservation release. `npm run test:e2e -- tests/e2e/admin.spec.ts` checks the editor and notification.
+
+## Repairing an earlier policy-based deployment
+
+Migration `202610030003_repair_profile_limit_schema.sql` adds missing profile columns and restores
+current RPCs when older migration IDs were already applied with the earlier policy schema. It is
+safe against the current schema as well. It reloads the PostgREST schema cache. Existing encrypted
+legacy rows are deliberately retained so saved values can be recovered instead of silently lost.
+The linked development database was repaired and its one saved policy was decrypted with the local
+signing key and restored to the profile columns. The old row is retained as a recovery record;
+the current application reads only profile columns. Other legacy databases need the same recovery
+before relying on limits. Do not reset migration history or overwrite deployed migration files.

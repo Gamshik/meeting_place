@@ -55,12 +55,14 @@ export function Notice({
   actionLabel,
   onAction,
   error = false,
+  neutral = false,
 }: {
   message: string
   onClose: () => void
   actionLabel?: string
   onAction?: () => void
   error?: boolean
+  neutral?: boolean
 }) {
   useEffect(() => {
     if (error) return
@@ -70,7 +72,7 @@ export function Notice({
   return (
     <div className={`toast ${error ? 'toast-error' : ''}`} role={error ? 'alert' : 'status'}>
       <span className="toast-icon" aria-hidden="true">
-        {error ? '!' : '✓'}
+        {error ? '!' : neutral ? 'i' : '✓'}
       </span>
       <span className="toast-content">
         <span className="toast-message">{message}</span>

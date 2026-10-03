@@ -86,7 +86,7 @@ it.each([
   expect(mocks.rpc).not.toHaveBeenCalledWith('submit_word_game_transcript', expect.anything())
 })
 
-it.each(['processing', 'conflict', 'unavailable'] as const)(
+it.each(['processing', 'conflict', 'unavailable', 'credits_exhausted'] as const)(
   'blocks recording work when reservation is %s',
   async (kind) => {
     mocks.rpc.mockResolvedValue({
@@ -114,7 +114,13 @@ it.each(['processing', 'conflict', 'unavailable'] as const)(
       },
       env,
     )
-    expect(response.status).toBe(kind === 'unavailable' ? 503 : 409)
+    expect(response.status).toBe(
+      kind === 'credits_exhausted' ? 403 : kind === 'unavailable' ? 503 : 409,
+    )
+    if (kind === 'credits_exhausted')
+      expect(await response.json()).toEqual({
+        error: { code: 'credits_exhausted', message: 'You’ve run out of credits.' },
+      })
     expect(mocks.storageUpload).not.toHaveBeenCalled()
     expect(provider).not.toHaveBeenCalled()
     if (kind === 'processing') expect(response.headers.get('Retry-After')).toBe('120')
@@ -749,6 +755,32 @@ describe('explain-word game API', () => {
     expect(responseBody).not.toContain('private-password')
     expect(mocks.rpc).not.toHaveBeenCalledWith('cache_word_game_cards', expect.anything())
   })
+
+  it.each([true, false])(
+    'keeps pooled fallback available with exhausted credits (available: %s)',
+    async (available) => {
+      mocks.rpc
+        .mockResolvedValueOnce({ data: game(), error: null })
+        .mockResolvedValueOnce({ data: null, error: null })
+        .mockResolvedValueOnce({ data: [], error: null })
+        .mockResolvedValueOnce({ data: available ? game({ round: round() }) : null, error: null })
+      mocks.runGameAi.mockRejectedValue(new GameAiError('credits_exhausted'))
+      const response = await app.request(
+        `/api/games/explain-word/${partnershipId}/rounds`,
+        {
+          method: 'POST',
+          headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic: 'Travel' }),
+        },
+        env,
+      )
+      expect(response.status).toBe(available ? 201 : 403)
+      if (!available)
+        expect(await response.json()).toEqual({
+          error: { code: 'credits_exhausted', message: 'You’ve run out of credits.' },
+        })
+    },
+  )
 
   it('uses the stored-card fallback when the restricted writer fails', async () => {
     mocks.rpc

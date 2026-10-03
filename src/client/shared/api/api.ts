@@ -1,3 +1,4 @@
+import type { AiLimits } from '@contracts/ai-limits'
 import type { AdminReport } from '@contracts/admin'
 import type {
   InvitePartnerInput,
@@ -65,6 +66,13 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getAiLimits: (userId: string) =>
+    apiRequest<DataResponse<AiLimits>>(`/api/admin/users/${userId}/limits`),
+  setAiLimits: (userId: string, limits: AiLimits) =>
+    apiRequest<DataResponse<AiLimits>>(`/api/admin/users/${userId}/limits`, {
+      method: 'PATCH',
+      body: JSON.stringify(limits),
+    }),
   getAdminUsers: (period: 'all' | 'month', afterId?: string) =>
     apiRequest<DataResponse<AdminReport>>(
       `/api/admin/users?${new URLSearchParams({ period, ...(afterId ? { afterId } : {}) })}`,

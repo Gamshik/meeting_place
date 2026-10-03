@@ -309,7 +309,7 @@ OpenRouter usage metadata is captured before domain-response validation. Thus in
 provider errors, and later game-save failures do not erase known charges. Network ambiguity or
 missing metadata remains null rather than zero. Final-save retries are idempotent; a failed save
 leaves the signed initial unknown event. Cached game results never enter provider dispatch and
-therefore never add another usage row. There are no quotas or model-price tables.
+therefore never add another usage row. There are no model-price tables; optional soft limits are enforced before paid dispatch.
 
 The user-authenticated RPC boundary cannot itself attest that metadata originated at OpenRouter.
 The Worker signs receipts under a distinct HMAC domain and verifies their actor, event, game, and
@@ -342,3 +342,30 @@ than returning partial totals if the 50,000-receipt scan limit is exceeded or a 
 This initial on-demand scan should become a verified aggregation pipeline if usage grows enough
 to exceed edge runtime limits. Concurrent updates are reflected on refresh, not snapshot-isolated
 across batches. Account deletion retains the ledger's existing cascade behavior.
+
+## Profile spending limits
+
+`public.profiles.monthly_limit_usd` and `lifetime_limit_usd` store each user's actual numeric
+limits. NULL means unlimited; zero blocks paid AI. Column-level SELECT and UPDATE grants exclude
+these fields from ordinary users. Existing profile RLS remains in force. Admin-only RPCs read and
+atomically edit these same columns after checking current admin status. There are no encrypted
+limit policies, separate signup-limit rows, or override precedence rules.
+
+`private.ai_limit_defaults` has one row with monthly_usd and lifetime_usd, initially 0.20 each.
+A BEFORE INSERT trigger copies them into NEW.monthly_limit_usd and NEW.lifetime_limit_usd when
+a profile is created. It runs only on insertion. No existing profiles are backfilled; their new
+columns remain NULL. Changing defaults affects only later registrations. Missing settings fail
+registration closed. The defaults table has RLS and no ordinary-user grants.
+
+Before actual provider dispatch, the Worker scans and signature-verifies the caller's usage
+receipts, summing lifetime and current UTC-month known costs using integer arithmetic. It passes
+those totals to check_my_ai_credits, which compares against the caller's profile columns, lifetime
+first. The function returns only a boolean; direct RPC calls cannot initiate paid work, and the
+Worker never accepts spending totals from the browser. Read failures or more than 50,000 receipts
+fail closed. Unknown or unverifiable costs are excluded. This is a soft limit: concurrent requests
+and the final call can overshoot. Unlimited accounts currently use the same verified ledger scan.
+
+Cached results bypass dispatch; pooled cards and older-card fallback remain available. A blocked
+request records no paid attempt, releases the game reservation, and returns credits_exhausted
+with “You’ve run out of credits.” The game shows the existing neutral bottom-right notification.
+Usage signing-key rotation still affects old receipt verification; limits have no key dependency.

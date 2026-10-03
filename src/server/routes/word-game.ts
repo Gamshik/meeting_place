@@ -240,7 +240,8 @@ wordGameRoutes.post('/:partnershipId/rounds', async (context) => {
     if (generatedRound.error) return gameDatabaseError(context, generatedRound.error)
     if (generatedRound.data) return gameResponse(context, generatedRound.data, 201)
   } catch (error) {
-    if (error instanceof GameAiError) return openRouterErrorResponse(context, error)
+    if (error instanceof GameAiError && error.kind !== 'credits_exhausted')
+      return openRouterErrorResponse(context, error)
     generationError = error
   }
 
@@ -632,6 +633,8 @@ function openRouterErrorResponse(context: Parameters<typeof errorResponse>[0], e
     )
   }
   if (error instanceof GameAiError) {
+    if (error.kind === 'credits_exhausted')
+      return errorResponse(context, 403, 'credits_exhausted', 'You’ve run out of credits.')
     if (error.retryAfter) context.header('Retry-After', String(error.retryAfter))
     if (error.kind === 'processing')
       return errorResponse(

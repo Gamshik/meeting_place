@@ -104,6 +104,7 @@ it('does not treat missing usage or missing cost as free', () => {
 it('a cached retry adds neither another provider call nor another usage event', async () => {
   let savedResult: unknown
   rpc.mockImplementation(async (name: string, args: Record<string, unknown>) => {
+    if (name === 'list_my_ai_usage') return { data: [], error: null }
     if (name === 'reserve_my_game_ai')
       return {
         data: savedResult

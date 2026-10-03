@@ -311,7 +311,7 @@ before deploying; old Workers do not honor reservations, so retire the old versi
 
 Each actual OpenRouter attempt records a signed receipt with the triggering account, operation,
 model, provider request ID, reported cost, token counts, and audio duration when available.
-There are no usage quotas or manually maintained prices. Cached retries and pooled cards do not
+There are no manually maintained prices. Optional admin-managed spending limits are described below. Cached retries and pooled cards do not
 add another charge. Unknown costs remain null and are counted separately from confirmed zero.
 
 Apply `202610020004_track_ai_usage.sql` with `npm run db:push`, then restart development or deploy
@@ -327,7 +327,7 @@ repeat-submission checks, tests, pagination, and failure/reconciliation limitati
 
 ## Owner admin panel
 
-The read-only `/admin` page shows all users with verified word-token totals, transcription duration, and combined AI spending
+The `/admin` page shows all users with verified word-token totals, transcription duration, and combined AI spending
 in USD, with All time and This month (UTC) filters. Only the single profile with `is_admin = true`
 can access it. Apply `202610020005_add_owner_admin.sql`, then assign your existing account's flag
 manually in the Supabase SQL Editor. Regular users cannot change that field. Reload to reveal the
@@ -335,6 +335,26 @@ Admin navigation item. No additional credentials are needed.
 
 See [owner admin setup and testing](docs/admin-testing.md) for the exact SQL, access checks,
 reporting semantics, and limits. Unknown or unverified usage is explicitly marked as incomplete.
+
+## Soft AI spending limits
+
+Apply migrations through `202610030003_repair_profile_limit_schema.sql` before deploying the updated Worker.
+New profiles receive a one-time copy of the database defaults: initially $0.20 monthly and $0.20
+lifetime. Changing the defaults affects only later registrations. Existing profiles are not backfilled.
+In Admin, open **Spending limits** for a user. Blank lifetime and monthly USD fields mean unlimited; zero blocks new paid AI calls. Lifetime spending is checked first, then the current
+UTC calendar month. Saving a lower limit takes effect on subsequent paid requests. Admins are
+subject to their own configured limits too.
+
+Limits count verified, known costs across word generation and transcription. A final request or
+concurrent requests can exceed the threshold; missing or unverifiable costs are excluded. Existing
+cached results and pooled words remain available. Regular users see only the dismissible notification
+“You’ve run out of credits.” when a paid action is blocked; no amounts or remaining balances appear.
+
+Limits are plain numeric columns on `public.profiles`: `monthly_limit_usd` and
+`lifetime_limit_usd`. Only admin RPCs or database operators can read or change them; ordinary
+profile permissions exclude these columns. No separate per-user policy or signup table exists.
+The existing signing key still verifies usage receipts, but does not encrypt limits.
+See [the admin testing guide](docs/admin-testing.md) for setup, negative checks, and limitations.
 
 ## Configure Google sign-in
 

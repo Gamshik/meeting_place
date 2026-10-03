@@ -38,6 +38,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          monthly_limit_usd: number | null
+          lifetime_limit_usd: number | null
           is_admin: boolean
           avatar_url: string | null
           created_at: string
@@ -242,6 +244,15 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      check_my_ai_credits: {
+        Args: { p_lifetime_usd: string; p_monthly_usd: string }
+        Returns: boolean
+      }
+      admin_get_ai_limits: { Args: { p_user_id: string }; Returns: Json }
+      admin_set_ai_limits: {
+        Args: { p_user_id: string; p_monthly_usd: string | null; p_lifetime_usd: string | null }
+        Returns: boolean
+      }
       is_current_user_admin: { Args: Record<string, never>; Returns: boolean }
       admin_list_users: {
         Args: { p_after_id?: string }
