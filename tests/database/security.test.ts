@@ -73,6 +73,13 @@ afterAll(async () => {
 })
 
 describe('database authorization and lifecycle', () => {
+  it('allows 12 MiB recordings while keeping the bucket private and WAV-only', async () => {
+    expect(
+      await rows(
+        "select file_size_limit::integer, public, allowed_mime_types from storage.buckets where id='word-game-recordings'",
+      ),
+    ).toEqual([{ file_size_limit: 12_582_912, public: false, allowed_mime_types: ['audio/wav'] }])
+  })
   async function aiGame() {
     await asUser(alice)
     const invitation = await invite('bob')

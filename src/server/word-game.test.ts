@@ -45,6 +45,46 @@ const env = {
   OPENROUTER_TEXT_MODEL: 'test/text-model',
 }
 
+it.each([9_600_044, 12_582_912, 12_582_913])(
+  'checks recording size %i against the 12 MiB limit',
+  async (size) => {
+    mocks.rpc.mockResolvedValue({
+      data: game({
+        round: round({
+          recordingStartedAt: '2026-09-11T12:00:00Z',
+          recordingFinishedAt: '2026-09-11T12:05:00Z',
+          explanationDurationSeconds: 300,
+        }),
+        explanationDurationSeconds: 300,
+      }),
+      error: null,
+    })
+    // Stop at the reservation boundary; no real storage upload or paid AI call.
+    mocks.runGameAi.mockRejectedValue(new GameAiError('processing', 120))
+    const body = new FormData()
+    body.set('audio', new File([new Uint8Array(size)], 'turn.wav', { type: 'audio/wav' }))
+    const response = await app.request(
+      `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
+      {
+        method: 'POST',
+        headers: { Authorization: 'Bearer token' },
+        body,
+      },
+      env,
+    )
+    expect(response.status).toBe(size > 12_582_912 ? 400 : 409)
+    if (size > 12_582_912) {
+      expect(await response.json()).toMatchObject({
+        error: { code: 'invalid_audio', message: expect.stringContaining('12 MiB') },
+      })
+      expect(mocks.runGameAi).not.toHaveBeenCalled()
+    } else {
+      expect(mocks.runGameAi).toHaveBeenCalledOnce()
+    }
+    expect(mocks.storageUpload).not.toHaveBeenCalled()
+  },
+)
+
 it.each([
   ['45', '45'],
   [null, null],

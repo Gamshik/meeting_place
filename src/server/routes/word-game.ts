@@ -25,7 +25,7 @@ import {
 import type { AppEnvironment } from '../types'
 import { cacheGeneratedCards, WordCardStoreError } from '../lib/word-card-store'
 
-const MAX_AUDIO_BYTES = 8 * 1024 * 1024
+const MAX_AUDIO_BYTES = 12 * 1024 * 1024 // 12 MiB, matching the storage bucket.
 const RECORDING_BUCKET = 'word-game-recordings'
 
 export const wordGameRoutes = new Hono<AppEnvironment>()
@@ -296,7 +296,7 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (cont
       context,
       400,
       'invalid_audio',
-      'Record an explanation shorter than one minute and under 8 MB.',
+      'Send a nonempty recording no larger than 12 MiB. You can record for up to five minutes.',
     )
   }
   const format = audioFormat(audio)

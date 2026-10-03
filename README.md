@@ -554,3 +554,29 @@ checks in a separate database job, and runs browser tests in the main verificati
 The current application covers identity, two-person partnerships, and the first turn-based speaking
 activity. Meetings, background push notifications, additional game types in the shared activity
 calendar, realtime game updates, and billing belong in later vertical slices.
+
+## Recording upload limit
+
+The API and `word-game-recordings` bucket allow recordings up to **12 MiB (12,582,912 bytes)**,
+including full five-minute mono WAV recordings. To update an existing Supabase project:
+
+1. Open a terminal in this repository.
+2. Run `npm run db:push` and confirm the pending migrations. The migration
+   `202610030004_increase_recording_upload_limit.sql` sets the bucket limit to 12,582,912 bytes.
+3. In the Supabase SQL Editor, verify the result with this read-only query:
+
+   ```sql
+   select id, file_size_limit
+   from storage.buckets
+   where id = 'word-game-recordings';
+   ```
+
+   The result should show `12582912`. The bucket remains private and WAV-only.
+
+4. Restart local development if necessary. Run `npm run deploy` when ready to publish the API
+   change to Cloudflare; changing the bucket alone does not change the deployed API limit.
+5. Try sending a full five-minute recording. It should pass the size check; provider availability
+   and other validation still apply.
+
+The project-wide Supabase Storage upload limit must also be at least 12 MiB. Prefer the migration
+command over manually changing the bucket so the database migration history stays synchronized.
