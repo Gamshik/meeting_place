@@ -215,6 +215,7 @@ export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
 export type InvitePartnerInput = z.infer<typeof invitePartnerSchema>
 
 export type Profile = {
+  isAdmin?: boolean
   id: string
   username: string
   displayName: string

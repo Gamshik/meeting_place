@@ -141,7 +141,9 @@
     bottom: max(10px, env(safe-area-inset-bottom));
     left: 50%;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     width: min(420px, calc(100% - 20px));
     height: var(--mobile-nav-height);
     padding: 6px;

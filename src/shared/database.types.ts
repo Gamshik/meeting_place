@@ -38,6 +38,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          is_admin: boolean
           avatar_url: string | null
           created_at: string
           display_name: string
@@ -241,6 +242,15 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      is_current_user_admin: { Args: Record<string, never>; Returns: boolean }
+      admin_list_users: {
+        Args: { p_after_id?: string }
+        Returns: { id: string; username: string; display_name: string }[]
+      }
+      admin_list_usage: {
+        Args: { p_user_ids: string[]; p_from: string; p_to: string; p_after_id?: string }
+        Returns: Database['public']['Functions']['list_my_ai_usage']['Returns']
+      }
       start_my_ai_usage: {
         Args: { p_id: string; p_job_id: string; p_token: string; p_receipt: Json }
         Returns: boolean

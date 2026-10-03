@@ -13,9 +13,12 @@ type AppShellProps = {
 export function AppShell({ children, profile, onNavigate, variant = 'default' }: AppShellProps) {
   const [inviteOpen, setInviteOpen] = useState(false)
   const location = useLocation()
-  const view = location.pathname.startsWith('/profiles/')
-    ? 'friend-profile'
-    : (new URLSearchParams(location.search).get('view') ?? 'games')
+  const view =
+    location.pathname === '/admin'
+      ? 'admin'
+      : location.pathname.startsWith('/profiles/')
+        ? 'friend-profile'
+        : (new URLSearchParams(location.search).get('view') ?? 'games')
   return (
     <div className={`app-shell ${variant === 'room' ? 'app-shell-room' : ''}`}>
       <a className="skip-link" href="#main">
@@ -57,6 +60,15 @@ export function AppShell({ children, profile, onNavigate, variant = 'default' }:
               >
                 Friends
               </Link>
+              {profile.isAdmin ? (
+                <Link
+                  onClick={onNavigate}
+                  to="/admin"
+                  aria-current={view === 'admin' ? 'page' : undefined}
+                >
+                  Admin
+                </Link>
+              ) : null}
             </nav>
             <div className="header-actions">
               <button

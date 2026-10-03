@@ -320,3 +320,23 @@ alone does not verify signatures. The `/api/ai-usage` route reports only the cur
 entries using stable descending date/ID pagination. Its totals are explicitly per page, with
 separate transcription and shared-card costs, unknown costs, and unverifiable counts. Decimal costs
 are stored in signed payloads at 12 places and summed with integer arithmetic.
+
+## Single-owner admin reporting
+
+`public.profiles.is_admin` is false by default. A partial unique index permits at most one true
+value. Existing column-level profile update grants exclude it; only an operator changes the flag.
+`/api/me` returns the viewer's flag for navigation. It does not authorize admin operations.
+
+The Worker checks current database-backed admin access for `/api/admin/users`. Narrow
+`SECURITY DEFINER` functions with empty search paths also check `auth.uid()` on every user-list
+or receipt-batch read. Ordinary profile RLS and private-ledger grants stay unchanged. The Worker
+uses the caller's existing JWT, with no service-role credential or new general-purpose backend.
+
+Users paginate independently of usage. For up to 20 users, the Worker reads receipt batches,
+verifies signatures and row/actor/game/operation bindings, and sums complete period totals using
+integer arithmetic. Unknown costs/tokens and unverifiable rows have separate counters. Receipt
+payloads and reservation tokens are never returned by the admin HTTP endpoint. Reports fail rather
+than returning partial totals if the 50,000-receipt scan limit is exceeded or a database read fails.
+This initial on-demand scan should become a verified aggregation pipeline if usage grows enough
+to exceed edge runtime limits. Concurrent updates are reflected on refresh, not snapshot-isolated
+across batches. Account deletion retains the ledger's existing cascade behavior.

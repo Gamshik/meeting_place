@@ -1,3 +1,4 @@
+import type { AdminReport } from '@contracts/admin'
 import type {
   InvitePartnerInput,
   PartnershipCursor,
@@ -64,6 +65,10 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getAdminUsers: (period: 'all' | 'month', afterId?: string) =>
+    apiRequest<DataResponse<AdminReport>>(
+      `/api/admin/users?${new URLSearchParams({ period, ...(afterId ? { afterId } : {}) })}`,
+    ),
   getProfile: () => apiRequest<DataResponse<Profile>>('/api/me'),
   getProfileActivity: (profileId: string, year: number) =>
     apiRequest<DataResponse<ProfileActivity>>(

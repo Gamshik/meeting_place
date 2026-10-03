@@ -24,6 +24,10 @@ const FriendProfilePage = lazy(() =>
   })),
 )
 
+const AdminPage = lazy(() =>
+  import('@pages/AdminPage/AdminPage').then((module) => ({ default: module.AdminPage })),
+)
+
 export function App() {
   useTouchInputMode()
 
@@ -37,6 +41,7 @@ export function App() {
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route element={<ProtectedRoute />}>
               <Route index element={<DashboardPage />} />
+              <Route path="admin" element={<AdminPage />} />
               <Route path="profiles/:profileId" element={<FriendProfilePage />} />
               <Route path="games/explain-word/:partnershipId" element={<ExplainWordGamePage />} />
             </Route>

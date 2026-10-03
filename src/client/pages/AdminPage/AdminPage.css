@@ -1,0 +1,92 @@
+.admin-page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+.admin-page h1 {
+  font-size: 2.5rem;
+  font-weight: 900;
+  margin: 0;
+}
+.admin-page p {
+  margin: 0;
+}
+.admin-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  font-weight: 700;
+}
+.admin-period select {
+  padding: 0.65rem;
+  background: #e2f27b;
+  border: 2px solid #242422;
+  border-radius: 3px;
+  box-shadow: 3px 3px 0 #242422;
+}
+.admin-period select:hover {
+  box-shadow: 1px 1px 0 #242422;
+}
+.admin-period select:active {
+  box-shadow: none;
+}
+.admin-note,
+.admin-table caption,
+.admin-table th span {
+  font-size: var(--mp-font-size-supporting);
+}
+.admin-toolbar,
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.admin-table-scroll {
+  overflow-x: auto;
+  border: 2px solid #242422;
+  border-radius: 3px;
+  box-shadow: 5px 5px 0 #242422;
+  background: #fff;
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--mp-font-size-body);
+}
+.admin-table caption {
+  text-align: left;
+  padding: 1rem;
+}
+.admin-table th,
+.admin-table td {
+  padding: 1rem;
+  border-top: 2px solid #242422;
+  vertical-align: top;
+}
+.admin-table thead {
+  background: #e2f27b;
+}
+.admin-table th span {
+  display: block;
+  font-weight: 400;
+  margin-top: 0.35rem;
+  overflow-wrap: anywhere;
+}
+.admin-table tbody th {
+  min-width: 15rem;
+  max-width: 30rem;
+  overflow-wrap: anywhere;
+}
+.admin-table td {
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  min-width: 10rem;
+}
+.admin-incomplete {
+  padding: 0.5rem;
+  background: #fff0af;
+  border: 2px solid #242422;
+}

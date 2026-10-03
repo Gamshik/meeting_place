@@ -1461,3 +1461,72 @@ describe('database authorization and lifecycle', () => {
     )
   })
 })
+
+describe('single-owner admin reporting', () => {
+  it('prevents self-promotion through direct profile updates', async () => {
+    await asUser(alice)
+    await expect(
+      rows('update public.profiles set is_admin=true where id=$1', [alice]),
+    ).rejects.toThrow(/permission denied/)
+  })
+  it('allows at most one administrator', async () => {
+    await rows('update public.profiles set is_admin=true where id=$1', [alice])
+    await expect(
+      rows('update public.profiles set is_admin=true where id=$1', [bob]),
+    ).rejects.toThrow(/profiles_single_admin/)
+  })
+  it('denies non-admin user enumeration', async () => {
+    await asUser(bob)
+    expect(await rows('select public.is_current_user_admin() as allowed')).toEqual([
+      { allowed: false },
+    ])
+    await expect(rows('select * from public.admin_list_users()')).rejects.toThrow(/admin_required/)
+  })
+  it('denies non-admin usage reads', async () => {
+    await asUser(bob)
+    await expect(
+      rows("select * from public.admin_list_usage($1, '1970-01-01', '2100-01-01')", [[alice]]),
+    ).rejects.toThrow(/admin_required/)
+  })
+  it('allows the owner to list profiles without widening ordinary profile access', async () => {
+    await rows('update public.profiles set is_admin=true where id=$1', [alice])
+    await asUser(alice)
+    expect(await rows('select public.is_current_user_admin() as allowed')).toEqual([
+      { allowed: true },
+    ])
+    expect(await rows('select * from public.admin_list_users()')).toHaveLength(3)
+    expect(await rows('select * from public.admin_list_users($1)', [alice])).toHaveLength(2)
+    expect(await rows('select id from public.profiles')).toEqual([{ id: alice }])
+    await db.exec('reset role')
+    await rows('update public.profiles set is_admin=false where id=$1', [alice])
+    await asUser(alice)
+    await expect(rows('select * from public.admin_list_users()')).rejects.toThrow(/admin_required/)
+  })
+  it('filters owner usage reads by account, date and cursor without exposing reservation tokens', async () => {
+    await rows('update public.profiles set is_admin=true where id=$1', [alice])
+    for (const [id, account, date] of [
+      [alice, bob, '2026-10-01'],
+      [bob, bob, '2026-09-01'],
+      [eve, eve, '2026-10-01'],
+    ]) {
+      await rows(
+        "insert into private.ai_usage_events(id,requester_id,game_id,operation,token,receipt,created_at) values($1,$2,$3,'cards',gen_random_uuid(),'{}',$4)",
+        [id, account, alice, date],
+      )
+    }
+    await asUser(alice)
+    const result = await rows(
+      "select * from public.admin_list_usage($1, '2026-10-01', '2026-11-01')",
+      [[bob]],
+    )
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ id: alice, requester_id: bob })
+    expect(result[0]).not.toHaveProperty('token')
+    expect(
+      await rows("select * from public.admin_list_usage($1, '2026-10-01', '2026-11-01', $2)", [
+        [bob],
+        alice,
+      ]),
+    ).toHaveLength(0)
+  })
+})

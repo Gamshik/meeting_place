@@ -11,7 +11,7 @@ meRoutes.get('/', async (context) => {
   const user = context.get('user')
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, created_at, time_zone')
+    .select('id, username, display_name, avatar_url, created_at, time_zone, is_admin')
     .eq('id', user.id)
     .single()
 
@@ -22,6 +22,7 @@ meRoutes.get('/', async (context) => {
 
   const profile: Profile = {
     id: data.id,
+    isAdmin: data.is_admin === true,
     username: data.username,
     displayName: data.display_name,
     avatarUrl: data.avatar_url,
@@ -58,7 +59,7 @@ meRoutes.patch('/', async (context) => {
     .from('profiles')
     .update(values)
     .eq('id', user.id)
-    .select('id, username, display_name, avatar_url, created_at, time_zone')
+    .select('id, username, display_name, avatar_url, created_at, time_zone, is_admin')
     .single()
 
   if (error || !data) {
@@ -73,6 +74,7 @@ meRoutes.patch('/', async (context) => {
 
   const profile: Profile = {
     id: data.id,
+    isAdmin: data.is_admin === true,
     username: data.username,
     displayName: data.display_name,
     avatarUrl: data.avatar_url,

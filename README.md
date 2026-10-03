@@ -325,6 +325,17 @@ and `beforeId` parameters. Costs use decimal strings; unknown and unverifiable r
 See [the usage accounting check guide](docs/ai-usage-testing.md) for browser steps, examples,
 repeat-submission checks, tests, pagination, and failure/reconciliation limitations.
 
+## Owner admin panel
+
+The read-only `/admin` page shows all users with complete verified token totals and AI spending
+in USD, with All time and This month (UTC) filters. Only the single profile with `is_admin = true`
+can access it. Apply `202610020005_add_owner_admin.sql`, then assign your existing account's flag
+manually in the Supabase SQL Editor. Regular users cannot change that field. Reload to reveal the
+Admin navigation item. No additional credentials are needed.
+
+See [owner admin setup and testing](docs/admin-testing.md) for the exact SQL, access checks,
+reporting semantics, and limits. Unknown or unverified usage is explicitly marked as incomplete.
+
 ## Configure Google sign-in
 
 1. In Google Cloud Console, create or select a project.
