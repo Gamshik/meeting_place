@@ -1,7 +1,7 @@
 # Owner admin setup and testing
 
 The read-only `/admin` page lists all profiles, including accounts with no usage, with verified
-token totals and AI spending in USD. It defaults to All time; This month uses UTC boundaries.
+word-token totals, transcription duration in seconds, and combined AI spending in USD. It defaults to All time; This month uses UTC boundaries.
 Only one profile can be an administrator. An Admin navigation link appears only for that account.
 
 ## Setup
@@ -31,7 +31,7 @@ admin is rejected by the `profiles_single_admin` unique index.
 ## Browser checks
 
 1. Sign in with your admin account. Open **Admin** in the navigation. Confirm the list includes
-   your account, other profiles, and accounts without usage. The latter show zero tokens and $0.00.
+   your account, other profiles, and accounts without usage. The latter show zero word tokens, zero seconds, and $0.00.
 2. Compare a user's totals with their verified accounting history. Totals include every receipt
    in the selected period, even when there are more than 100 or 500 usage records.
 3. Switch between **All time** and **This month (UTC)**. Old usage should appear only in All time.
@@ -40,7 +40,7 @@ admin is rejected by the `profiles_single_admin` unique index.
    does not limit the history included in their totals. Refresh recalculates the current page.
 5. Make a real paid AI request, then refresh. The triggering account's known cost should increase
    if the provider returned cost metadata. A cached retry or pooled card must not add spending.
-   Missing token metadata may show an incomplete indicator even when the dollar cost is known.
+   Missing word-token metadata or transcription duration may show an incomplete indicator even when the dollar cost is known. Transcription does not require token metadata.
 6. Sign in as a regular user in another browser session. There must be no Admin menu item.
    Visiting `/admin` directly must show an access message and no user list. A request to
    `/api/admin/users` with that user's bearer token must return 403; without a token it returns 401.
@@ -54,9 +54,11 @@ the second-admin constraint. Do not alter real accounting receipts to test signa
 
 ## Reporting semantics and limits
 
-- Dollar amounts are decimal strings summed with integer arithmetic. Token totals are also
-  accumulated as integers. Missing total tokens fall back to input plus output only if both exist.
-- Unknown costs and missing token counts are not treated as confirmed zero. Invalid signatures
+- Dollar amounts are decimal strings summed with integer arithmetic. Word-token totals are accumulated as integers from card-generation receipts only. Missing total
+  tokens fall back to input plus output only if both exist. Transcription duration sums reported
+  audio seconds from transcription receipts only; absent duration remains unknown. Dollar totals
+  include both operations and use provider-reported costs, not token or duration-based estimates.
+- Unknown costs, missing word-token counts, and missing transcription durations are not treated as confirmed zero. Invalid signatures
   or mismatched receipt identities are excluded. The UI marks the affected totals as known amounts
   and shows counts explaining incomplete data.
 - All time means since usage tracking began. Shared-card generation is attributed to its triggering

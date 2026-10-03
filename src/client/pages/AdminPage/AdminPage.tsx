@@ -126,8 +126,9 @@ function AdminUsers({ period }: { period: 'all' | 'month' }) {
               <thead>
                 <tr>
                   <th scope="col">User</th>
-                  <th scope="col">Tokens used</th>
-                  <th scope="col">AI spend (USD)</th>
+                  <th scope="col">Word tokens</th>
+                  <th scope="col">Transcription duration</th>
+                  <th scope="col">Total AI spend (USD)</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,17 +137,28 @@ function AdminUsers({ period }: { period: 'all' | 'month' }) {
                     <th scope="row">
                       <strong>{user.displayName}</strong>
                       <span>@{user.username}</span>
-                      {user.unknownCostCount + user.unknownTokenCount + user.unverifiedCount > 0 ? (
+                      {user.unknownCostCount +
+                        user.unknownTokenCount +
+                        user.unknownAudioDurationCount +
+                        user.unverifiedCount >
+                      0 ? (
                         <span className="admin-incomplete">
                           Incomplete usage data: {user.unknownCostCount} missing costs,{' '}
-                          {user.unknownTokenCount} missing token counts, {user.unverifiedCount}{' '}
-                          unverified receipts.
+                          {user.unknownTokenCount} missing word token counts,{' '}
+                          {user.unknownAudioDurationCount} missing audio durations,{' '}
+                          {user.unverifiedCount} unverified receipts.
                         </span>
                       ) : null}
                     </th>
                     <td>
                       {BigInt(user.knownTokens).toLocaleString()}
                       {user.unknownTokenCount + user.unverifiedCount > 0 ? ' (known)' : ''}
+                    </td>
+                    <td>
+                      {user.knownAudioSeconds.toLocaleString(undefined, {
+                        maximumFractionDigits: 2,
+                      })}{' '}
+                      s{user.unknownAudioDurationCount + user.unverifiedCount > 0 ? ' (known)' : ''}
                     </td>
                     <td title={`$${user.knownCostUsd}`}>
                       {formatCost(user.knownCostUsd)}

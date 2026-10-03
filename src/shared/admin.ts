@@ -10,6 +10,8 @@ export type AdminUser = {
   username: string
   displayName: string
   knownCostUsd: string
+  knownAudioSeconds: number
+  unknownAudioDurationCount: number
   knownTokens: string
   unknownCostCount: number
   unknownTokenCount: number

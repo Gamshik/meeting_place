@@ -67,6 +67,8 @@ for (const width of [320, 375, 768, 1440]) {
                 displayName: second ? 'Second User' : 'English Learner',
                 knownCostUsd: '0.012345000000',
                 knownTokens: '12345',
+                knownAudioSeconds: 125.5,
+                unknownAudioDurationCount: 0,
                 unknownCostCount: 1,
                 unknownTokenCount: 0,
                 unverifiedCount: 0,
@@ -88,6 +90,8 @@ for (const width of [320, 375, 768, 1440]) {
     await expect(page.getByText('@learner', { exact: true })).toBeVisible()
     await expect(page.getByRole('cell', { name: '$0.012345 (known)', exact: true })).toBeVisible()
     await expect(page.getByText(/Incomplete usage data:/)).toBeVisible()
+    await expect(page.getByRole('columnheader', { name: 'Word tokens', exact: true })).toBeVisible()
+    await expect(page.getByRole('cell', { name: '125.5 s', exact: true })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect(
       await page.getByRole('navigation', { name: 'Main navigation' }).evaluate((nav) => {

@@ -93,6 +93,71 @@ it('verifies other users receipts, excludes forgery and binding mismatches, and 
     { id: owner, knownCostUsd: '0.000000000000', knownTokens: '0', unverifiedCount: 0 },
   ])
 })
+it('separates transcription seconds from word tokens while summing both costs', async () => {
+  mocks.rpc
+    .mockResolvedValueOnce({ data: true })
+    .mockResolvedValueOnce({ data: [{ id: user, username: 'learner', display_name: 'Learner' }] })
+    .mockResolvedValueOnce({
+      data: [
+        await row(),
+        await row({
+          id: crypto.randomUUID(),
+          operation: 'transcription',
+          inputTokens: null,
+          outputTokens: null,
+          totalTokens: null,
+          audioSeconds: 12.5,
+        }),
+        await row({
+          id: crypto.randomUUID(),
+          operation: 'transcription',
+          totalTokens: 999,
+          audioSeconds: 3.25,
+        }),
+      ],
+    })
+  const result = await (await request()).json()
+  expect(result.data.users[0]).toMatchObject({
+    knownCostUsd: '0.003000000000',
+    knownTokens: '15',
+    knownAudioSeconds: 15.75,
+    unknownTokenCount: 0,
+    unknownAudioDurationCount: 0,
+    unknownCostCount: 0,
+  })
+})
+it('counts missing metadata only for the applicable operation, preserving known zero duration', async () => {
+  mocks.rpc
+    .mockResolvedValueOnce({ data: true })
+    .mockResolvedValueOnce({ data: [{ id: user, username: 'learner', display_name: 'Learner' }] })
+    .mockResolvedValueOnce({
+      data: [
+        await row({ inputTokens: null, outputTokens: null }),
+        await row({
+          id: crypto.randomUUID(),
+          operation: 'transcription',
+          inputTokens: null,
+          outputTokens: null,
+          audioSeconds: null,
+        }),
+        await row({
+          id: crypto.randomUUID(),
+          operation: 'transcription',
+          inputTokens: null,
+          outputTokens: null,
+          audioSeconds: 0,
+        }),
+      ],
+    })
+  const result = await (await request()).json()
+  expect(result.data.users[0]).toMatchObject({
+    knownTokens: '0',
+    knownAudioSeconds: 0,
+    unknownTokenCount: 1,
+    unknownAudioDurationCount: 1,
+    unknownCostCount: 0,
+  })
+})
 it('sums every usage batch without counting the lookahead twice', async () => {
   const rows = await Promise.all(
     Array.from({ length: 501 }, () => row({ id: crypto.randomUUID() })),

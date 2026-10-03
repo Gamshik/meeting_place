@@ -327,7 +327,7 @@ repeat-submission checks, tests, pagination, and failure/reconciliation limitati
 
 ## Owner admin panel
 
-The read-only `/admin` page shows all users with complete verified token totals and AI spending
+The read-only `/admin` page shows all users with verified word-token totals, transcription duration, and combined AI spending
 in USD, with All time and This month (UTC) filters. Only the single profile with `is_admin = true`
 can access it. Apply `202610020005_add_owner_admin.sql`, then assign your existing account's flag
 manually in the Supabase SQL Editor. Regular users cannot change that field. Reload to reveal the

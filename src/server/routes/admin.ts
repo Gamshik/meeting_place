@@ -49,6 +49,8 @@ adminRoutes.get('/users', async (context) => {
     displayName: user.display_name,
     knownCostUsd: '0.000000000000',
     knownTokens: '0',
+    knownAudioSeconds: 0,
+    unknownAudioDurationCount: 0,
     unknownCostCount: 0,
     unknownTokenCount: 0,
     unverifiedCount: 0,
@@ -83,13 +85,18 @@ adminRoutes.get('/users', async (context) => {
         }
         user.knownCostUsd = sumCosts([user.knownCostUsd, receipt.costUsd])
         if (receipt.costUsd === null) user.unknownCostCount++
-        const tokens =
-          receipt.totalTokens ??
-          (receipt.inputTokens !== null && receipt.outputTokens !== null
-            ? BigInt(receipt.inputTokens) + BigInt(receipt.outputTokens)
-            : null)
-        if (tokens === null) user.unknownTokenCount++
-        else user.knownTokens = String(BigInt(user.knownTokens) + BigInt(tokens))
+        if (receipt.operation === 'transcription') {
+          if (receipt.audioSeconds === null) user.unknownAudioDurationCount++
+          else user.knownAudioSeconds += receipt.audioSeconds
+        } else {
+          const tokens =
+            receipt.totalTokens ??
+            (receipt.inputTokens !== null && receipt.outputTokens !== null
+              ? BigInt(receipt.inputTokens) + BigInt(receipt.outputTokens)
+              : null)
+          if (tokens === null) user.unknownTokenCount++
+          else user.knownTokens = String(BigInt(user.knownTokens) + BigInt(tokens))
+        }
       }
       if (rows.length <= 500) break
       afterId = rows[499]!.id

@@ -334,7 +334,9 @@ uses the caller's existing JWT, with no service-role credential or new general-p
 
 Users paginate independently of usage. For up to 20 users, the Worker reads receipt batches,
 verifies signatures and row/actor/game/operation bindings, and sums complete period totals using
-integer arithmetic. Unknown costs/tokens and unverifiable rows have separate counters. Receipt
+integer arithmetic. Word tokens aggregate card-generation receipts only; audio seconds aggregate transcription receipts
+only. Costs include both operations. Unknown costs, word-token counts, transcription durations,
+and unverifiable rows have separate counters. Receipt
 payloads and reservation tokens are never returned by the admin HTTP endpoint. Reports fail rather
 than returning partial totals if the 50,000-receipt scan limit is exceeded or a database read fails.
 This initial on-demand scan should become a verified aggregation pipeline if usage grows enough
