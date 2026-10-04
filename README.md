@@ -580,3 +580,18 @@ including full five-minute mono WAV recordings. To update an existing Supabase p
 
 The project-wide Supabase Storage upload limit must also be at least 12 MiB. Prefer the migration
 command over manually changing the bucket so the database migration history stays synchronized.
+
+## Recording during disconnects
+
+An active recording keeps its original time limit when a partner disconnects. The microphone
+stops at that deadline, and the finished audio remains available to send when the game resumes.
+Other game timers still pause. Reconnecting or repeating a start request cannot extend an
+unfinished recording. The server rejects malformed WAV files and audio exceeding the round's
+configured duration before uploading or requesting transcription.
+
+Apply `202610040001_keep_recording_deadline_on_disconnect.sql` with `npm run db:push` before
+publishing this change. To check manually, start a 30-second recorded round, begin recording,
+and have the partner leave after about 10 seconds. The microphone should stop roughly 20 seconds
+later while the game is still paused. Return with the partner: the audio preview should remain
+and Send should become available. Repeated departures must never reset an active recording's
+countdown. Live-call and guessing timers should still resume with their remaining time.

@@ -1,4 +1,5 @@
 import { GameAiError, runGameAi } from '../lib/game-ai'
+import { recordingFitsDuration } from '../lib/recording-duration'
 import { Hono } from 'hono'
 
 import {
@@ -305,6 +306,14 @@ wordGameRoutes.post('/:partnershipId/rounds/:roundId/transcription', async (cont
   }
 
   const audioBuffer = await audio.arrayBuffer()
+  if (!recordingFitsDuration(audioBuffer, round.explanationDurationSeconds)) {
+    return errorResponse(
+      context,
+      400,
+      'invalid_recording_duration',
+      `Send a valid WAV recording no longer than ${round.explanationDurationSeconds} seconds.`,
+    )
+  }
   const fingerprint = Array.from(
     new Uint8Array(await crypto.subtle.digest('SHA-256', audioBuffer)),
     (byte) => byte.toString(16).padStart(2, '0'),

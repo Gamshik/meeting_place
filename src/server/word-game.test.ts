@@ -62,7 +62,7 @@ it.each([9_600_044, 12_582_912, 12_582_913])(
     // Stop at the reservation boundary; no real storage upload or paid AI call.
     mocks.runGameAi.mockRejectedValue(new GameAiError('processing', 120))
     const body = new FormData()
-    body.set('audio', new File([new Uint8Array(size)], 'turn.wav', { type: 'audio/wav' }))
+    body.set('audio', new File([wav(size)], 'turn.wav', { type: 'audio/wav' }))
     const response = await app.request(
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
       {
@@ -72,11 +72,14 @@ it.each([9_600_044, 12_582_912, 12_582_913])(
       },
       env,
     )
-    expect(response.status).toBe(size > 12_582_912 ? 400 : 409)
+    expect(response.status).toBe(size > 9_600_044 ? 400 : 409)
     if (size > 12_582_912) {
       expect(await response.json()).toMatchObject({
         error: { code: 'invalid_audio', message: expect.stringContaining('12 MiB') },
       })
+      expect(mocks.runGameAi).not.toHaveBeenCalled()
+    } else if (size > 9_600_044) {
+      expect(await response.json()).toMatchObject({ error: { code: 'invalid_recording_duration' } })
       expect(mocks.runGameAi).not.toHaveBeenCalled()
     } else {
       expect(mocks.runGameAi).toHaveBeenCalledOnce()
@@ -109,7 +112,7 @@ it.each([
   )
   vi.stubGlobal('fetch', provider)
   const body = new FormData()
-  body.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+  body.set('audio', new File([wav(32044)], 'turn.wav', { type: 'audio/wav' }))
   const response = await app.request(
     `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
     {
@@ -144,7 +147,7 @@ it.each(['processing', 'conflict', 'unavailable', 'credits_exhausted'] as const)
     const provider = vi.fn()
     vi.stubGlobal('fetch', provider)
     const body = new FormData()
-    body.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+    body.set('audio', new File([wav(32044)], 'turn.wav', { type: 'audio/wav' }))
     const response = await app.request(
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
       {
@@ -187,7 +190,7 @@ it('reuses a saved transcript after a failed game update without uploading or ca
   vi.stubGlobal('fetch', provider)
   async function submit() {
     const body = new FormData()
-    body.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+    body.set('audio', new File([wav(32044)], 'turn.wav', { type: 'audio/wav' }))
     return app.request(
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
       {
@@ -1022,7 +1025,7 @@ describe('explain-word game API', () => {
     )
     vi.stubGlobal('fetch', providerFetch)
     const form = new FormData()
-    form.set('audio', new File([new Uint8Array([1, 2, 3])], 'turn.wav', { type: 'audio/wav' }))
+    form.set('audio', new File([wav(32044)], 'turn.wav', { type: 'audio/wav' }))
 
     const response = await app.request(
       `/api/games/explain-word/${partnershipId}/rounds/${roundId}/transcription`,
@@ -1120,3 +1123,24 @@ describe('explain-word game API', () => {
     expect(providerFetch).not.toHaveBeenCalled()
   })
 })
+
+function wav(size: number) {
+  const bytes = new Uint8Array(size)
+  const view = new DataView(bytes.buffer)
+  const text = (offset: number, value: string) =>
+    [...value].forEach((char, index) => view.setUint8(offset + index, char.charCodeAt(0)))
+  text(0, 'RIFF')
+  text(8, 'WAVE')
+  text(12, 'fmt ')
+  text(36, 'data')
+  view.setUint32(4, size - 8, true)
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, 16000, true)
+  view.setUint32(28, 32000, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  view.setUint32(40, size - 44, true)
+  return bytes
+}

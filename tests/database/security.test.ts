@@ -121,6 +121,75 @@ describe('database authorization and lifecycle', () => {
       result === null ? null : JSON.stringify(result),
     ])
   }
+  it('keeps recording deadlines across pauses, stops while paused, and prevents repeated starts extending them', async () => {
+    const gameId = await aiGame()
+    await asUser(alice)
+    const created = await db.query<{ result: { round: { id: string } } }>(
+      'select public.create_word_game_round_from_pool($1,$2,false) result',
+      [gameId, 'Travel'],
+    )
+    const roundId = created.rows[0]!.result.round.id
+    await rows('select public.start_word_game_recording($1)', [roundId])
+    await db.exec('reset role')
+    const info = await db.query<{ partnership_id: string }>(
+      'select partnership_id from public.word_games where id=$1',
+      [gameId],
+    )
+    const partnershipId = info.rows[0]!.partnership_id
+    await rows(
+      "update public.word_game_rounds set recording_started_at=clock_timestamp()-interval '70 seconds' where id=$1",
+      [roundId],
+    )
+    const original = await rows(
+      'select recording_started_at from public.word_game_rounds where id=$1',
+      [roundId],
+    )
+    await asUser(alice)
+    await rows('select public.start_word_game_recording($1)', [roundId])
+    await rows('select public.heartbeat_word_game($1)', [partnershipId])
+    await asUser(bob)
+    await rows('select public.heartbeat_word_game($1)', [partnershipId])
+    await rows('select public.leave_word_game($1)', [partnershipId])
+    await asUser(alice)
+    await rows('select public.finish_word_game_recording($1)', [roundId])
+    await rows('select public.finish_word_game_recording($1)', [roundId])
+    await db.exec('reset role')
+    expect(
+      await rows('select recording_started_at from public.word_game_rounds where id=$1', [roundId]),
+    ).toEqual(original)
+    expect(
+      await rows(
+        'select extract(epoch from recording_finished_at-recording_started_at)::integer seconds from public.word_game_rounds where id=$1',
+        [roundId],
+      ),
+    ).toEqual([{ seconds: 60 }])
+    for (let index = 0; index < 2; index++) {
+      await rows(
+        "update public.word_games set paused_at=clock_timestamp()-interval '30 seconds' where id=$1",
+        [gameId],
+      )
+      await asUser(bob)
+      await rows('select public.heartbeat_word_game($1)', [partnershipId])
+      await db.exec('reset role')
+      expect(
+        await rows('select recording_started_at from public.word_game_rounds where id=$1', [
+          roundId,
+        ]),
+      ).toEqual(original)
+      expect(
+        await rows(
+          'select extract(epoch from recording_finished_at-recording_started_at)::integer seconds from public.word_game_rounds where id=$1',
+          [roundId],
+        ),
+      ).toEqual([{ seconds: 60 }])
+      if (index === 0) {
+        await asUser(bob)
+        await rows('select public.leave_word_game($1)', [partnershipId])
+        await db.exec('reset role')
+      }
+    }
+  })
+
   it('uses authenticated reservations without exposing or replacing the owner token', async () => {
     const gameId = await aiGame()
     await asUser(alice)

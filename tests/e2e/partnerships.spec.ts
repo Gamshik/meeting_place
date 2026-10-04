@@ -731,10 +731,13 @@ test('starts a word game and submits a browser recording for transcription', asy
       state: RecordingState = 'inactive'
       ondataavailable: ((event: { data: Blob }) => void) | null = null
       onstop: (() => void) | null = null
+      startedAt = 0
       start() {
+        this.startedAt = Date.now()
         this.state = 'recording'
       }
       stop() {
+        document.documentElement.dataset.recordingDuration = String(Date.now() - this.startedAt)
         this.state = 'inactive'
         this.ondataavailable?.({ data: new Blob(['audio'], { type: 'audio/webm' }) })
         this.onstop?.()
@@ -783,6 +786,8 @@ test('starts a word game and submits a browser recording for transcription', asy
   let pauseSession = false
   await page.route(`**/api/games/explain-word/${relationshipId}**`, async (route) => {
     const path = new URL(route.request().url()).pathname
+    const currentTime = await page.evaluate(() => Date.now())
+    game = { ...game, serverTime: new Date(currentTime).toISOString() }
     if (route.request().method() === 'GET' && !started) {
       await route.fulfill({
         status: 404,
@@ -800,8 +805,8 @@ test('starts a word game and submits a browser recording for transcription', asy
           ? {
               ...game,
               status: 'paused',
-              pausedAt: new Date().toISOString(),
-              reconnectDeadline: new Date(Date.now() + 300_000).toISOString(),
+              pausedAt: new Date(currentTime).toISOString(),
+              reconnectDeadline: new Date(currentTime + 300_000).toISOString(),
               disconnectedPlayerId: partnerId,
               finishedAt: null,
             }
@@ -817,7 +822,7 @@ test('starts a word game and submits a browser recording for transcription', asy
       return
     }
     if (path.endsWith('/end')) {
-      game = { ...game, status: 'finished', finishedAt: new Date().toISOString() }
+      game = { ...game, status: 'finished', finishedAt: new Date(currentTime).toISOString() }
       await route.fulfill({ status: 204 })
       return
     }
@@ -830,7 +835,7 @@ test('starts a word game and submits a browser recording for transcription', asy
           ...game.round!,
           status: 'awaiting_guess',
           audioAvailable: true,
-          explainedAt: new Date().toISOString(),
+          explainedAt: new Date(currentTime).toISOString(),
           transcript: 'You need this document to cross a border.',
           transcriptWords: [],
           usedForbiddenWord: false,
@@ -839,16 +844,22 @@ test('starts a word game and submits a browser recording for transcription', asy
         },
       }
     } else if (path.endsWith('/recording-started')) {
+      // Starting the microphone must not lose time to a slow API response.
+      await page.waitForTimeout(750)
       game = {
         ...game,
-        serverTime: new Date().toISOString(),
-        round: { ...game.round!, recordingStartedAt: new Date().toISOString() },
+        serverTime: new Date(currentTime).toISOString(),
+        round: {
+          ...game.round!,
+          recordingStartedAt: new Date(currentTime).toISOString(),
+          recordingFinishedAt: null,
+        },
       }
     } else if (path.endsWith('/recording-stopped')) {
       game = {
         ...game,
-        serverTime: new Date().toISOString(),
-        round: { ...game.round!, recordingFinishedAt: new Date().toISOString() },
+        serverTime: new Date(currentTime).toISOString(),
+        round: { ...game.round!, recordingFinishedAt: new Date(currentTime).toISOString() },
       }
     } else if (path.endsWith('/rounds')) {
       game = {
@@ -955,19 +966,28 @@ test('starts a word game and submits a browser recording for transcription', asy
   }
   await page.setViewportSize({ width: 1280, height: 720 })
   await expect(page.getByRole('heading', { name: 'Rounds' })).toHaveCount(0)
+  await page.clock.install()
   await page.getByRole('button', { name: 'Start recording' }).click()
   await expect(page.getByText('1:00 remaining')).toBeVisible()
   await expect(page.getByText(/0:5[89] remaining/)).toBeVisible({ timeout: 2_500 })
   await page.screenshot({ path: testInfo.outputPath('mic-recording.png'), animations: 'disabled' })
   pauseSession = true
+  await page.clock.runFor(4_500)
   await expect(page.getByText('Game paused', { exact: true })).toBeVisible({ timeout: 6_000 })
   const pauseCard = page.locator('.session-pause-card')
   expect(await pauseCard.evaluate((element) => element.clientWidth)).toBeLessThanOrEqual(760)
   await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible()
   await expect(page.getByText(/0:[0-5][0-9] remaining/)).toBeVisible()
+  // The microphone must stop at its original deadline even while paused.
+  await page.clock.runFor(60_000)
+  await expect(page.getByRole('button', { name: 'Stop recording' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Play Your recorded explanation' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Send explanation' })).toBeDisabled()
+  expect(Number(await page.locator('html').getAttribute('data-recording-duration'))).toBe(60_000)
   pauseSession = false
+  await page.clock.runFor(4_500)
   await expect(page.getByText('Game paused', { exact: true })).toHaveCount(0, { timeout: 6_000 })
-  await page.getByRole('button', { name: 'Stop recording' }).click()
+  await expect(page.getByRole('button', { name: 'Send explanation' })).toBeEnabled()
   await expect(page.getByRole('button', { name: 'Play Your recorded explanation' })).toBeVisible()
   for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 844 })

@@ -38,7 +38,7 @@ export function RecordedRound({
   userId: string
 }) {
   const round = game.round!
-  const now = useServerNow(game.serverTime, frozen)
+  const now = useServerNow(game.serverTime, frozen && round.status !== 'explaining')
   const expirationAttempted = useRef(false)
   const isExplainer = round.explainerId === userId
   const recordingStartedAt = parseTimestamp(round.recordingStartedAt)
@@ -67,7 +67,7 @@ export function RecordedRound({
                 ? 'Your partner is recording the clue now.'
                 : 'The recording is being prepared and sent.'
             }
-            remainingMs={recordingEndsAt - now}
+            remainingMs={Math.min(round.explanationDurationSeconds * 1000, recordingEndsAt - now)}
             title={now < recordingEndsAt ? 'Recording in progress' : 'Preparing the recording'}
           />
         ) : null}

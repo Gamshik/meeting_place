@@ -4,7 +4,7 @@ export function preferredMimeType() {
   )
 }
 
-export async function convertRecordingToWav(recording: Blob) {
+export async function convertRecordingToWav(recording: Blob, maximumSeconds = 300) {
   const decodingContext = new AudioContext()
   let decoded: AudioBuffer
   try {
@@ -14,7 +14,7 @@ export async function convertRecordingToWav(recording: Blob) {
   }
 
   const sampleRate = 16_000
-  const frameCount = Math.max(1, Math.ceil(decoded.duration * sampleRate))
+  const frameCount = Math.max(1, Math.ceil(Math.min(decoded.duration, maximumSeconds) * sampleRate))
   const renderingContext = new OfflineAudioContext(1, frameCount, sampleRate)
   const source = renderingContext.createBufferSource()
   source.buffer = decoded

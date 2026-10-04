@@ -31,6 +31,7 @@ export function AudioRecorder({
   const chunks = useRef<Blob[]>([])
   const discardOnStop = useRef(false)
   const recordingBlocked = useRef(false)
+  const stopConfirmed = useRef(false)
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   const [isRecording, setIsRecording] = useState(false)
@@ -42,6 +43,19 @@ export function AudioRecorder({
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const now = useServerNow(serverTime)
+
+  useEffect(() => {
+    if (
+      !isRecording ||
+      isStarting ||
+      !recordingStartedAt ||
+      now < Date.parse(recordingStartedAt) + durationSeconds * 1000
+    )
+      return
+    if (stopTimer.current) clearTimeout(stopTimer.current)
+    if (countdownTimer.current) clearInterval(countdownTimer.current)
+    if (recorder.current?.state === 'recording') recorder.current.stop()
+  }, [isRecording, isStarting, recordingStartedAt, durationSeconds, now])
 
   useLayoutEffect(
     () => () => {
@@ -74,6 +88,7 @@ export function AudioRecorder({
 
   async function startRecording() {
     if (isStarting || isPreparing || isSending || disabled) return
+    stopConfirmed.current = false
     setIsStarting(true)
     recordingBlocked.current = false
     discardOnStop.current = false
@@ -102,6 +117,7 @@ export function AudioRecorder({
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunks.current.push(event.data)
       }
+      let startResult: Promise<boolean> = Promise.resolve(false)
       mediaRecorder.onstop = async () => {
         mediaStream.getTracks().forEach((track) => track.stop())
         if (discardOnStop.current) {
@@ -111,17 +127,14 @@ export function AudioRecorder({
         setIsRecording(false)
         setIsPreparing(true)
         try {
-          const stopped = await onStop()
-          if (!stopped || recordingBlocked.current) {
-            if (!recordingBlocked.current) {
-              setError('The recording status could not be updated. Try recording again.')
-            }
-            return
-          }
+          if (!(await startResult) || recordingBlocked.current) return
+          // Preserve local audio even if presence/network prevents the status update.
+          stopConfirmed.current = await onStop().catch(() => false)
+          if (recordingBlocked.current) return
           const recording = new Blob(chunks.current, {
             type: mediaRecorder.mimeType || 'audio/webm',
           })
-          const wav = await convertRecordingToWav(recording)
+          const wav = await convertRecordingToWav(recording, durationSeconds)
           if (recordingBlocked.current) return
           setAudio(wav)
           setAudioUrl(URL.createObjectURL(wav))
@@ -133,19 +146,25 @@ export function AudioRecorder({
           setIsPreparing(false)
         }
       }
-      const started = await onStart()
-      if (!started || recordingBlocked.current) {
-        mediaStream.getTracks().forEach((track) => track.stop())
-        if (!recordingBlocked.current) setError('The recording could not be started. Try again.')
-        return
-      }
+      // Capture audio while the start request is in flight so network latency
+      // does not consume part of the user's recording allowance.
       mediaRecorder.start()
+      const deadline = Date.now() + durationSeconds * 1000
       setSecondsRemaining(durationSeconds)
       setIsRecording(true)
       stopTimer.current = setTimeout(stopRecording, durationSeconds * 1000)
       countdownTimer.current = setInterval(() => {
-        setSecondsRemaining((current) => Math.max(0, current - 1))
-      }, 1_000)
+        setSecondsRemaining(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)))
+      }, 250)
+      startResult = onStart().catch(() => false)
+      const started = await startResult
+      if (!started || recordingBlocked.current) {
+        discardOnStop.current = true
+        stopRecording()
+        mediaStream.getTracks().forEach((track) => track.stop())
+        setIsRecording(false)
+        if (!recordingBlocked.current) setError('The recording could not be started. Try again.')
+      }
     } catch {
       stream.current?.getTracks().forEach((track) => track.stop())
       if (!recordingBlocked.current) {
@@ -161,6 +180,15 @@ export function AudioRecorder({
     setIsSending(true)
     setError(null)
     try {
+      if (!stopConfirmed.current) {
+        stopConfirmed.current = await onStop()
+        if (!stopConfirmed.current) {
+          setError(
+            'Could not update the recording status. Your audio is saved here; try sending again.',
+          )
+          return
+        }
+      }
       await onSubmit(audio)
     } catch {
       setError('Could not send the recording. Try again.')
@@ -275,17 +303,7 @@ export function AudioRecorder({
         <div className="mic-countdown">
           <span className="sr-only">Recording</span>
           <strong>
-            {formatCountdown(
-              recordingStartedAt
-                ? Math.max(
-                    0,
-                    Math.ceil(
-                      (Date.parse(recordingStartedAt) + durationSeconds * 1000 - now) / 1000,
-                    ),
-                  )
-                : secondsRemaining,
-            )}{' '}
-            <span className="sr-only">remaining</span>
+            {formatCountdown(secondsRemaining)} <span className="sr-only">remaining</span>
           </strong>
         </div>
       ) : null}

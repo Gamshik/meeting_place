@@ -133,12 +133,12 @@ export function AudioPlayer({
           step="0.05"
           value={Math.min(currentTime, duration || 0)}
           aria-label={`${label} progress`}
-          aria-valuetext={`${formatAudioTime(currentTime)} of ${formatAudioTime(duration)}`}
+          aria-valuetext={`${formatAudioTime(currentTime)} of ${formatAudioTime(Math.round(duration))}`}
           onChange={(event) => seek(Number(event.currentTarget.value))}
         />
         <div className="custom-audio-time" aria-hidden="true">
           <span>{formatAudioTime(currentTime)}</span>
-          <span>{formatAudioTime(duration)}</span>
+          <span>{formatAudioTime(Math.round(duration))}</span>
         </div>
       </div>
 
