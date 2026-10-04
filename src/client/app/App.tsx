@@ -5,6 +5,7 @@ import { AuthProvider } from '@features/auth/ui/AuthProvider/AuthProvider'
 import { FullPageLoader, ProtectedRoute } from '@features/auth/ui/ProtectedRoute/ProtectedRoute'
 import { CustomCursor } from '@shared/ui/CustomCursor/CustomCursor'
 import { AuthCallbackPage } from '@pages/AuthCallbackPage/AuthCallbackPage'
+import { LegalPage } from '@pages/LegalPage/LegalPage'
 import { LoginPage } from '@pages/LoginPage/LoginPage'
 import { useTouchInputMode } from './hooks/useTouchInputMode'
 
@@ -37,6 +38,8 @@ export function App() {
       <AuthProvider>
         <Suspense fallback={<FullPageLoader label="Opening your meeting place…" />}>
           <Routes>
+            <Route path="/terms" element={<LegalPage kind="terms" />} />
+            <Route path="/privacy" element={<LegalPage kind="privacy" />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route element={<ProtectedRoute />}>

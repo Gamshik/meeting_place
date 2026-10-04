@@ -595,3 +595,26 @@ and have the partner leave after about 10 seconds. The microphone should stop ro
 later while the game is still paused. Return with the partner: the audio preview should remain
 and Send should become available. Repeated departures must never reset an active recording's
 countdown. Live-call and guessing timers should still resume with their remaining time.
+
+## Adult onboarding and audio retention
+
+Meeting Place is 18+. New and existing accounts must confirm their age and accept versioned Terms
+before using the app. Public `/terms` and `/privacy` pages explain recording/AI processing and
+link to Kovsharov Gleb at gkovsharov05@gmail.com for manual privacy and deletion requests.
+
+Audio expires seven days after its first upload. A Cloudflare scheduled Worker runs every 15
+minutes to delete expired private Storage files, including abandoned uploads. Transcripts and
+game results remain. The job requires the server-only `SUPABASE_SERVICE_ROLE_KEY` secret; never
+expose it to browser code. Apply `202610040002_adult_terms_and_recording_retention.sql` before
+deploying. This also requires existing users to accept the Terms and makes old audio eligible
+for deletion. See [setup, browser checks, retention testing, and legal review](docs/privacy-validation.md).
+
+Admin user rows include a Delete user button with a named confirmation dialog. Deletion removes
+the Auth identity and cascaded profile, partnerships, shared games, and usage records. Administrator
+accounts are protected. Related audio is queued for the existing cleanup worker, including late
+uploads. Apply `202610040003_admin_delete_user.sql` and configure the server cleanup secret before
+using this action. Deletion is not a ban: signing in again creates a new account.
+
+The Google sign-in button first opens the age/Terms confirmation panel. After Google returns,
+the app saves the confirmation to the signed-in account without asking twice. Cancel does not
+start sign-in; failed acceptance saves offer retry before practice opens.

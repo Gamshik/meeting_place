@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     auth: { getUser: mocks.getUser },
-    rpc: mocks.rpc,
+    rpc: (name: string, ...args: unknown[]) =>
+      name === 'has_accepted_current_terms'
+        ? Promise.resolve({ data: true, error: null })
+        : mocks.rpc(name, ...args),
     storage: {
       from: () => ({ createSignedUrl: mocks.createSignedUrl, upload: mocks.storageUpload }),
     },

@@ -1,3 +1,6 @@
+import { FullPageLoader } from '@shared/ui/FullPageLoader/FullPageLoader'
+export { FullPageLoader } from '@shared/ui/FullPageLoader/FullPageLoader'
+import { LegalGate } from '@features/auth/ui/LegalGate/LegalGate'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import { lazy } from 'react'
@@ -21,19 +24,10 @@ export function ProtectedRoute() {
   }
 
   return (
-    <CommunityProvider key={session.user.id}>
-      <Outlet />
-    </CommunityProvider>
-  )
-}
-
-export function FullPageLoader({ label }: { label: string }) {
-  return (
-    <main className="grid min-h-screen place-items-center bg-stone-100 px-6 text-stone-700">
-      <div className="flex items-center gap-3" role="status">
-        <span className="size-3 animate-pulse rounded-full bg-emerald-700" />
-        <span>{label}</span>
-      </div>
-    </main>
+    <LegalGate key={session.user.id}>
+      <CommunityProvider>
+        <Outlet />
+      </CommunityProvider>
+    </LegalGate>
   )
 }

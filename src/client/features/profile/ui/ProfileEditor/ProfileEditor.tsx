@@ -1,3 +1,4 @@
+import { LegalLinks } from '@pages/LegalPage/LegalPage'
 import { useState, type FormEvent } from 'react'
 import type { Profile } from '@contracts/contracts'
 import { browserTimeZone, supportedTimeZones } from '@shared/lib/time-zone'
@@ -95,6 +96,7 @@ export function ProfileEditor({
               ×
             </button>
           </div>
+          <LegalLinks />
           <form onSubmit={submit}>
             <div className="profile-fields-grid">
               <label>

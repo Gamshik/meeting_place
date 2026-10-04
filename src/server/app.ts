@@ -1,3 +1,5 @@
+import { legalRoutes } from './routes/legal'
+import { requireTerms } from './middleware/legal'
 import { adminRoutes } from './routes/admin'
 import { aiUsageRoutes } from './routes/ai-usage'
 import { Hono } from 'hono'
@@ -29,6 +31,8 @@ app.get('/api/health', (context) =>
 )
 
 app.use('/api/*', requireAuthentication)
+app.route('/api/legal', legalRoutes)
+app.use('/api/*', requireTerms)
 app.route('/api/ai-usage', aiUsageRoutes)
 app.route('/api/me', meRoutes)
 app.route('/api/admin', adminRoutes)

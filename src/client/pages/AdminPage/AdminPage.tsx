@@ -1,3 +1,4 @@
+import { DeleteUser } from './DeleteUser'
 import { SpendingLimits } from './SpendingLimits'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -64,7 +65,7 @@ export function AdminPage() {
               user. Missing or unverified usage is excluded from totals and marked below. Spending
               limits use known costs; a final or concurrent request can exceed them.
             </p>
-            <AdminUsers key={period} period={period} />
+            <AdminUsers key={period} period={period} currentUserId={profile.id} />
           </>
         )}
       </section>
@@ -72,11 +73,12 @@ export function AdminPage() {
   )
 }
 
-function AdminUsers({ period }: { period: 'all' | 'month' }) {
+function AdminUsers({ period, currentUserId }: { period: 'all' | 'month'; currentUserId: string }) {
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined])
   const [report, setReport] = useState<AdminReport | null>(null)
   const [error, setError] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const [notice, setNotice] = useState('')
   const cursor = cursors.at(-1)
   useEffect(() => {
     let active = true
@@ -98,6 +100,7 @@ function AdminUsers({ period }: { period: 'all' | 'month' }) {
   }
   return (
     <>
+      {notice ? <p role="status">{notice}</p> : null}
       <div className="admin-toolbar">
         <p>Page {cursors.length}</p>
         <button
@@ -152,6 +155,22 @@ function AdminUsers({ period }: { period: 'all' | 'month' }) {
                         </span>
                       ) : null}
                       <SpendingLimits userId={user.id} username={user.username} />
+                      <DeleteUser
+                        user={user}
+                        self={user.id === currentUserId}
+                        onDeleted={() => {
+                          setNotice(`Deleted @${user.username}. Recording cleanup is queued.`)
+                          setReport((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  users: current.users.filter((row) => row.id !== user.id),
+                                }
+                              : current,
+                          )
+                          setRefresh((value) => value + 1)
+                        }}
+                      />
                     </th>
                     <td>
                       {BigInt(user.knownTokens).toLocaleString()}

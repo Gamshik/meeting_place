@@ -36,6 +36,10 @@ test('real PostgreSQL concurrency, cooldown, and quota rules', async () => {
         `${names[index]}@example.test`,
       ])
       await pool.query('update public.profiles set username=$1 where id=$2', [names[index], id])
+      await pool.query(
+        "insert into private.legal_acceptances(user_id, terms_version, adult_declared) values ($1, '2026-10-04', true)",
+        [id],
+      )
     }
     const pair = await Promise.all([
       authenticated(ids[0], 'select public.invite_partner($1) result', [names[1]]),

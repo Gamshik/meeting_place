@@ -1,3 +1,7 @@
+import { Panel } from '@shared/ui/Panel/Panel'
+import { TermsFields } from '@features/auth/ui/TermsFields/TermsFields'
+import { rememberTerms, forgetTerms } from '@features/auth/lib/pending-terms'
+import { LegalLinks } from '@pages/LegalPage/LegalPage'
 import { useState } from 'react'
 import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
 import { Navigate } from 'react-router-dom'
@@ -7,6 +11,9 @@ import { FullPageLoader } from '@features/auth/ui/ProtectedRoute/ProtectedRoute'
 
 export function LoginPage() {
   const { isLoading, session, signInWithGoogle, error: authError } = useAuth()
+  const [showTerms, setShowTerms] = useState(false)
+  const [terms, setTerms] = useState(false)
+  const [adult, setAdult] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(false)
 
@@ -19,12 +26,15 @@ export function LoginPage() {
   }
 
   async function handleSignIn() {
+    if (!adult || !terms || isSigningIn) return
     setError(null)
     setIsSigningIn(true)
 
     try {
+      rememberTerms()
       await signInWithGoogle()
     } catch (signInError) {
+      forgetTerms()
       setError(signInError instanceof Error ? signInError.message : 'Google sign-in failed.')
       setIsSigningIn(false)
     }
@@ -32,6 +42,39 @@ export function LoginPage() {
 
   return (
     <main className="login-page">
+      {showTerms ? (
+        <Panel
+          title="Before you practice"
+          onClose={() => {
+            if (!isSigningIn) {
+              forgetTerms()
+              setShowTerms(false)
+            }
+          }}
+        >
+          <TermsFields adult={adult} terms={terms} onAdult={setAdult} onTerms={setTerms} />
+          {error ? <p role="alert">{error}</p> : null}
+          <div className="legal-confirm-actions">
+            <button
+              className="button button-primary"
+              disabled={!adult || !terms || isSigningIn}
+              onClick={() => void handleSignIn()}
+            >
+              {isSigningIn ? 'Opening Google…' : 'Agree and continue with Google'}
+            </button>
+            <button
+              className="button button-secondary"
+              disabled={isSigningIn}
+              onClick={() => {
+                forgetTerms()
+                setShowTerms(false)
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </Panel>
+      ) : null}
       <header className="login-header">
         <a className="wordmark" href="/">
           <span className="brand-mark" aria-hidden="true">
@@ -56,12 +99,19 @@ export function LoginPage() {
           <button
             className="button button-primary google-button"
             type="button"
-            onClick={handleSignIn}
+            onClick={() => {
+              forgetTerms()
+              setAdult(false)
+              setTerms(false)
+              setError(null)
+              setShowTerms(true)
+            }}
             disabled={isSigningIn}
           >
             <GoogleMark />
             {isSigningIn ? 'Opening Google…' : 'Start practicing with Google'}
           </button>
+          <LegalLinks />
           <div className="login-promises" aria-label="What to expect">
             <span>
               <i aria-hidden="true">

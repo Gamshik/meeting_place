@@ -147,3 +147,23 @@ The linked development database was repaired and its one saved policy was decryp
 signing key and restored to the profile columns. The old row is retained as a recovery record;
 the current application reads only profile columns. Other legacy databases need the same recovery
 before relying on limits. Do not reset migration history or overwrite deployed migration files.
+
+## Delete a user
+
+Apply `202610040003_admin_delete_user.sql` after the onboarding/retention migration and configure
+`SUPABASE_SERVICE_ROLE_KEY` for the scheduled cleanup. Use a disposable test account.
+
+1. Open Admin and click Delete user on that account's row. The dialog must show its username and
+   explain that shared partnerships/game history are removed. Cancel or press Escape: no deletion.
+2. Reopen and confirm. The row disappears after success. A failed request stays visible in the
+   dialog with a retry option; repeated clicks while saving must not send duplicate requests.
+3. Verify Auth Users, profiles, associated partnerships/games, and user usage records are removed.
+   The other participant's account must remain. Refreshing the deleted user's session should fail.
+4. Check `private.deleted_recording_games` and trigger/wait for cleanup: recordings in those game
+   paths must be removed even if newer than seven days. Test a late upload in staging too.
+5. As a normal user, direct DELETE requests and `admin_delete_user` RPC calls must be denied.
+   Administrator accounts and stale/mismatched usernames must be rejected.
+
+This permanently deletes data; it does not ban the Google identity from creating a fresh account.
+Full Supabase Auth cascades and physical Storage removal require a local/staging integration check;
+embedded PostgreSQL and mocked browser/API tests do not validate provider-owned Auth tables.

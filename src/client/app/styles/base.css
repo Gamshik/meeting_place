@@ -21,7 +21,7 @@
   font-family: Arial, Helvetica, sans-serif;
   font-size: var(--mp-font-size-body);
   color: #242422;
-  background: #f8f7f4;
+  background: var(--mp-paper, #f4f0e8);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }

@@ -244,6 +244,16 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      admin_delete_user: { Args: { p_user_id: string; p_username: string }; Returns: boolean }
+      get_my_legal_status: { Args: Record<string, never>; Returns: Json }
+      has_accepted_current_terms: { Args: Record<string, never>; Returns: boolean }
+      accept_my_terms: {
+        Args: { p_adult: boolean; p_accept_terms: boolean; p_version: string }
+        Returns: undefined
+      }
+      list_expired_recordings: { Args: Record<string, never>; Returns: { name: string }[] }
+      clear_deleted_recording_paths: { Args: Record<string, never>; Returns: undefined }
+
       check_my_ai_credits: {
         Args: { p_lifetime_usd: string; p_monthly_usd: string }
         Returns: boolean

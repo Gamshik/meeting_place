@@ -121,3 +121,37 @@
 .admin-limits p {
   font-size: var(--mp-font-size-supporting);
 }
+
+.admin-delete {
+  margin-top: 1rem;
+}
+.admin-delete-dialog {
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  margin: auto;
+  padding: 24px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 8px;
+  background: var(--mp-card);
+  color: var(--mp-ink);
+  box-shadow: 6px 6px 0 var(--mp-ink);
+  font-size: var(--mp-font-size-body);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+.admin-delete-dialog::backdrop {
+  background: rgb(23 21 29 / 55%);
+}
+.admin-delete-dialog h2 {
+  font-size: 24px;
+  font-weight: 900;
+}
+.admin-delete-dialog p {
+  margin: 16px 0;
+}
+.admin-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}

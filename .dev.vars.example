@@ -11,3 +11,6 @@ OPENROUTER_SITE_URL=http://localhost:5173
 # Optional: PEM CA certificate downloaded from Supabase Database Settings.
 # Quoted content with \n between lines is supported; do not use a file path.
 WORD_CARD_DATABASE_CA_CERT=""
+
+# Server-only: required by scheduled seven-day audio cleanup. Never use a VITE_ variable.
+SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key

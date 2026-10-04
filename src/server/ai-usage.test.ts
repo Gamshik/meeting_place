@@ -1,7 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }),
+  createClient: () => ({
+    auth: { getUser: mocks.getUser },
+    rpc: (name: string, ...args: unknown[]) =>
+      name === 'has_accepted_current_terms'
+        ? Promise.resolve({ data: true, error: null })
+        : mocks.rpc(name, ...args),
+  }),
 }))
 import { app } from './app'
 import { signUsage, type UsageReceipt } from './lib/ai-usage'

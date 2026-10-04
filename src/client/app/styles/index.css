@@ -40,3 +40,5 @@
 @import '../../features/games/history/ui/HistoryView/HistoryLayout.css';
 @import './focus.css';
 @import '../../features/games/explain-word/ui/Scoreboard/Scoreboard.css';
+
+@import '../../pages/LegalPage/LegalPage.css';

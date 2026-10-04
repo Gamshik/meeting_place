@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { AudioPlayer } from '@shared/ui/AudioPlayer/AudioPlayer'
@@ -307,6 +308,13 @@ export function AudioRecorder({
           </strong>
         </div>
       ) : null}
+      <p className="recording-privacy">
+        When you send, audio is stored for seven days and sent through OpenRouter to an AI provider
+        for transcription. Your partner can listen. Transcripts and results remain in history.{' '}
+        <Link to="/privacy" target="_blank" rel="noopener">
+          Privacy and deletion
+        </Link>
+      </p>
       <span role="status" className="sr-only">
         {isSending
           ? 'Sending and transcribing your recording'

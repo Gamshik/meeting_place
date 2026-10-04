@@ -372,3 +372,38 @@ Cached results bypass dispatch; pooled cards and older-card fallback remain avai
 request records no paid attempt, releases the game reservation, and returns credits_exhausted
 with “You’ve run out of credits.” The game shows the existing neutral bottom-right notification.
 Usage signing-key rotation still affects old receipt verification; limits have no key dependency.
+
+## Adult onboarding and recording lifecycle
+
+Google/Supabase identity is established before the authenticated onboarding confirmation. A
+`LegalGate` prevents the community provider and game UI mounting until `/api/legal` confirms
+current Terms acceptance. The private acceptance table records user, immutable versioned
+acceptance time, and an adult self-declaration; it is not general processing consent. The API
+requires acceptance for application routes; database triggers independently protect partnership,
+game, round, and AI job mutations. Storage RLS adds acceptance and expiry restrictions to
+existing participant checks. The public legal pages and account settings expose a manual
+privacy/deletion contact path.
+
+A Cloudflare cron invokes the existing Worker every 15 minutes. A server-only service-role
+Supabase client calls restricted RPCs to list at most 100 expired Storage objects per batch,
+deletes the actual bytes through the Storage API, and then reconciles missing audio paths.
+There are at most 20 batches per run; failures are retried on later invocations and reported
+as failed scheduled events. The first upload's Storage `created_at` defines seven-day expiry,
+including orphaned uploads. Expired objects cannot be replaced; old rounds cannot recreate
+recordings. Signed URLs already issued may work for up to five minutes. Transcripts, game
+results, usage records, and provider-side data are outside this automatic audio deletion scope.
+Full setup, verification and manual deletion responsibilities are in `docs/privacy-validation.md`.
+
+Admin deletion calls an authenticated, authorization-checked database function. It locks the target
+profile and affected partnerships/games, saves game IDs in a private cleanup queue, then deletes the
+Auth identity and its dependent rows in the same transaction. The queue is independent of user/game
+foreign keys and also matches late in-flight Storage uploads. The scheduled Storage deletion job
+includes queued game paths regardless of audio age. Administrator accounts cannot be removed by
+this function. Account deletion removes shared game history for partners too; the dialog explains
+that effect. Short-lived signed URLs and provider-side copies are not revoked by the transaction.
+
+The login CTA opens the age/Terms dialog before initiating Google OAuth. A versioned, 30-minute
+pending declaration is kept in sessionStorage for that tab. The OAuth callback submits it through
+the authenticated acceptance API before entering the app, clearing it only after success. Failed
+saves offer retry. Missing/expired declarations retain the authenticated LegalGate fallback;
+client storage is never treated as server authorization.

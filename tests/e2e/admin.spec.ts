@@ -29,6 +29,13 @@ async function setup(page: Page, isAdmin = true) {
   await page.route('https://browser-test.supabase.co/auth/v1/**', (route) =>
     route.fulfill({ status: 503, json: {} }),
   )
+  await page.route('**/api/legal', (route) =>
+    route.fulfill({
+      json: {
+        data: { accepted: true, termsVersion: '2026-10-04', acceptedAt: '2026-10-04T00:00:00Z' },
+      },
+    }),
+  )
   await page.route('**/api/me', (route) =>
     route.fulfill({
       json: {
@@ -233,4 +240,77 @@ test('exhausted credits show only the existing soft notification during a paid g
   await expect(page.getByRole('button', { name: 'Give me a word' })).toBeEnabled()
   await notice.getByRole('button', { name: 'Dismiss notification' }).click()
   await expect(notice).toHaveCount(0)
+})
+
+test('confirms the selected user before deleting and keeps failed deletions retryable', async ({
+  page,
+}, testInfo) => {
+  await setup(page)
+  const targetId = '22222222-2222-4222-8222-222222222222'
+  let deleted = false
+  let calls = 0
+  await page.route('**/api/admin/users?**', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          users: deleted
+            ? []
+            : [
+                {
+                  id: targetId,
+                  username: 'learner',
+                  displayName: 'Learner',
+                  knownCostUsd: '0.000000000000',
+                  knownTokens: '0',
+                  knownAudioSeconds: 0,
+                  unknownAudioDurationCount: 0,
+                  unknownCostCount: 0,
+                  unknownTokenCount: 0,
+                  unverifiedCount: 0,
+                },
+              ],
+          nextCursor: null,
+          from: '1970-01-01T00:00:00Z',
+          to: '2026-10-04T00:00:00Z',
+          currency: 'USD',
+        },
+      },
+    }),
+  )
+  await page.route(`**/api/admin/users/${targetId}`, (route) => {
+    calls++
+    expect(route.request().method()).toBe('DELETE')
+    expect(route.request().postDataJSON()).toEqual({ username: 'learner', confirm: true })
+    if (calls === 1)
+      return route.fulfill({
+        status: 503,
+        json: { error: { code: 'user_deletion_failed', message: 'Try again.' } },
+      })
+    deleted = true
+    return route.fulfill({ status: 204 })
+  })
+  await page.goto('/admin')
+  await page.getByRole('button', { name: 'Delete @learner' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Delete @learner?' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Cancel' }).hover()
+  await expect(dialog.locator('.custom-cursor')).toBeVisible()
+  await expect(dialog.locator('.custom-cursor')).toHaveCSS('pointer-events', 'none')
+
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  expect(calls).toBe(0)
+  await page.getByRole('button', { name: 'Delete @learner' }).click()
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+  expect(calls).toBe(0)
+  await page.getByRole('button', { name: 'Delete @learner' }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({ path: testInfo.outputPath('delete-user-confirmation.png') })
+  await dialog.getByRole('button', { name: 'Permanently delete user' }).click()
+  await expect(dialog.getByRole('alert')).toHaveText('Try again.')
+  await dialog.getByRole('button', { name: 'Permanently delete user' }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(page.getByRole('status')).toContainText('Deleted @learner')
+  await expect(page.getByRole('button', { name: 'Delete @learner' })).toHaveCount(0)
 })

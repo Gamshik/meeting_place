@@ -166,3 +166,68 @@ adminRoutes.get('/users', async (context) => {
   }
   return context.json({ data: report })
 })
+
+adminRoutes.delete('/users/:userId', async (context) => {
+  const db = context.get('supabase')
+  const access = await db.rpc('is_current_user_admin')
+  if (access.error)
+    return errorResponse(
+      context,
+      503,
+      'user_deletion_unavailable',
+      'User deletion is temporarily unavailable.',
+    )
+  if (access.data !== true)
+    return errorResponse(context, 403, 'admin_required', 'Administrator access is required.')
+  const id = z.uuid().safeParse(context.req.param('userId'))
+  const body = z
+    .object({ username: z.string().min(3).max(32), confirm: z.literal(true) })
+    .strict()
+    .safeParse(await context.req.json().catch(() => null))
+  if (!id.success || !body.success)
+    return errorResponse(context, 400, 'invalid_deletion', 'Confirm the user you want to delete.')
+  if (id.data === context.get('user').id)
+    return errorResponse(
+      context,
+      409,
+      'admin_account_protected',
+      'Administrator accounts cannot be deleted here.',
+    )
+  if (!context.env.SUPABASE_SERVICE_ROLE_KEY)
+    return errorResponse(
+      context,
+      503,
+      'user_deletion_unavailable',
+      'Recording cleanup must be configured before deleting users.',
+    )
+  const result = await db.rpc('admin_delete_user', {
+    p_user_id: id.data,
+    p_username: body.data.username,
+  })
+  if (result.error || result.data !== true) {
+    if (result.error?.code === '42501')
+      return errorResponse(context, 403, 'admin_required', 'Administrator access is required.')
+    if (result.error?.message === 'admin_account_protected')
+      return errorResponse(
+        context,
+        409,
+        'admin_account_protected',
+        'Administrator accounts cannot be deleted here.',
+      )
+    if (result.error?.message === 'user_confirmation_mismatch')
+      return errorResponse(
+        context,
+        409,
+        'user_confirmation_mismatch',
+        'This username changed. Refresh the list before deleting.',
+      )
+    console.error('Admin user deletion failed', { code: result.error?.code })
+    return errorResponse(
+      context,
+      503,
+      'user_deletion_failed',
+      'The user could not be deleted. Try again.',
+    )
+  }
+  return context.body(null, 204)
+})

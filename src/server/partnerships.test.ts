@@ -1,7 +1,13 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), rpc: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }),
+  createClient: () => ({
+    auth: { getUser: mocks.getUser },
+    rpc: (name: string, ...args: unknown[]) =>
+      name === 'has_accepted_current_terms'
+        ? Promise.resolve({ data: true, error: null })
+        : mocks.rpc(name, ...args),
+  }),
 }))
 import { app } from './app'
 const env = { SUPABASE_URL: 'https://example.supabase.co', SUPABASE_ANON_KEY: 'test-key' }

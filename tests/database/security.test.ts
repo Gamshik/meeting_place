@@ -25,7 +25,7 @@ beforeAll(async () => {
   // PGlite runs PostgreSQL itself. Only Supabase identity/roles and pgcrypto's
   // UUID alias are bootstrapped; both application migrations execute below.
   await db.exec(`
-    create role anon; create role authenticated;
+    create role anon; create role authenticated; create role service_role;
     create schema auth; create schema extensions; create schema storage;
     create table auth.users(id uuid primary key, email text, raw_user_meta_data jsonb);
     create function auth.uid() returns uuid language sql stable as
@@ -40,7 +40,7 @@ beforeAll(async () => {
       file_size_limit bigint,
       allowed_mime_types text[]
     );
-    create table storage.objects(bucket_id text not null, name text not null);
+    create table storage.objects(bucket_id text not null, name text not null, created_at timestamptz not null default now());
     alter table storage.objects enable row level security;
     grant usage on schema storage to authenticated;
     grant select, insert, update on storage.objects to authenticated;
@@ -60,6 +60,10 @@ beforeAll(async () => {
   ]) {
     await db.query('insert into auth.users values ($1, $2, $3)', [id, `${name}@example.test`, {}])
     await db.query('update public.profiles set username=$1 where id=$2', [name, id])
+    await db.query(
+      "insert into private.legal_acceptances(user_id, terms_version, adult_declared) values ($1, '2026-10-04', true)",
+      [id],
+    )
   }
 })
 beforeEach(async () => {
@@ -73,6 +77,97 @@ afterAll(async () => {
 })
 
 describe('database authorization and lifecycle', () => {
+  it('atomically deletes a user and queues recordings from shared games without deleting the partner', async () => {
+    const gameId = await aiGame()
+    await db.exec('reset role')
+    await rows('update public.profiles set is_admin=true where id=$1', [eve])
+    await rows("insert into storage.objects(bucket_id,name) values ('word-game-recordings',$1)", [
+      `${gameId}/orphan.wav`,
+    ])
+    await asUser(eve)
+    expect(await rows("select public.admin_delete_user($1,'alice') deleted", [alice])).toEqual([
+      { deleted: true },
+    ])
+    await db.exec('reset role')
+    expect(await rows('select id from auth.users where id=$1', [alice])).toEqual([])
+    expect(await rows('select id from public.word_games where id=$1', [gameId])).toEqual([])
+    expect(await rows('select id from auth.users where id=$1', [bob])).toEqual([{ id: bob }])
+    expect(await rows('select * from public.list_expired_recordings()')).toContainEqual({
+      name: `${gameId}/orphan.wav`,
+    })
+    await asUser(eve)
+    expect(await rows("select public.admin_delete_user($1,'alice') deleted", [alice])).toEqual([
+      { deleted: true },
+    ])
+  })
+  it('rejects direct deletion RPCs from non-admins', async () => {
+    await asUser(alice)
+    await expect(rows("select public.admin_delete_user($1,'bob')", [bob])).rejects.toThrow(
+      'admin_required',
+    )
+  })
+  it('protects administrators and requires the current target username', async () => {
+    await rows('update public.profiles set is_admin=true where id=$1', [eve])
+    await asUser(eve)
+    await db.exec('savepoint protect')
+    await expect(rows("select public.admin_delete_user($1,'eve')", [eve])).rejects.toThrow(
+      'admin_account_protected',
+    )
+    await db.exec('rollback to savepoint protect')
+    await expect(rows("select public.admin_delete_user($1,'wrong')", [alice])).rejects.toThrow(
+      'user_confirmation_mismatch',
+    )
+  })
+
+  it('requires adult Terms confirmation for direct partnership mutations', async () => {
+    await db.query('delete from private.legal_acceptances where user_id=$1', [alice])
+    await asUser(alice)
+    expect(await rows('select public.has_accepted_current_terms() accepted')).toEqual([
+      { accepted: false },
+    ])
+    await db.exec('savepoint denied')
+    await expect(invite('bob')).rejects.toThrow('terms_acceptance_required')
+    await db.exec('rollback to savepoint denied')
+    await rows("select public.accept_my_terms(true,true,'2026-10-04')")
+    const before = await rows('select public.get_my_legal_status() status')
+    await rows("select public.accept_my_terms(true,true,'2026-10-04')")
+    expect(await rows('select public.get_my_legal_status() status')).toEqual(before)
+    expect((await invite('bob')).ok).toBe(true)
+  })
+  it.each([
+    "false,true,'2026-10-04'",
+    "true,false,'2026-10-04'",
+    "true,true,'old'",
+    "null,true,'2026-10-04'",
+  ])('rejects invalid Terms confirmation in the database: %s', async (args) => {
+    await asUser(alice)
+    await expect(rows(`select public.accept_my_terms(${args})`)).rejects.toThrow(
+      'invalid_terms_acceptance',
+    )
+  })
+  it('keeps acceptance records private and cleanup unavailable to users', async () => {
+    await asUser(alice)
+    expect(
+      await rows(
+        "select has_function_privilege('authenticated', 'public.list_expired_recordings()', 'execute') allowed",
+      ),
+    ).toEqual([{ allowed: false }])
+    await expect(rows('select * from private.legal_acceptances')).rejects.toThrow(
+      'permission denied',
+    )
+  })
+  it('lists only recordings at least seven days old, including abandoned uploads', async () => {
+    await db.exec(`insert into storage.objects(bucket_id,name,created_at) values
+      ('word-game-recordings','old/orphan.wav',now()-interval '8 days'),
+      ('word-game-recordings','boundary.wav',now()-interval '7 days'),
+      ('word-game-recordings','recent.wav',now()-interval '6 days'),
+      ('another-bucket','unrelated.wav',now()-interval '9 days')`)
+    expect(await rows('select * from public.list_expired_recordings()')).toEqual([
+      { name: 'old/orphan.wav' },
+      { name: 'boundary.wav' },
+    ])
+  })
+
   it('allows 12 MiB recordings while keeping the bucket private and WAV-only', async () => {
     expect(
       await rows(
@@ -1144,6 +1239,33 @@ describe('database authorization and lifecycle', () => {
     ])
     await asUser(bob)
     expect(await rows('select name from storage.objects')).toEqual([{ name: audioPath }])
+    await db.exec('reset role')
+    await rows("update storage.objects set created_at=now()-interval '8 days' where name=$1", [
+      audioPath,
+    ])
+    await rows(
+      "update public.word_game_rounds set created_at=now()-interval '8 days' where id=$1",
+      [roundId],
+    )
+    await asUser(bob)
+    expect(await rows('select name from storage.objects')).toEqual([])
+    await db.exec('reset role')
+    const saved = await rows('select transcript, score from public.word_game_rounds where id=$1', [
+      roundId,
+    ])
+    await rows('select public.clear_deleted_recording_paths()')
+    expect(
+      await rows('select audio_path from public.word_game_rounds where id=$1', [roundId]),
+    ).toEqual([{ audio_path: audioPath }])
+    // Simulate the Storage API removing metadata only after successful object deletion.
+    await rows('delete from storage.objects where name=$1', [audioPath])
+    await rows('select public.clear_deleted_recording_paths()')
+    expect(
+      await rows('select audio_path from public.word_game_rounds where id=$1', [roundId]),
+    ).toEqual([{ audio_path: null }])
+    expect(
+      await rows('select transcript, score from public.word_game_rounds where id=$1', [roundId]),
+    ).toEqual(saved)
   })
 
   it('does not let a player accept another game while one is active', async () => {

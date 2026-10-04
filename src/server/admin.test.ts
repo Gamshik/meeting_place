@@ -1,7 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), getUser: vi.fn() }))
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({ auth: { getUser: mocks.getUser }, rpc: mocks.rpc }),
+  createClient: () => ({
+    auth: { getUser: mocks.getUser },
+    rpc: (name: string, ...args: unknown[]) =>
+      name === 'has_accepted_current_terms'
+        ? Promise.resolve({ data: true, error: null })
+        : mocks.rpc(name, ...args),
+  }),
 }))
 import { app } from './app'
 import { signUsage, type UsageReceipt } from './lib/ai-usage'
@@ -275,4 +281,49 @@ it('returns copied signup amounts only through the admin endpoint', async () => 
   )
   expect(response.status).toBe(200)
   expect(await response.json()).toEqual({ data: { monthlyUsd: '0.20', lifetimeUsd: '0.20' } })
+})
+
+const deleteRequest = (
+  id = user,
+  body: unknown = { username: 'learner', confirm: true },
+  configured = true,
+) =>
+  app.request(
+    `/api/admin/users/${id}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer token', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    },
+    { ...env, ...(configured ? { SUPABASE_SERVICE_ROLE_KEY: 'server-only-test' } : {}) },
+  )
+it('denies deletion to non-admins and protects the current admin', async () => {
+  expect((await deleteRequest(owner)).status).toBe(409)
+  mocks.rpc.mockResolvedValue({ data: false, error: null })
+  expect((await deleteRequest()).status).toBe(403)
+  expect(mocks.rpc.mock.calls.some(([name]) => name === 'admin_delete_user')).toBe(false)
+})
+it('requires explicit confirmation and cleanup configuration', async () => {
+  expect((await deleteRequest(user, { username: 'learner', confirm: false })).status).toBe(400)
+  expect((await deleteRequest(user, { username: 'learner', confirm: true }, false)).status).toBe(
+    503,
+  )
+})
+it('deletes only the confirmed target through the authorized RPC', async () => {
+  mocks.rpc.mockResolvedValue({ data: true, error: null })
+  expect((await deleteRequest()).status).toBe(204)
+  expect(mocks.rpc).toHaveBeenLastCalledWith('admin_delete_user', {
+    p_user_id: user,
+    p_username: 'learner',
+  })
+})
+it('reports changed targets and failed deletions instead of claiming success', async () => {
+  mocks.rpc
+    .mockResolvedValueOnce({ data: true })
+    .mockResolvedValueOnce({ error: { code: 'P0001', message: 'user_confirmation_mismatch' } })
+  expect((await deleteRequest()).status).toBe(409)
+  mocks.rpc
+    .mockResolvedValueOnce({ data: true })
+    .mockResolvedValueOnce({ error: { code: '08006' } })
+  expect((await deleteRequest()).status).toBe(503)
 })

@@ -34,6 +34,13 @@ async function signIn(page: Page, id = userId, activityStartDate = '2025-09-14')
   await page.route('https://browser-test.supabase.co/auth/v1/**', (route) =>
     route.fulfill({ status: 503, json: { message: 'Sign-out unavailable' } }),
   )
+  await page.route('**/api/legal', (route) =>
+    route.fulfill({
+      json: {
+        data: { accepted: true, termsVersion: '2026-10-04', acceptedAt: '2026-10-04T00:00:00Z' },
+      },
+    }),
+  )
   await page.route('**/api/me', (route) =>
     route.fulfill({
       json: {
@@ -2933,3 +2940,134 @@ for (const width of [320, 358, 1440]) {
     await page.screenshot({ path: `test-results/history-${width}.png`, fullPage: true })
   })
 }
+
+test('requires adult Terms acceptance before opening the app', async ({ page }, testInfo) => {
+  await signIn(page)
+  let accepted = false
+  let saved: unknown
+  await page.route('**/api/legal', async (route) => {
+    if (route.request().method() === 'POST') {
+      saved = route.request().postDataJSON()
+      accepted = true
+      return route.fulfill({ status: 204 })
+    }
+    return route.fulfill({
+      json: {
+        data: {
+          accepted,
+          termsVersion: accepted ? '2026-10-04' : null,
+          acceptedAt: accepted ? '2026-10-04T00:00:00Z' : null,
+        },
+      },
+    })
+  })
+  await page.goto('/')
+  const confirm = page.getByRole('button', { name: 'Confirm and continue' })
+  await expect(page.getByRole('heading', { name: 'Before you practice' })).toBeVisible()
+  await expect(confirm).toBeDisabled()
+  await page.getByRole('checkbox', { name: 'I am 18 years old or older.' }).check()
+  await expect(confirm).toBeDisabled()
+  await page.getByRole('checkbox', { name: /I accept the Terms/ }).check()
+  await expect(confirm).toBeEnabled()
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('adult-terms-mobile.png'), fullPage: true })
+  await confirm.click()
+  expect(saved).toEqual({ adult: true, acceptTerms: true, termsVersion: '2026-10-04' })
+  await expect(page.getByRole('heading', { name: 'Before you practice' })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('link', { name: 'Your profile' })).toBeVisible()
+})
+
+test('offers public privacy and Terms pages and an unchecked age declaration', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/login')
+  const start = page.getByRole('button', { name: 'Start practicing with Google' })
+  await expect(start).toBeEnabled()
+  await expect(page.getByRole('checkbox')).toHaveCount(0)
+  await start.click()
+  const confirmation = page.getByRole('dialog', { name: 'Before you practice' })
+  const proceed = confirmation.getByRole('button', { name: 'Agree and continue with Google' })
+  await expect(proceed).toBeDisabled()
+  await confirmation.getByRole('checkbox', { name: 'I am 18 years old or older.' }).check()
+  await expect(proceed).toBeDisabled()
+  await confirmation.getByRole('checkbox', { name: /I accept the Terms/ }).check()
+  await expect(proceed).toBeEnabled()
+  await confirmation.getByRole('button', { name: 'Cancel' }).click()
+  await expect(confirmation).toHaveCount(0)
+  await page.getByRole('link', { name: 'Privacy and deletion' }).click()
+  await expect(page.getByRole('heading', { name: 'Seven-day audio retention' })).toBeVisible()
+  await expect(page.getByText(/This seven-day rule applies only to audio/)).toBeVisible()
+  await expect(page.getByRole('link', { name: 'gkovsharov05@gmail.com' }).first()).toHaveAttribute(
+    'href',
+    'mailto:gkovsharov05@gmail.com',
+  )
+  await page.setViewportSize({ width: 390, height: 844 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('privacy-mobile.png'), fullPage: true })
+  await page.getByRole('link', { name: 'Terms', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Terms of use' })).toBeVisible()
+})
+
+test('shows a neutral loader while checking saved Terms acceptance on reload', async ({ page }) => {
+  await signIn(page)
+  let release!: () => void
+  const pending = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/legal', async (route) => {
+    await pending
+    await route.fulfill({
+      json: {
+        data: { accepted: true, termsVersion: '2026-10-04', acceptedAt: '2026-10-04T00:00:00Z' },
+      },
+    })
+  })
+  await page.goto('/')
+  await expect(page.getByRole('status')).toHaveText('Opening your meeting place…')
+  await expect(page.getByRole('heading', { name: 'Before you practice' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Confirm and continue' })).toHaveCount(0)
+  release()
+  await expect(page.getByRole('link', { name: 'Your profile' })).toBeVisible()
+})
+
+test('saves pre-sign-in Terms confirmation after Google returns without asking twice', async ({
+  page,
+}) => {
+  await signIn(page)
+  await page.addInitScript(() =>
+    sessionStorage.setItem(
+      'meeting-place:pending-terms',
+      JSON.stringify({ version: '2026-10-04', createdAt: Date.now() }),
+    ),
+  )
+  let saved = false
+  await page.route('**/api/legal', async (route) => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({
+        adult: true,
+        acceptTerms: true,
+        termsVersion: '2026-10-04',
+      })
+      saved = true
+      return route.fulfill({ status: 204 })
+    }
+    return route.fulfill({
+      json: {
+        data: {
+          accepted: saved,
+          termsVersion: saved ? '2026-10-04' : null,
+          acceptedAt: saved ? '2026-10-04T00:00:00Z' : null,
+        },
+      },
+    })
+  })
+  await page.goto('/auth/callback')
+  await expect(page.getByRole('link', { name: 'Your profile' })).toBeVisible()
+  expect(saved).toBe(true)
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('meeting-place:pending-terms')),
+  ).toBeNull()
+  await expect(page.getByRole('heading', { name: 'Before you practice' })).toHaveCount(0)
+})

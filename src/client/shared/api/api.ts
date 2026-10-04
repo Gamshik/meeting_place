@@ -1,3 +1,5 @@
+import type { LegalStatus } from '@contracts/legal'
+import { TERMS_VERSION } from '@contracts/legal'
 import type { AiLimits } from '@contracts/ai-limits'
 import type { AdminReport } from '@contracts/admin'
 import type {
@@ -66,6 +68,14 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  deleteUser: (userId: string, username: string) =>
+    apiRequest<void>(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      body: JSON.stringify({ username, confirm: true }),
+    }),
+  getLegalStatus: () => apiRequest<DataResponse<LegalStatus>>('/api/legal'),
+  acceptTerms: (input: { adult: true; acceptTerms: true; termsVersion: typeof TERMS_VERSION }) =>
+    apiRequest<void>('/api/legal', { method: 'POST', body: JSON.stringify(input) }),
   getAiLimits: (userId: string) =>
     apiRequest<DataResponse<AiLimits>>(`/api/admin/users/${userId}/limits`),
   setAiLimits: (userId: string, limits: AiLimits) =>
