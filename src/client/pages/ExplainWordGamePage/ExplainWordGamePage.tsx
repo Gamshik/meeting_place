@@ -277,14 +277,14 @@ export function ExplainWordGamePage() {
 
   if (!profile) {
     return (
-      <main className="grid min-h-screen place-items-center bg-stone-100 px-5">
-        <div className="max-w-md rounded-3xl border border-stone-200 bg-white p-7 text-center shadow-sm">
-          <h1 className="font-serif text-2xl font-semibold">We could not open this game</h1>
-          <p className="mt-3 text-stone-600">{error ?? 'Please try again in a moment.'}</p>
-          <Link className="button button-primary mt-6" to="/">
+      <main className="game-error-page">
+        <section className="game-error-card" aria-labelledby="game-error-title">
+          <h1 id="game-error-title">We could not open this game</h1>
+          <p role="alert">{error ?? 'Please try again in a moment.'}</p>
+          <Link className="button button-primary" to="/">
             Return to games
           </Link>
-        </div>
+        </section>
       </main>
     )
   }

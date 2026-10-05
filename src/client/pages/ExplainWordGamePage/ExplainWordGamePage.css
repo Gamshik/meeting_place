@@ -1,4 +1,38 @@
 /* Explain-the-word game workspace */
+.game-error-page {
+  display: grid;
+  min-height: 100dvh;
+  place-items: center;
+  padding: 24px 20px;
+  background: var(--mp-paper);
+  color: var(--mp-ink);
+}
+
+.game-error-card {
+  width: min(100%, 560px);
+  padding: clamp(24px, 5vw, 40px);
+  border: 2px solid var(--mp-ink);
+  border-radius: 14px 14px 14px 4px;
+  background: var(--mp-card);
+  box-shadow: 7px 7px 0 var(--mp-ink);
+  text-align: center;
+}
+
+.game-error-card h1 {
+  margin: 0;
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+
+.game-error-card p {
+  margin: 20px 0 28px;
+  font-size: var(--mp-font-size-body);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
 .game-page-header {
   display: flex;
   align-items: flex-end;
