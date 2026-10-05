@@ -25,13 +25,14 @@ export function LoginPage() {
     return <Navigate to="/" replace />
   }
 
-  async function handleSignIn() {
-    if (!adult || !terms || isSigningIn) return
+  async function handleSignIn(acceptTerms: boolean) {
+    if (isSigningIn || (acceptTerms && (!adult || !terms))) return
     setError(null)
     setIsSigningIn(true)
 
     try {
-      rememberTerms()
+      if (acceptTerms) rememberTerms()
+      else forgetTerms()
       await signInWithGoogle()
     } catch (signInError) {
       forgetTerms()
@@ -58,7 +59,7 @@ export function LoginPage() {
             <button
               className="button button-primary"
               disabled={!adult || !terms || isSigningIn}
-              onClick={() => void handleSignIn()}
+              onClick={() => void handleSignIn(true)}
             >
               {isSigningIn ? 'Opening Google…' : 'Agree and continue with Google'}
             </button>
@@ -96,21 +97,31 @@ export function LoginPage() {
             <br />
             you overthink.
           </h1>
-          <button
-            className="button button-primary google-button"
-            type="button"
-            onClick={() => {
-              forgetTerms()
-              setAdult(false)
-              setTerms(false)
-              setError(null)
-              setShowTerms(true)
-            }}
-            disabled={isSigningIn}
-          >
-            <GoogleMark />
-            {isSigningIn ? 'Opening Google…' : 'Start practicing with Google'}
-          </button>
+          <div className="login-actions">
+            <button
+              className="button button-primary google-button"
+              type="button"
+              onClick={() => {
+                forgetTerms()
+                setAdult(false)
+                setTerms(false)
+                setError(null)
+                setShowTerms(true)
+              }}
+              disabled={isSigningIn}
+            >
+              <GoogleMark />
+              {isSigningIn ? 'Opening Google…' : 'Start practicing with Google'}
+            </button>
+            <button
+              className="button button-secondary"
+              type="button"
+              disabled={isSigningIn}
+              onClick={() => void handleSignIn(false)}
+            >
+              {isSigningIn ? 'Opening Google…' : 'Sign in'}
+            </button>
+          </div>
           <LegalLinks />
           <div className="login-promises" aria-label="What to expect">
             <span>

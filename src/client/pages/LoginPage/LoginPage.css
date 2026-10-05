@@ -1,6 +1,18 @@
 /* Login hero: a lightweight conversation orbit replaces the framed card stack. */
-.login-copy .google-button {
+.login-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 16px;
   margin-top: 36px;
+}
+
+.login-copy .google-button {
+  margin-top: 0;
+}
+
+.login-actions > .button {
+  min-height: 56px;
 }
 
 .login-promises span {

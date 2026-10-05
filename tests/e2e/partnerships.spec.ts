@@ -3010,6 +3010,32 @@ test('offers public privacy and Terms pages and an unchecked age declaration', a
   await expect(page.getByRole('heading', { name: 'Terms of use' })).toBeVisible()
 })
 
+test('returning users can sign in directly without recording a new Terms acceptance', async ({
+  page,
+}) => {
+  await page.goto('/login')
+  await page.evaluate(() =>
+    sessionStorage.setItem(
+      'meeting-place:pending-terms',
+      JSON.stringify({ version: '2026-10-04', createdAt: Date.now() }),
+    ),
+  )
+  await page.route('https://browser-test.supabase.co/auth/v1/authorize**', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<p>Google sign-in redirect</p>' }),
+  )
+  await page.setViewportSize({ width: 375, height: 812 })
+  const signInButton = page.getByRole('button', { name: 'Sign in', exact: true })
+  await expect(signInButton).toBeInViewport()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await signInButton.click()
+  await expect(page).toHaveURL(/\/auth\/v1\/authorize\?.*provider=google/)
+  await page.goto('/login')
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('meeting-place:pending-terms')),
+  ).toBeNull()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
 test('shows a neutral loader while checking saved Terms acceptance on reload', async ({ page }) => {
   await signIn(page)
   let release!: () => void

@@ -619,6 +619,8 @@ Non-admin accounts visiting `/admin` are redirected to Practice. Admin API endpo
 require administrator authorization. See [the launch validation guide](docs/launch-validation.md)
 for browser permission checks, recording privacy, and provider review.
 
-The Google sign-in button first opens the age/Terms confirmation panel. After Google returns,
+The Start practicing with Google button first opens the age/Terms confirmation panel. After Google returns,
 the app saves the confirmation to the signed-in account without asking twice. Cancel does not
 start sign-in; failed acceptance saves offer retry before practice opens.
+Returning users can use Sign in beside Start practicing with Google to open Google directly. This does
+not create a Terms acceptance: accounts missing the current acceptance must confirm after sign-in.
