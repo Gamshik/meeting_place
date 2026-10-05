@@ -42,7 +42,7 @@ admin is rejected by the `profiles_single_admin` unique index.
    if the provider returned cost metadata. A cached retry or pooled card must not add spending.
    Missing word-token metadata or transcription duration may show an incomplete indicator even when the dollar cost is known. Transcription does not require token metadata.
 6. Sign in as a regular user in another browser session. There must be no Admin menu item.
-   Visiting `/admin` directly must show an access message and no user list. A request to
+   Visiting `/admin` directly must redirect to `/` and show no user list. A request to
    `/api/admin/users` with that user's bearer token must return 403; without a token it returns 401.
 7. Revoke your admin flag in the SQL Editor while the page is open. Refresh must clear the old
    report and show an access error. Reloading also removes the navigation item.

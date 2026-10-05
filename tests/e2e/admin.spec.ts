@@ -147,7 +147,7 @@ test('a regular user cannot open the admin UI or trigger its report request', as
     return route.fulfill({ status: 403, json: {} })
   })
   await page.goto('/admin')
-  await expect(page.getByRole('alert')).toContainText('available only to the administrator')
+  await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('link', { name: 'Admin', exact: true })).toHaveCount(0)
   await expect(page.getByRole('table')).toHaveCount(0)
   expect(requested).toBe(false)
