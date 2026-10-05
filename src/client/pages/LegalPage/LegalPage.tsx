@@ -29,9 +29,9 @@ export function LegalPage({ kind }: { kind: 'terms' | 'privacy' }) {
               Google sign-in and Supabase Auth provide your account identity, email, name, and
               profile image. We store your profile, username, time zone, partnerships, game
               activity, transcripts, guesses, and results to provide English practice and your
-              history. We also record AI usage and estimated costs to operate the service. Hosting
-              and authentication services may process technical information such as IP addresses and
-              security logs.
+              history. We also record provider-reported AI usage and costs, where available, to
+              operate the service. Hosting and authentication services may process technical
+              information such as IP addresses and security logs.
             </p>
             <h2>Your recordings</h2>
             <p>
@@ -42,6 +42,19 @@ export function LegalPage({ kind }: { kind: 'terms' | 'privacy' }) {
               record other people without their permission or include sensitive personal
               information.
             </p>
+            <h2>What other users can see</h2>
+            <p>
+              Your friends can see your display name, username, profile image, and practice activity
+              summaries. Game participants can see their shared transcripts, guesses, and results
+              through the game and history screens. Audio playback is available to the game partner
+              during the supported game flow. These features do not provide a public directory of
+              users or public access to game history.
+            </p>
+            <p>
+              Playback uses temporary links valid for up to five minutes. Anyone who obtains one of
+              these links can play or download that recording until the link expires, even without
+              signing in. Do not share playback links. Expiration does not erase downloaded copies.
+            </p>
             <h2>Seven-day audio retention</h2>
             <p>
               Audio recordings expire seven days after their first upload. Automatic deletion runs
@@ -51,26 +64,67 @@ export function LegalPage({ kind }: { kind: 'terms' | 'privacy' }) {
               transcription failed.
             </p>
             <p>
-              This seven-day rule applies only to audio stored by Meeting Place. Transcripts,
-              guesses, game results, profile information, Terms acceptance, and usage records remain
-              until deleted through a request or another applicable retention rule. Deleting audio
-              does not delete its transcript. Copies already downloaded by another person cannot be
+              This seven-day rule applies only to audio stored by Meeting Place. Deleting audio does
+              not delete its transcript. Copies already downloaded by another person cannot be
               recalled.
+            </p>
+            <h2>Other records and account deletion</h2>
+            <p>
+              Profiles, age declarations and Terms acceptance records, practice activity, and AI
+              usage records are kept while your account exists. Transcripts, guesses, and results
+              are kept with the shared game history. These records have no automatic age-based
+              deletion schedule. You can request earlier deletion using the contact below.
+            </p>
+            <p>
+              Deleting your account removes its profile, acceptance records, activity and usage
+              records, partnerships, and associated shared games. Your partners also lose that
+              shared game history, including transcripts and results; their accounts are not
+              deleted. Deletion of either participant's account can therefore remove shared history.
+              Related recordings are queued for cleanup, normally within 15 minutes, with failed
+              deletions retried. Existing playback links may work briefly as described above.
+            </p>
+            <p>
+              We retain identifiers of deleted games to find and remove related recordings,
+              including delayed uploads. These cleanup records contain game identifiers and deletion
+              times, not audio or transcripts, and currently have no automatic deletion schedule.
+              Provider backups and technical logs have separate retention rules.
             </p>
             <h2>Service providers and international processing</h2>
             <p>
               We use Google for sign-in, Supabase for authentication, database and storage,
-              Cloudflare for hosting, and OpenRouter with its selected AI provider for transcription
-              and other game AI features. Data may be processed outside your country, including
-              outside Belarus and the European Economic Area. Provider retention and backups follow
-              their own agreements and settings; the seven-day app cleanup does not automatically
-              erase their copies.
+              Cloudflare for hosting, and OpenRouter for transcription and word-card generation. Our
+              current models are Microsoft MAI-Transcribe 2 and OpenAI GPT-4o-mini, served through
+              Microsoft Azure in our verified configuration. The model developer and the provider
+              serving a request can be different organizations. Data may be processed outside your
+              country, including outside Belarus and the European Economic Area. Provider retention
+              and backups follow their own agreements and settings; the seven-day app cleanup does
+              not automatically erase their copies.
+            </p>
+            <p>
+              We configure OpenRouter to require zero-data-retention endpoints for the model groups
+              used by these features, and OpenRouter input/output logging is disabled. These routing
+              restrictions use OpenRouter's endpoint-specific policies; zero data retention does not
+              mean no temporary processing in memory. OpenRouter's definition permits certain
+              in-memory prompt caching. Request metadata, such as model, timing, and cost, is
+              separate from audio, prompts, and response content and may be retained.
+            </p>
+            <p>
+              These AI settings do not change Meeting Place's own storage and deletion periods.
+              Provider information and this notice will be reviewed when our models, routing, or
+              privacy settings change.
             </p>
             <p>
               <a href="https://supabase.com/privacy">Supabase privacy</a> ·{' '}
               <a href="https://www.cloudflare.com/privacypolicy/">Cloudflare privacy</a> ·{' '}
               <a href="https://openrouter.ai/privacy">OpenRouter privacy</a> ·{' '}
-              <a href="https://policies.google.com/privacy">Google privacy</a>
+              <a href="https://policies.google.com/privacy">Google privacy</a> ·{' '}
+              <a href="https://www.microsoft.com/en-us/privacy/privacystatement">
+                Microsoft privacy
+              </a>{' '}
+              ·{' '}
+              <a href="https://openrouter.ai/docs/guides/features/zdr">
+                OpenRouter zero data retention
+              </a>
             </p>
             <h2>Access, corrections, and deletion</h2>
             <p>

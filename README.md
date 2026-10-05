@@ -598,6 +598,13 @@ countdown. Live-call and guessing timers should still resume with their remainin
 
 ## Adult onboarding and audio retention
 
+The Privacy notice dated October 5, 2026 describes current AI providers and ZDR routing,
+friend/game visibility, temporary playback links, and the effects of account deletion on shared
+history. Keep the OpenRouter account's OpenAI and All other models ZDR restrictions enabled and
+input/output logging disabled to match this notice. Terms acceptance remains version 2026-10-04.
+Legal bases, international-transfer arrangements, and jurisdiction-specific rights still require
+review; these factual disclosures are not a legal compliance certification.
+
 Meeting Place is 18+. New and existing accounts must confirm their age and accept versioned Terms
 before using the app. Public `/terms` and `/privacy` pages explain recording/AI processing and
 link to Kovsharov Gleb at gkovsharov05@gmail.com for manual privacy and deletion requests.

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const TERMS_VERSION = '2026-10-04'
-export const PRIVACY_VERSION = '2026-10-04'
+export const PRIVACY_VERSION = '2026-10-05'
 export const PRIVACY_CONTACT = 'gkovsharov05@gmail.com'
 export const OPERATOR_NAME = 'Kovsharov Gleb'
 export const acceptTermsSchema = z
