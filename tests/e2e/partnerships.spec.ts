@@ -710,7 +710,16 @@ test.describe('mobile profile layout', () => {
           await expect(editor).toBeVisible()
           await page.getByLabel('Display name', { exact: true }).fill('Alice Updated')
           await expect(editor.getByRole('button', { name: 'Reset', exact: true })).toBeVisible()
-          expect((await editor.boundingBox())!.height).toBeLessThan(450)
+          // Include the legal links while keeping the complete editor usable on one screen.
+          expect((await editor.boundingBox())!.height).toBeLessThan(page.viewportSize()!.height)
+          await editor.evaluate((element) => element.scrollIntoView({ block: 'center' }))
+          await expect(editor).toBeInViewport({ ratio: 1 })
+          await expect(editor.getByRole('link', { name: 'Terms', exact: true })).toBeInViewport()
+          await expect(editor.getByRole('link', { name: 'Privacy and deletion' })).toBeInViewport()
+          await expect(editor.getByRole('button', { name: 'Reset', exact: true })).toBeInViewport()
+          expect(
+            await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          ).toBe(true)
           await editor.screenshot({ path: testInfo.outputPath('profile-settings.png') })
           await editor.getByRole('button', { name: 'Reset', exact: true }).click()
           await expect(page.getByLabel('Display name', { exact: true })).toHaveValue('Alice')
