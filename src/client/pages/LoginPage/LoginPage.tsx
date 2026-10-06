@@ -134,7 +134,7 @@ export function LoginPage() {
               <i aria-hidden="true">◷</i>5–10 minutes
             </span>
             <span>
-              <i aria-hidden="true">✓</i>No setup
+              <i aria-hidden="true">✓</i>No scheduling needed
             </span>
           </div>
           {error || authError ? (
