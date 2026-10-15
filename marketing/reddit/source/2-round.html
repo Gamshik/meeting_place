@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="shared.css" />
+    <style>
+      .game {
+        font-size: 34px;
+        padding: 12px 22px;
+        border-radius: 12px;
+        box-shadow: 8px 8px 0 #17151d;
+        border-width: 5px;
+      }
+      .chat {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        margin-top: 70px;
+      }
+      .who {
+        font-size: 28px;
+        font-weight: 700;
+        color: #6f6976;
+      }
+      .bubble {
+        padding: 30px 36px;
+      }
+      .q {
+        align-self: flex-start;
+        max-width: 86%;
+        font-size: 50px;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+      .a {
+        align-self: flex-end;
+        font-size: 74px;
+      }
+      .right {
+        align-self: flex-end;
+      }
+      .point {
+        align-self: center;
+        margin-top: 30px;
+        font-size: 52px;
+        padding: 14px 34px;
+        transform: rotate(-3deg);
+      }
+      h1 {
+        font-size: 92px;
+        line-height: 0.98;
+        margin: auto 0 56px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="top">
+      <div class="box acid game heavy">Explain the word</div>
+    </div>
+    <div class="chat">
+      <div class="who">You</div>
+      <div class="bubble box card q">“You open it when it starts raining…”</div>
+      <div class="who right">Your friend</div>
+      <div class="bubble box lilac a heavy">Umbrella!</div>
+      <div class="box coral point heavy">+1 point</div>
+    </div>
+    <h1 class="heavy">Explain it.<br />They guess it.</h1>
+    <div class="footer" style="margin-top: 0">
+      <div class="brand heavy">
+        <div class="dots"><span class="acid"></span><span class="lilac"></span></div>
+        Meeting Place
+      </div>
+      <div class="tag">Rounds take minutes</div>
+    </div>
+  </body>
+</html>
