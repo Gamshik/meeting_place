@@ -25,7 +25,7 @@
 .session-finished-card h2 {
   font-size: 19px;
   line-height: 1.15;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
 .session-finished-card p {
@@ -83,7 +83,7 @@
   margin-top: 0;
   font-size: clamp(21px, 3vw, 28px);
   line-height: 1.1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.014em;
 }
 
 .session-pause-copy > p:last-child {

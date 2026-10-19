@@ -238,7 +238,7 @@
   font-size: clamp(28px, 2.4vw, 36px);
   font-weight: 850;
   line-height: 1.2;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.016em;
   overflow-wrap: anywhere;
 }
 .archive-result-header .button {

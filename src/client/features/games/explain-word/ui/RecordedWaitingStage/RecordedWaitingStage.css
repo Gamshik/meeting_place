@@ -14,7 +14,7 @@
   max-width: 100%;
   font-size: clamp(30px, 4vw, 44px);
   line-height: 1;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.022em;
   text-align: center;
   overflow-wrap: anywhere;
 }

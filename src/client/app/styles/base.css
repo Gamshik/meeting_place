@@ -14,11 +14,13 @@
   --text-base: 17px;
 }
 :root {
+  --mp-font-body: 'Figtree Variable', Arial, Helvetica, sans-serif;
+  --mp-font-heading: 'Outfit Variable', 'Arial Black', Arial, sans-serif;
   --mp-font-size-body: 17px;
   --mp-font-size-supporting: 15px;
   /* Kept as the shared floor name because existing component styles already consume it. */
   --mp-mobile-font-floor: var(--mp-font-size-supporting);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--mp-font-body);
   font-size: var(--mp-font-size-body);
   color: #242422;
   background: var(--mp-paper, #f4f0e8);
@@ -40,6 +42,13 @@
 }
 body {
   margin: 0;
+}
+h1,
+h2,
+h3,
+.wordmark,
+.brand-mark {
+  font-family: var(--mp-font-heading);
 }
 button,
 input,
@@ -169,7 +178,7 @@ summary:focus-visible {
 
 .font-serif {
   font-family: inherit;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.014em;
 }
 .button {
   display: inline-flex;
@@ -235,7 +244,7 @@ summary:focus-visible {
   font-weight: 800;
   font-size: 26px;
   line-height: 0.82;
-  letter-spacing: -1.4px;
+  letter-spacing: -0.6px;
   text-decoration: none;
   color: #242422;
   min-width: 160px;
@@ -343,7 +352,7 @@ summary:focus-visible {
   margin-bottom: 48px;
 }
 h1 {
-  letter-spacing: -0.065em;
+  letter-spacing: -0.026em;
 }
 .page-heading h1 {
   font-size: clamp(40px, 5vw, 64px);
@@ -412,7 +421,7 @@ h1 {
 }
 .card-front strong {
   font-size: 33px;
-  letter-spacing: -1.5px;
+  letter-spacing: -0.6px;
   font-weight: 500;
 }
 .sound-lines {
@@ -437,7 +446,7 @@ h1 {
 .game-caption h2 {
   font-size: 25px;
   font-weight: 500;
-  letter-spacing: -0.9px;
+  letter-spacing: -0.4px;
 }
 .game-caption p {
   color: #6d6b65;
@@ -466,7 +475,7 @@ h1 {
 .list-section > h2 {
   font-size: 24px;
   font-weight: 500;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.2px;
   margin-bottom: 18px;
 }
 .session-row {
@@ -479,7 +488,7 @@ h1 {
 }
 .empty-state h2 {
   font-size: 32px;
-  letter-spacing: -1px;
+  letter-spacing: -0.4px;
 }
 .empty-state p {
   color: #6d6b65;
@@ -553,7 +562,7 @@ h1 {
 }
 .panel-heading h2 {
   font-size: 28px;
-  letter-spacing: -0.8px;
+  letter-spacing: -0.3px;
   line-height: 1.15;
 }
 .panel-buttons {
@@ -1094,7 +1103,7 @@ html.touch-input .rules-steps li:hover .rules-step-icon svg {
 .game-title-art {
   padding: 36px;
   font-size: 44px;
-  letter-spacing: -2px;
+  letter-spacing: -0.8px;
   line-height: 1.1;
   overflow-wrap: anywhere;
 }

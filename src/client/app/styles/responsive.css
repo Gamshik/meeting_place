@@ -795,7 +795,7 @@
 
   .game-page-header:not(.is-room) .game-title-row h1 {
     font-size: clamp(1.75rem, 8.5vw, 2.2rem);
-    letter-spacing: -0.055em;
+    letter-spacing: -0.022em;
   }
 
   .game-lobby-ready .game-mode-picker {

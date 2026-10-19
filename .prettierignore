@@ -6,3 +6,4 @@ test-results
 .wrangler
 package-lock.json
 worker-configuration.d.ts
+marketing/promo-video/.film

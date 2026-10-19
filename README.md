@@ -22,6 +22,10 @@ This repository contains the first vertical slice:
 
 ## Interface
 
+Headings, the wordmark, and the secret word use Outfit; body text and controls use Figtree. Both
+are self-hosted variable fonts from `@fontsource-variable` (SIL Open Font License), imported in
+`src/client/main.tsx` and exposed as `--mp-font-heading` and `--mp-font-body` in `base.css`.
+
 Incoming game invitations are handled through the notification toast or notification panel, not a
 full-page room card. Opening a room with an unaccepted invitation does not redirect or accept it;
 the recipient can leave using Lobby to access notifications. Senders keep their waiting screen.

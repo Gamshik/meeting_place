@@ -17,7 +17,7 @@
 .activity-heading h2 {
   margin-top: 6px;
   font-size: clamp(28px, 3.2vw, 42px);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.016em;
   line-height: 1.05;
 }
 
@@ -335,7 +335,7 @@ button.activity-cell:disabled {
   margin-top: 4px;
   font-size: clamp(31px, 4vw, 43px);
   line-height: 0.98;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.018em;
 }
 
 .friend-profile-identity,

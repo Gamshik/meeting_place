@@ -16,7 +16,7 @@
 .live-round > .live-round-clock p {
   font-size: 18px;
   font-weight: 900;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
 .live-round > .live-round-clock > strong {
@@ -51,7 +51,7 @@
   align-items: center;
   gap: 8px;
   font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.008em;
 }
 
 .live-round-clock.is-final-guess p::before {
@@ -94,7 +94,7 @@
 .live-round-clock.is-preparing p {
   font-size: 18px;
   font-weight: 900;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
 .live-round-clock.is-preparing > strong {

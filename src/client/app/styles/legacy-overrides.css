@@ -30,7 +30,7 @@
 .login-hero {
   width: min(1320px, calc(100% - 48px));
   min-height: calc(100dvh - 118px);
-  grid-template-columns: minmax(0, 0.88fr) minmax(440px, 1.12fr);
+  grid-template-columns: minmax(0, 1fr) minmax(440px, 1fr);
   gap: clamp(28px, 6vw, 90px);
   margin: 0 auto;
   padding: 46px 0 70px;
@@ -41,7 +41,7 @@
   font-size: clamp(56px, 6.8vw, 94px);
   font-weight: 760;
   line-height: 0.91;
-  letter-spacing: -0.075em;
+  letter-spacing: -0.03em;
 }
 
 .login-copy > p:not(.login-error) {

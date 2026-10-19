@@ -18,6 +18,11 @@ export default tseslint.config(
   },
   js.configs.recommended,
   { files: ['tests/**/*.mjs'], languageOptions: { globals: globals.node } },
+  { files: ['marketing/promo-video/scripts/**/*.mjs'], languageOptions: { globals: globals.node } },
+  {
+    files: ['marketing/promo-video/shared/**/*.js'],
+    languageOptions: { globals: globals.browser },
+  },
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],

@@ -73,7 +73,7 @@ summary:focus-visible {
   gap: 12px;
   font-size: 17px;
   line-height: 0.88;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.016em;
   text-transform: lowercase;
 }
 
@@ -88,7 +88,7 @@ summary:focus-visible {
   color: var(--mp-acid);
   font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
   font-weight: 800;
-  letter-spacing: -0.08em;
+  letter-spacing: -0.032em;
 }
 
 .site-header nav {
@@ -218,7 +218,7 @@ summary:focus-visible {
   font-size: clamp(54px, 6.1vw, 88px);
   font-weight: 750;
   line-height: 0.93;
-  letter-spacing: -0.075em;
+  letter-spacing: -0.03em;
 }
 
 .practice-hero h1 span {
@@ -497,7 +497,7 @@ summary:focus-visible {
   color: var(--mp-ink);
   font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.004em;
 }
 
 .live-dot {
@@ -516,10 +516,6 @@ summary:focus-visible {
 .quick-search {
   max-width: 420px;
   margin: 0 0 16px;
-}
-
-.quick-search span {
-  font-size: max(var(--mp-mobile-font-floor, 0px), 13px);
 }
 
 .input,
@@ -841,7 +837,7 @@ summary:focus-visible {
 
 .friends-page .friend-row h3 {
   font-weight: 800;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
 .friends-page .friend-profile-link {
@@ -921,7 +917,7 @@ summary:focus-visible {
 .panel-heading h2 {
   font-size: 31px;
   font-weight: 750;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.018em;
 }
 
 .notifications-panel {
@@ -1096,7 +1092,7 @@ summary:focus-visible {
 }
 .page-heading h1 {
   font-size: clamp(30px, 4vw, 42px);
-  letter-spacing: -0.045em;
+  letter-spacing: -0.018em;
 }
 .play-layout {
   display: grid;
@@ -1144,7 +1140,7 @@ summary:focus-visible {
   font-size: 25px;
   line-height: 1.2;
   margin-bottom: 8px;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.2px;
 }
 .search-field {
   display: block;
@@ -1556,7 +1552,7 @@ summary:focus-visible {
 .loading-error-copy h1 {
   font-size: clamp(30px, 4vw, 40px);
   line-height: 1.08;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.016em;
 }
 .loading-error-copy p {
   margin-top: 12px;

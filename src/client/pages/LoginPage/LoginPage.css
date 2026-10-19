@@ -128,7 +128,7 @@
 .login-practice-core strong {
   font-size: 39px;
   font-weight: 600;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.022em;
 }
 
 .login-waveform {
@@ -197,11 +197,11 @@
 .login-listen-bubble {
   position: absolute;
   z-index: 3;
-  padding: 12px 16px;
+  padding: 14px 22px;
   border: 2px solid var(--mp-ink);
   background: var(--mp-card);
   box-shadow: 4px 4px 0 var(--mp-ink);
-  font-size: max(var(--mp-mobile-font-floor, 0px), 15px);
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -325,8 +325,8 @@
 
   .login-speak-bubble,
   .login-listen-bubble {
-    padding: 9px 12px;
-    font-size: max(var(--mp-mobile-font-floor, 0px), 12px);
+    padding: 10px 14px;
+    font-size: max(var(--mp-mobile-font-floor, 0px), 17px);
   }
 
   .login-speak-bubble {

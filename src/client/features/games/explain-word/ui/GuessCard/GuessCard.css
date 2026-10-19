@@ -454,7 +454,7 @@
 .guess-card-heading h2 {
   font-size: clamp(23px, 3vw, 31px);
   line-height: 1.05;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.016em;
 }
 
 .guess-card-form {

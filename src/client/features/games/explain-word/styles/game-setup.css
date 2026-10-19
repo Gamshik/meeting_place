@@ -44,7 +44,7 @@
   margin-top: 14px;
   font-size: clamp(32px, 4vw, 48px);
   line-height: 1.02;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.022em;
 }
 
 .game-lobby-copy > p:not(.game-lobby-blocked),
