@@ -21,3 +21,6 @@ supabase/.temp/
 .DS_Store
 Thumbs.db
 worker-configuration.d.ts
+
+# Promo material (Reddit images, promo video) stays local
+marketing/
