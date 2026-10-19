@@ -57,19 +57,19 @@ export function GameWorkspace({
       {friends.length ? (
         <>
           {friends.length > 4 ? (
-            <label className="search-field quick-search">
-              <span>Play with</span>
+            <div className="search-field quick-search">
               <input
                 className="input"
                 type="search"
+                aria-label="Search friends to play with"
                 placeholder="Find a friend"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-            </label>
+            </div>
           ) : (
             <label className="sr-only">
-              Play with
+              Search friends to play with
               <input
                 type="search"
                 value={search}
