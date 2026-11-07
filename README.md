@@ -450,9 +450,10 @@ In Supabase **Authentication → URL Configuration**:
 No change to the Google callback is required when only the app's Worker URL changes: Google still
 returns to Supabase's `/auth/v1/callback`, and Supabase returns to this application.
 
-The homepage's canonical and social-preview tags in `index.html` point to the current Worker URL.
-If you move the app to a custom domain, update those absolute URLs. The preview artwork lives at
-`public/social-preview.png` and must remain publicly accessible for link previews.
+The homepage's canonical and social-preview tags in `index.html` point to the production domain,
+`https://meetingplacehq.com`. If you deploy under a different domain, update those absolute URLs.
+The preview artwork lives at `public/social-preview.jpg` (1200×627, kept small so link crawlers
+such as LinkedIn fetch it reliably) and must remain publicly accessible for link previews.
 
 ## Commands
 
