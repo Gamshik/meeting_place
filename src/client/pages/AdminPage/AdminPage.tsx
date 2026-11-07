@@ -1,6 +1,7 @@
 import { DeleteUser } from './DeleteUser'
 import { SpendingLimits } from './SpendingLimits'
 import { useEffect, useState } from 'react'
+// TODO: use react-router instead. react-router-dom is legacy
 import { Link, Navigate } from 'react-router-dom'
 import type { Profile } from '@contracts/contracts'
 import type { AdminReport } from '@contracts/admin'
