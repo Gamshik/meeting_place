@@ -1,0 +1,140 @@
+{
+  "Everyday life": [
+    {
+      "word": "umbrella",
+      "clueDurationMs": 4833,
+      "avoid": ["rain", "wet", "open"],
+      "miss": "raincoat",
+      "clue": "You hold this above your head when water falls from the sky. It keeps your clothes dry."
+    },
+    {
+      "word": "pillow",
+      "clueDurationMs": 4128,
+      "avoid": ["bed", "sleep", "head"],
+      "miss": "blanket",
+      "clue": "This is soft. You put it under your head at night to get comfortable."
+    },
+    {
+      "word": "mirror",
+      "clueDurationMs": 4206,
+      "avoid": ["reflection", "look", "glass"],
+      "miss": "window",
+      "clue": "You can see your own face in this. There is often one in the bathroom."
+    }
+  ],
+  "Food": [
+    {
+      "word": "pancake",
+      "clueDurationMs": 5800,
+      "avoid": ["breakfast", "syrup", "batter"],
+      "miss": "waffle",
+      "clue": "This round, flat food is cooked in a pan. People often eat a stack of them in the morning."
+    },
+    {
+      "word": "lemon",
+      "clueDurationMs": 5565,
+      "avoid": ["yellow", "sour", "fruit"],
+      "miss": "lime",
+      "clue": "This is like an orange, but its skin is a different color. You can squeeze it into tea."
+    },
+    {
+      "word": "sandwich",
+      "clueDurationMs": 4911,
+      "avoid": ["bread", "slice", "filling"],
+      "miss": "burger",
+      "clue": "This is a common lunch you can hold in your hands. Cheese or meat goes in the middle."
+    }
+  ],
+  "Travel": [
+    {
+      "word": "passport",
+      "clueDurationMs": 5878,
+      "avoid": ["country", "border", "document"],
+      "miss": "ticket",
+      "clue": "You show this small book when you arrive somewhere far from home. It has your photo and name inside."
+    },
+    {
+      "word": "suitcase",
+      "clueDurationMs": 4833,
+      "avoid": ["luggage", "pack", "clothes"],
+      "miss": "backpack",
+      "clue": "This is a large bag you take on a trip. It often has wheels and a handle."
+    },
+    {
+      "word": "airport",
+      "clueDurationMs": 5408,
+      "avoid": ["plane", "flight", "terminal"],
+      "miss": "station",
+      "clue": "You go here before you travel through the sky. People check in and wait at a gate."
+    }
+  ],
+  "Nature": [
+    {
+      "word": "waterfall",
+      "clueDurationMs": 5329,
+      "avoid": ["water", "fall", "river"],
+      "miss": "fountain",
+      "clue": "You can see this where a stream drops over the edge of a cliff. It can be very loud."
+    },
+    {
+      "word": "rainbow",
+      "clueDurationMs": 5408,
+      "avoid": ["color", "rain", "sky"],
+      "miss": "sunset",
+      "clue": "This looks like a big curved line. You might see it when the sun comes out during a shower."
+    },
+    {
+      "word": "volcano",
+      "clueDurationMs": 5147,
+      "avoid": ["lava", "erupt", "mountain"],
+      "miss": "geyser",
+      "clue": "This is a tall landform with an opening at the top. Hot rock can come out of it."
+    }
+  ],
+  "Work and study": [
+    {
+      "word": "notebook",
+      "clueDurationMs": 5408,
+      "avoid": ["paper", "write", "pages"],
+      "miss": "textbook",
+      "clue": "You carry this to class to keep ideas in one place. It is empty when you first buy it."
+    },
+    {
+      "word": "deadline",
+      "clueDurationMs": 5147,
+      "avoid": ["date", "due", "time"],
+      "miss": "appointment",
+      "clue": "This tells you when you must finish a task. Your teacher might give you one for an essay."
+    },
+    {
+      "word": "library",
+      "clueDurationMs": 5878,
+      "avoid": ["books", "read", "borrow"],
+      "miss": "bookstore",
+      "clue": "This is a quiet place where you can study. You can take things home for a few weeks and then return them."
+    }
+  ],
+  "Technology": [
+    {
+      "word": "keyboard",
+      "clueDurationMs": 5565,
+      "avoid": ["type", "keys", "computer"],
+      "miss": "mouse",
+      "clue": "This sits on your desk and has lots of buttons. Each button can put a letter on the screen."
+    },
+    {
+      "word": "charger",
+      "clueDurationMs": 5068,
+      "avoid": ["battery", "power", "plug"],
+      "miss": "adapter",
+      "clue": "You connect this to your phone when it is almost empty. Soon you can use your phone again."
+    },
+    {
+      "word": "headphones",
+      "clueDurationMs": 4049,
+      "avoid": ["ears", "music", "listen"],
+      "miss": "speakers",
+      "clue": "You wear these so you can hear a video without other people hearing it too."
+    }
+  ]
+}

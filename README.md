@@ -81,6 +81,21 @@ incoming invitations until they are resolved. Notifications are in-app, not back
 notifications. Dialogs and sections size to content; long notification lists scroll with the close
 control visible.
 
+## Guest demo
+
+Choose **Try without signing up** on the sign-in page or open `/demo` directly. The demo offers
+Recorded mode for Explain the word. Pick an explanation time and a topic, then take turns with a
+scripted partner. Each topic cycles through three words. Partner clues have audio and a text option.
+You can skip recording if your microphone is unavailable.
+
+The demo logo and Lobby button return to `/` in guest mode. Choose **Sign in** to leave the demo.
+
+The demo plays entirely in the browser and makes no gameplay API requests. Recordings stay on
+the device for preview and are discarded when you send, replace, skip, or leave the turn.
+
+Keep the demo in sync when changing the website UI or UX it shows. Update the matching demo
+screens and interactions in the same change and verify both flows on desktop and mobile.
+
 ## Technology
 
 - React, TypeScript, Vite, React Router, and Tailwind CSS

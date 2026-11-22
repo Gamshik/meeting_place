@@ -1,0 +1,170 @@
+.quick-start-footer.demo-play-footer {
+  justify-content: center;
+  padding-block: clamp(18px, 3vw, 30px) clamp(36px, 6vw, 54px);
+}
+
+.demo-play-action {
+  --play-button-width: clamp(128px, 22vw, 168px);
+  --play-paddle-width: clamp(28px, 4vw, 38px);
+  --play-paddle-gap: clamp(18px, 3vw, 30px);
+  --play-pass-distance: calc(var(--play-button-width) / 2 + var(--play-paddle-gap) + 2px);
+  --play-rally-cycle: 5s;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--play-paddle-gap);
+}
+
+.demo-play-action > .button.button-primary {
+  position: relative;
+  z-index: 1;
+  min-inline-size: var(--play-button-width);
+  font-size: clamp(20px, 2.5vw, 24px);
+}
+
+.demo-play-paddle {
+  --paddle-angle: 32deg;
+  position: relative;
+  flex: 0 0 var(--play-paddle-width);
+  block-size: calc(var(--play-paddle-width) + 6px);
+  rotate: var(--paddle-angle);
+  transform-origin: 50% 90%;
+  border: 2px solid var(--mp-ink);
+  border-radius: 52% 50% 44% 46%;
+  background: var(--mp-lilac);
+  box-shadow:
+    inset 0 -4px 0 var(--mp-ink),
+    3px 3px 0 var(--mp-ink);
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.demo-play-paddle:last-child {
+  --paddle-angle: -32deg;
+  background: var(--mp-acid);
+}
+
+.demo-play-paddle::after {
+  position: absolute;
+  inset-block-start: calc(100% - 2px);
+  inset-inline-start: calc(50% - 5px);
+  inline-size: 10px;
+  block-size: 15px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 2px 2px 4px 4px;
+  background: var(--mp-card);
+  box-shadow: 2px 2px 0 var(--mp-ink);
+  content: '';
+}
+
+.demo-play-court {
+  position: absolute;
+  inset-block-start: calc(50% + 46px);
+  inset-inline: 0;
+  inline-size: calc(var(--play-button-width) + var(--play-paddle-gap));
+  block-size: 6px;
+  margin-inline: auto;
+  border: 2px solid currentColor;
+  border-block-start: 0;
+  border-radius: 0 0 5px 5px;
+  color: color-mix(in srgb, var(--mp-ink) 23%, transparent);
+  pointer-events: none;
+}
+
+.demo-play-court::after {
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline-start: 50%;
+  block-size: 5px;
+  border-inline-start: 2px solid currentColor;
+  content: '';
+}
+
+.demo-play-ball {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  inline-size: 16px;
+  block-size: 16px;
+  transform: translate(-50%, -50%);
+  translate: calc(-1 * var(--play-pass-distance)) 14px;
+  border: 2px solid var(--mp-ink);
+  border-radius: 50%;
+  background: var(--mp-coral);
+  box-shadow:
+    inset 2px 2px 0 var(--mp-card),
+    2px 2px 0 var(--mp-ink);
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.demo-play-action[data-ready='true'] :is(.demo-play-paddle, .demo-play-ball) {
+  opacity: 1;
+}
+
+.demo-play-action[data-ready='true'] .demo-play-ball {
+  animation: demo-play-ping-pong-pass var(--play-rally-cycle) linear infinite;
+}
+
+.demo-play-action[data-ready='true'] .demo-play-paddle:first-child {
+  animation: demo-play-left-paddle var(--play-rally-cycle) ease-out infinite;
+}
+
+.demo-play-action[data-ready='true'] .demo-play-paddle:last-child {
+  animation: demo-play-right-paddle var(--play-rally-cycle) ease-out infinite;
+}
+
+@keyframes demo-play-ping-pong-pass {
+  /* Leave most of the cycle still so the rally does not compete with Play. */
+  0%,
+  22%,
+  100% {
+    translate: calc(-1 * var(--play-pass-distance)) 14px;
+    scale: 1;
+  }
+
+  5%,
+  16% {
+    translate: 0 43px;
+    scale: 1.08 0.92;
+  }
+
+  11% {
+    translate: var(--play-pass-distance) 14px;
+    scale: 1;
+  }
+}
+
+@keyframes demo-play-left-paddle {
+  0%,
+  6%,
+  20%,
+  25%,
+  100% {
+    rotate: var(--paddle-angle);
+  }
+
+  2%,
+  22% {
+    rotate: 19deg;
+  }
+}
+
+@keyframes demo-play-right-paddle {
+  0%,
+  9%,
+  16%,
+  100% {
+    rotate: var(--paddle-angle);
+  }
+
+  11% {
+    rotate: -19deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-play-action[data-ready='true'] :is(.demo-play-paddle, .demo-play-ball) {
+    animation: none;
+  }
+}

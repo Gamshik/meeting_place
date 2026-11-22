@@ -4,7 +4,7 @@ import { rememberTerms, forgetTerms } from '@features/auth/lib/pending-terms'
 import { LegalLinks } from '@pages/LegalPage/LegalPage'
 import { useState } from 'react'
 import { ArrowIcon } from '@shared/ui/ArrowIcon/ArrowIcon'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 import { useAuth } from '@features/auth/model/AuthContext'
 import { FullPageLoader } from '@features/auth/ui/ProtectedRoute/ProtectedRoute'
@@ -121,6 +121,9 @@ export function LoginPage() {
             >
               {isSigningIn ? 'Opening Google…' : 'Sign in'}
             </button>
+            <Link className="button button-secondary" to="/demo">
+              Try without signing up
+            </Link>
           </div>
           <LegalLinks />
           <div className="login-promises" aria-label="What to expect">

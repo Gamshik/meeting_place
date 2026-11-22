@@ -250,6 +250,31 @@ game and each completed result expose an ordered rounds table. Playing again ins
 session for the same partnership while preserving the finished game, its score, and all of its round
 rows.
 
+## Guest demo
+
+The public `/demo` routes load the demo feature outside the authentication provider. The feature owns
+its components, turn state, words, and bundled English audio. It mirrors the site's Practice
+catalog, game settings, and Recorded room using the same CSS, layout, and interactions. The guest
+flow uses a Play button in place of friend selection and a scripted partner. The demo requires
+no backend session, game, transcription, or word generation.
+
+The scripted partner waits a random five to ten seconds before acting. The recording countdown
+starts at the configured explanation time, and the recording phase ends after the bundled clue's
+duration in `words.json`. Update that duration when replacing a clue clip.
+
+Demo links to `/` mark the browser history entry as guest mode. Reloading that entry keeps the
+guest catalog open. A fresh visit to `/` follows the normal sign-in flow.
+
+Update the demo counterparts in `src/client/features/demo` in the same change whenever the
+website UI or UX they mirror changes. Compare the corresponding screens and interactions on desktop
+and mobile, including the catalog, settings, topic picker, recording, waiting, guessing, answer
+review, and result states.
+
+The browser requests microphone access only when a visitor chooses to record. A temporary object
+URL supports preview in the current turn. The feature stops capture when the tab is hidden and
+releases microphone tracks and preview URLs when leaving a turn. No guest audio, answers, scores,
+or settings are persisted or uploaded.
+
 ## Dependency direction
 
 ```text

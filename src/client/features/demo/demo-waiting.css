@@ -1,0 +1,78 @@
+.app-shell-room .main-content:has(.demo-waiting-for-partner) {
+  padding-block-end: clamp(8px, calc(10dvh - 40px), 28px);
+}
+
+.main-content:has(.demo-waiting-for-partner) .game-page-header.is-room {
+  margin-block-end: clamp(8px, calc(5dvh - 18px), 20px);
+}
+
+.demo-waiting-for-partner .recorded-waiting-stage {
+  margin-block: clamp(4px, calc(10dvh - 44px), 28px);
+  padding-block: clamp(0px, calc(5dvh - 26px), 14px);
+}
+
+.demo-waiting-for-partner .recorded-waiting-pingpong {
+  width: min(100%, 360px, max(150px, calc(100dvh - 280px)));
+}
+
+.demo-waiting-for-partner .round-outcome {
+  margin-block-start: clamp(0px, calc(5dvh - 24px), 12px);
+  padding-block: clamp(0px, calc(5dvh - 24px), 10px);
+}
+
+@media (max-width: 680px) {
+  .demo-waiting-for-partner .recorded-waiting-pingpong {
+    width: min(100%, 360px, max(144px, calc(150dvh - 650px)));
+  }
+
+  .demo-waiting-for-partner .round-outcome {
+    padding-block: 0;
+  }
+}
+
+@media (min-width: 681px) {
+  .demo-waiting-for-partner .round-outcome-words {
+    flex-basis: 300px;
+  }
+}
+
+@media (max-width: 680px) and (max-height: 525px) {
+  .demo-waiting-for-partner .game-play-area,
+  .demo-waiting-for-partner .recorded-waiting-stage {
+    gap: 8px;
+  }
+
+  .demo-waiting-for-partner .recorded-waiting-stage > h2 {
+    font-size: clamp(25px, 4vw, 30px);
+  }
+}
+
+@media (min-width: 480px) and (max-height: 500px) {
+  .demo-waiting-for-partner .game-play-area {
+    gap: 6px;
+  }
+
+  .demo-waiting-for-partner .recorded-waiting-stage {
+    width: fit-content;
+    max-width: 100%;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    margin-block: 0;
+  }
+
+  .demo-waiting-for-partner .recorded-waiting-pingpong {
+    width: min(140px, 32dvh);
+  }
+
+  .demo-waiting-for-partner .round-outcome {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding-block: 0;
+  }
+
+  .demo-waiting-for-partner .round-outcome-words {
+    flex: 1 1 220px;
+  }
+}

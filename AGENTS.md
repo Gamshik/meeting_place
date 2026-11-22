@@ -63,3 +63,7 @@ not executed locally.
 
 Update `README.md` when setup, environment values, deployment, or user-facing capabilities change.
 Update `docs/architecture.md` when a system boundary or data lifecycle changes.
+When changing the website’s UI or UX for a screen or interaction shown in the guest demo, update
+the corresponding demo UI or UX in the same change. Verify both flows at desktop and mobile
+widths. The demo mirrors the Practice catalog, game settings, and Recorded mode and keeps its
+own components and local gameplay.

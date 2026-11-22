@@ -31,8 +31,7 @@
   line-height: 1;
 }
 
-.practice-step-heading h1::before,
-.practice-step-heading h2::before {
+.practice-step-heading > span + :is(h1, h2)::before {
   content: '— ';
 }
 
@@ -46,7 +45,7 @@
   position: relative;
   min-height: 210px;
   display: grid;
-  grid-template-columns: minmax(150px, 0.7fr) minmax(240px, 1.3fr);
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
   align-items: center;
   gap: clamp(10px, 2vw, 26px);
   width: 100%;
@@ -145,6 +144,11 @@
 .game-choice-copy strong,
 .game-choice-copy > span {
   display: block;
+}
+
+.game-choice-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .game-choice-copy strong {

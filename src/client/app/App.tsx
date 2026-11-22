@@ -1,33 +1,21 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, useLocation, useMatch } from 'react-router-dom'
 
-import { AuthProvider } from '@features/auth/ui/AuthProvider/AuthProvider'
-import { FullPageLoader, ProtectedRoute } from '@features/auth/ui/ProtectedRoute/ProtectedRoute'
+import { demoHomeState } from '@features/demo/demo-navigation'
 import { CustomCursor } from '@shared/ui/CustomCursor/CustomCursor'
-import { AuthCallbackPage } from '@pages/AuthCallbackPage/AuthCallbackPage'
-import { LegalPage } from '@pages/LegalPage/LegalPage'
-import { LoginPage } from '@pages/LoginPage/LoginPage'
+import { FullPageLoader } from '@shared/ui/FullPageLoader/FullPageLoader'
 import { useTouchInputMode } from './hooks/useTouchInputMode'
 
-const DashboardPage = lazy(() =>
-  import('@pages/DashboardPage/DashboardPage').then((module) => ({
-    default: module.DashboardPage,
-  })),
-)
-const ExplainWordGamePage = lazy(() =>
-  import('@pages/ExplainWordGamePage/ExplainWordGamePage').then((module) => ({
-    default: module.ExplainWordGamePage,
-  })),
-)
-const FriendProfilePage = lazy(() =>
-  import('@pages/FriendProfilePage/FriendProfilePage').then((module) => ({
-    default: module.FriendProfilePage,
-  })),
-)
+const SiteRoutes = lazy(() => import('./SiteRoutes'))
+const DemoPage = lazy(() => import('@features/demo/DemoPage'))
 
-const AdminPage = lazy(() =>
-  import('@pages/AdminPage/AdminPage').then((module) => ({ default: module.AdminPage })),
-)
+function AppRoutes() {
+  const { pathname, state } = useLocation()
+  const demoRoute = useMatch('/demo/*')
+  const demoHome = pathname === '/' && state?.demo === demoHomeState.demo
+
+  return demoRoute || demoHome ? <DemoPage /> : <SiteRoutes />
+}
 
 export function App() {
   useTouchInputMode()
@@ -35,23 +23,9 @@ export function App() {
   return (
     <BrowserRouter>
       <CustomCursor />
-      <AuthProvider>
-        <Suspense fallback={<FullPageLoader label="Opening your meeting place…" />}>
-          <Routes>
-            <Route path="/terms" element={<LegalPage kind="terms" />} />
-            <Route path="/privacy" element={<LegalPage kind="privacy" />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/auth/callback" element={<AuthCallbackPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="admin" element={<AdminPage />} />
-              <Route path="profiles/:profileId" element={<FriendProfilePage />} />
-              <Route path="games/explain-word/:partnershipId" element={<ExplainWordGamePage />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
+      <Suspense fallback={<FullPageLoader label="Opening your meeting place…" />}>
+        <AppRoutes />
+      </Suspense>
     </BrowserRouter>
   )
 }
